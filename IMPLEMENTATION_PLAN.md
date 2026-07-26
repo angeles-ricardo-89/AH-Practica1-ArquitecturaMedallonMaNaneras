@@ -398,7 +398,7 @@ Criterios de Aceptacion del PRD se cumplen.
 | CP-00 | Infraestructura | Docker Compose + Directorios | [x] |
 | CP-01 | Backend | Schemas Pydantic | [x] |
 | CP-02 | Backend | Ingesta Bronze | [x] |
-| CP-03 | Backend | Parsing Silver | [ ] |
+| CP-03 | Backend | Parsing Silver | [x] |
 | CP-04 | Backend | Enriquecimiento Gold | [ ] |
 | CP-05 | Backend | FastAPI Health + Search | [ ] |
 | CP-06 | Backend | Chat Endpoint RAG | [ ] |
