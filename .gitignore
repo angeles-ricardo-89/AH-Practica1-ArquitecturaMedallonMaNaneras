@@ -38,6 +38,9 @@ Thumbs.db
 # Project config (keep only template)
 opencode.json
 
+# Worktrees
+.worktrees/
+
 # uv lock (generated)
 backend/uv.lock
 
