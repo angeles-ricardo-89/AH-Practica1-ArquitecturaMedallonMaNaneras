@@ -1,0 +1,50 @@
+[project]
+name = "lakehouse"
+version = "0.1.0"
+description = "Lakehouse Mañaneras — Data pipeline for Mexican presidential morning conferences"
+requires-python = ">=3.13"
+dependencies = [
+    "duckdb>=1.2",
+    "fastapi[standard]>=0.115",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "typer>=0.15",
+    "httpx>=0.28",
+    "structlog>=25.1",
+    "python-dotenv>=1.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.1",
+    "ruff>=0.9",
+    "pyright>=1.1",
+    "requests>=2.32",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "ANN", "ARG", "BLE", "C4", "DTZ", "EM", "ERA", "FBT", "FLY", "G", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PLC", "PLE", "PLR", "PLW", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "SLOT", "T10", "T20", "TCH", "TID", "TRY", "UP"]
+ignore = ["ANN101", "ANN102", "ANN401", "PLR0913", "D", "E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-xvs --cov=src --cov-report=term-missing --cov-fail-under=90"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+include = ["src"]
+exclude = ["tests"]
+pythonVersion = "3.13"
