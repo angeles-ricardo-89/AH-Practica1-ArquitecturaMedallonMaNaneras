@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+*.egg
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+
+# Docker / Data
+pgdata/
+data/lakehouse/bronze/*
+data/lakehouse/silver/*
+data/lakehouse/gold/*
+data/lakehouse/logs/*
+data/lakehouse/ducklake_files/*
+!data/lakehouse/**/.gitkeep
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project config (keep only template)
+opencode.json
+
+# uv lock (generated)
+backend/uv.lock
+
+# pnpm lock (generated)
+frontend/pnpm-lock.yaml
