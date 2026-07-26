@@ -87,4 +87,4 @@ Output a structured report:
 ## Reference
 
 - GATE: `governance/GATE-S-SPEC-QUALITY.md`
-- Policy: `AGENTS.md` R2.5.1, R2.5.2
+- Policy: `AGENTS.md` 
