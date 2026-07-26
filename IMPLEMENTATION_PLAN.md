@@ -396,7 +396,7 @@ Criterios de Aceptacion del PRD se cumplen.
 | CP | Fase | Nombre | Estado |
 |----|------|--------|--------|
 | CP-00 | Infraestructura | Docker Compose + Directorios | [x] |
-| CP-01 | Backend | Schemas Pydantic | [ ] |
+| CP-01 | Backend | Schemas Pydantic | [x] |
 | CP-02 | Backend | Ingesta Bronze | [ ] |
 | CP-03 | Backend | Parsing Silver | [ ] |
 | CP-04 | Backend | Enriquecimiento Gold | [ ] |
