@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     source_archive_url: str = "https://www.gob.mx/presidencia/es/archivo/articulos"
 
     postgres_host: str = "localhost"
+    postgres_port: int = 5433
     postgres_db: str = "mananeras"
     postgres_user: str = "mananeras"
     postgres_password: str = "mananeras"

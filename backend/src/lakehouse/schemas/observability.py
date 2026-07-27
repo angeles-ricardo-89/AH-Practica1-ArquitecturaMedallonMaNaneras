@@ -6,6 +6,7 @@ class PipelineStatus(BaseModel):
     last_run: str = Field(default="")
     last_success: str = Field(default="")
     records_count: int = Field(default=0, ge=0)
+    semaphore: str = Field(default="gray")
 
 
 class PipelineLogs(BaseModel):

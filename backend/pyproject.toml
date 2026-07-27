@@ -12,6 +12,7 @@ dependencies = [
     "httpx>=0.28",
     "structlog>=25.1",
     "python-dotenv>=1.1",
+    "psycopg[binary]>=3.2",
 ]
 
 [dependency-groups]
@@ -32,7 +33,7 @@ select = ["E", "F", "I", "N", "W", "UP", "ANN", "ARG", "BLE", "C4", "DTZ", "EM",
 ignore = ["ANN101", "ANN102", "ANN401", "ANN001", "ARG001", "PLR0913", "PLR2004", "D", "E501", "EM101", "EM102", "TRY003", "FBT001", "FBT002"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ANN201", "ANN206", "PLR2004", "E741", "RET504", "S101"]
+"tests/**" = ["ANN201", "ANN206", "PLR2004", "E741", "RET504", "S101", "ARG002", "SLF001"]
 
 [tool.ruff.format]
 quote-style = "double"

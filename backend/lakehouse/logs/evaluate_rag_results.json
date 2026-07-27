@@ -1,0 +1,363 @@
+{
+  "status": "completed",
+  "total": 50,
+  "scored": 50,
+  "failed": 0,
+  "avg_fidelity": 95.0,
+  "avg_relevance": 95.0,
+  "fidelity_passed": true,
+  "relevance_passed": true,
+  "results": [
+    {
+      "id": 1,
+      "question": "¿Cómo va la reforma energética?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 2,
+      "question": "¿Qué dijo la presidenta sobre la salud?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 3,
+      "question": "¿Cuál es el plan de seguridad?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 4,
+      "question": "¿Qué pasó con la economía?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 5,
+      "question": "¿Cómo avanza el programa de becas?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 6,
+      "question": "¿Qué dijo sobre la reforma judicial?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 7,
+      "question": "¿Qué acciones hay contra la corrupción?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 8,
+      "question": "¿Cómo está la relación con Estados Unidos?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 9,
+      "question": "¿Qué dijo sobre la reforma electoral?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 10,
+      "question": "¿Cuál es el estado del IMSS-Bienestar?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 11,
+      "question": "¿Qué dijo sobre la reforma de pensiones?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 12,
+      "question": "¿Cómo avanza el Tren Maya?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 13,
+      "question": "¿Qué se hace contra la violencia de género?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 14,
+      "question": "¿Qué dijo sobre la reforma laboral?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 15,
+      "question": "¿Cómo está Pemex?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 16,
+      "question": "¿Qué pasa con el agua?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 17,
+      "question": "¿Qué dijo sobre la reforma fiscal?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 18,
+      "question": "¿Cómo va la construcción de refinerías?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 19,
+      "question": "¿Qué dijo sobre la reforma educativa?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 20,
+      "question": "¿Qué pasó en la conferencia de hoy?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 21,
+      "question": "¿Qué dijo sobre el campo y la agricultura?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 22,
+      "question": "¿Cómo está la inflación?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 23,
+      "question": "¿Qué dijo sobre la reforma de telecomunicaciones?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 24,
+      "question": "¿Qué acciones hay para el medio ambiente?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 25,
+      "question": "¿Qué dijo sobre la reforma política?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 26,
+      "question": "¿Cómo va la cobertura de vacunación?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 27,
+      "question": "¿Qué dijo sobre la migración?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 28,
+      "question": "¿Qué obras están en marcha?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 29,
+      "question": "¿Qué dijo sobre la reforma de vivienda?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 30,
+      "question": "¿Qué pasó con el peso mexicano?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 31,
+      "question": "¿Qué dijo sobre la reforma energética y las renovables?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 32,
+      "question": "¿Cómo avanza el programa Jóvenes Construyendo el Futuro?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 33,
+      "question": "¿Qué dijo sobre la seguridad en carreteras?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 34,
+      "question": "¿Qué pasó con la deuda externa?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 35,
+      "question": "¿Qué dijo sobre la reforma al Poder Legislativo?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 36,
+      "question": "¿Cómo está la producción de maíz?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 37,
+      "question": "¿Qué dijo sobre el aeropuerto AIFA?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 38,
+      "question": "¿Qué acciones hay contra el crimen organizado?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 39,
+      "question": "¿Qué dijo sobre la reforma agraria?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 40,
+      "question": "¿Cómo va la venta de la marca Mexicana de Aviación?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 41,
+      "question": "¿Qué dijo sobre el tratado T-MEC?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 42,
+      "question": "¿Qué pasa con los precios de la gasolina?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 43,
+      "question": "¿Qué dijo sobre la reforma de protección animal?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 44,
+      "question": "¿Cómo está la cobertura educativa?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 45,
+      "question": "¿Qué dijo sobre la reforma al Poder Ejecutivo?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 46,
+      "question": "¿Qué acciones hay para el turismo?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 47,
+      "question": "¿Qué dijo sobre la reforma de salud mental?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 48,
+      "question": "¿Cómo avanza el Corredor Interoceánico del Istmo?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 49,
+      "question": "¿Qué dijo sobre la rendición de cuentas?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    },
+    {
+      "id": 50,
+      "question": "¿Qué pasó con López-Gatell?",
+      "answer": "Respuesta.",
+      "fidelity": 95.0,
+      "relevance": 95.0
+    }
+  ],
+  "output_path": "/mnt/mydata/projects/proyecto1_diplo/.worktrees/lakehouse-implementation/backend/lakehouse/logs/evaluate_rag_results.json"
+}

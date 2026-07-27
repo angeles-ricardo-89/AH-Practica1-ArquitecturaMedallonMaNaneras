@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 class SearchRequest(BaseModel):
     query: str = Field(..., max_length=500)
     top_k: int = Field(default=8, ge=1, le=50)
+    strategy: Literal["hnsw", "relational_then_vector", "hybrid"] = Field(default="hnsw")
     filters: dict[str, str] | None = Field(default=None)
 
     @field_validator("query")
@@ -20,7 +21,7 @@ class SearchRequest(BaseModel):
     @classmethod
     def reject_extra_fields(cls, data: Any) -> Any:
         if isinstance(data, dict):
-            allowed = {"query", "top_k", "filters"}
+            allowed = {"query", "top_k", "strategy", "filters"}
             extra = set(data) - allowed
             if extra:
                 raise ValueError(f"Extra fields not allowed: {extra}")

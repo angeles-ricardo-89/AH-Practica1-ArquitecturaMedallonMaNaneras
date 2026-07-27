@@ -1,0 +1,411 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
+
+import httpx
+import pytest
+
+from lakehouse.pipeline.enrichment import (
+    build_embedding_payload,
+    embed_text,
+    enrich_interventions,
+    ensure_gold_tables,
+    get_pgvector_connection_string,
+)
+from lakehouse.schemas.silver import InterventionRecord
+
+
+@pytest.fixture
+def sample_intervention() -> InterventionRecord:
+    return InterventionRecord(
+        intervention_key="abc123_000_abc123",
+        conference_id="conf123",
+        participant="PRESIDENTA CLAUDIA SHEINBAUM PARDO",
+        text="Buenos días. Hoy vamos a informar sobre los avances del país.",
+        pregunta_activa="¿Cómo va la reforma energética?",
+        chunk_index=0,
+        ingested_at=datetime.now(UTC),
+    )
+
+
+@pytest.fixture
+def sample_intervention_no_question() -> InterventionRecord:
+    return InterventionRecord(
+        intervention_key="def456_001_def456",
+        conference_id="conf456",
+        participant="SECRETARIO DE GOBERNACIÓN",
+        text="Informamos que los programas sociales continúan.",
+        pregunta_activa="",
+        chunk_index=1,
+        ingested_at=datetime.now(UTC),
+    )
+
+
+class TestBuildEmbeddingPayload:
+    def test_format_matches_prd(self, sample_intervention: InterventionRecord):
+        payload = build_embedding_payload(
+            intervention=sample_intervention,
+            conference_date="2024-10-01",
+        )
+        expected = (
+            "Contexto: Conferencia del 2024-10-01\n"
+            "Participante: PRESIDENTA CLAUDIA SHEINBAUM PARDO\n"
+            "Pregunta activa: ¿Cómo va la reforma energética?\n"
+            "Respuesta: Buenos días. Hoy vamos a informar sobre los avances del país."
+        )
+        assert payload == expected
+
+    def test_no_pregunta_activa(self, sample_intervention_no_question: InterventionRecord):
+        payload = build_embedding_payload(
+            intervention=sample_intervention_no_question,
+            conference_date="2025-01-15",
+        )
+        expected = (
+            "Contexto: Conferencia del 2025-01-15\n"
+            "Participante: SECRETARIO DE GOBERNACIÓN\n"
+            "Pregunta activa: \n"
+            "Respuesta: Informamos que los programas sociales continúan."
+        )
+        assert payload == expected
+
+    def test_no_technical_ids_or_hashes(self, sample_intervention: InterventionRecord):
+        payload = build_embedding_payload(
+            intervention=sample_intervention,
+            conference_date="2024-10-01",
+        )
+        assert "abc123" not in payload
+        assert "conf123" not in payload
+        assert "intervention_key" not in payload.lower()
+        assert "chunk_index" not in payload.lower()
+
+    def test_special_characters(self):
+        record = InterventionRecord(
+            intervention_key="spec_000_chars",
+            conference_id="spec",
+            participant="LIC. MARÍA JOSÉ PÉREZ",
+            text="Costo: $1,234.56 — 100% real. ¡Vamos! ¿De acuerdo?",
+            pregunta_activa="¿Costo total? $500 pesos",
+            chunk_index=0,
+        )
+        payload = build_embedding_payload(
+            intervention=record,
+            conference_date="2025-03-01",
+        )
+        assert "$1,234.56" in payload
+        assert "100%" in payload
+        assert "¿Costo total?" in payload
+        assert "MARÍA JOSÉ PÉREZ" in payload
+
+
+class TestEmbedText:
+    @patch("lakehouse.pipeline.enrichment.httpx.Client")
+    def test_calls_ollama_with_correct_params(self, mock_client_class: MagicMock):
+        mock_client = MagicMock()
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"embeddings": [[0.1] * 768]}
+        mock_client.post.return_value = mock_response
+
+        embedding = embed_text(
+            text="test payload",
+            base_url="http://localhost:11434",
+            model="nomic-embed-text",
+        )
+
+        assert len(embedding) == 768
+        assert embedding[0] == 0.1
+        expected_url = "http://localhost:11434/api/embed"
+        mock_client.post.assert_called_once_with(
+            expected_url,
+            json={"model": "nomic-embed-text", "input": "test payload"},
+            timeout=30,
+        )
+
+    @patch("lakehouse.pipeline.enrichment.httpx.Client")
+    def test_retries_on_connection_error(self, mock_client_class: MagicMock):
+        mock_client = MagicMock()
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.post.side_effect = [
+            httpx.ConnectError("connection refused"),
+            httpx.ConnectError("connection refused"),
+            MagicMock(
+                status_code=200,
+                json=lambda: {"embeddings": [[0.2] * 768]},
+            ),
+        ]
+
+        embedding = embed_text(
+            text="test",
+            base_url="http://localhost:11434",
+            model="nomic-embed-text",
+        )
+
+        assert len(embedding) == 768
+        assert mock_client.post.call_count == 3
+
+    @patch("lakehouse.pipeline.enrichment.httpx.Client")
+    def test_retries_on_bad_status(self, mock_client_class: MagicMock):
+        mock_client = MagicMock()
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        bad_resp = MagicMock()
+        bad_resp.status_code = 500
+        mock_client.post.side_effect = [
+            bad_resp,
+            bad_resp,
+            MagicMock(
+                status_code=200,
+                json=lambda: {"embeddings": [[0.3] * 768]},
+            ),
+        ]
+
+        embedding = embed_text(
+            text="test",
+            base_url="http://localhost:11434",
+            model="nomic-embed-text",
+        )
+
+        assert len(embedding) == 768
+        assert mock_client.post.call_count == 3
+
+    @patch("lakehouse.pipeline.enrichment.httpx.Client")
+    def test_raises_after_max_retries(self, mock_client_class: MagicMock):
+        mock_client = MagicMock()
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.post.side_effect = httpx.ConnectError("always down")
+
+        with pytest.raises(ConnectionError, match="Ollama embedding failed after 3 retries"):
+            embed_text(
+                text="test",
+                base_url="http://localhost:11434",
+                model="nomic-embed-text",
+            )
+
+        assert mock_client.post.call_count == 3
+
+    @patch("lakehouse.pipeline.enrichment.httpx.Client")
+    def test_invalid_embedding_dimension_format(self, mock_client_class: MagicMock):
+        mock_client = MagicMock()
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.post.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"embeddings": [[0.1, 0.2, 0.3]]},
+        )
+
+        embedding = embed_text(
+            text="test",
+            base_url="http://localhost:11434",
+            model="nomic-embed-text",
+        )
+
+        assert len(embedding) == 3
+
+    @patch("lakehouse.pipeline.enrichment.httpx.Client")
+    def test_raises_on_empty_embeddings_response(self, mock_client_class: MagicMock):
+        mock_client = MagicMock()
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.post.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"embeddings": []},
+        )
+
+        with pytest.raises(ValueError, match="Ollama returned empty embeddings"):
+            embed_text(
+                text="test",
+                base_url="http://localhost:11434",
+                model="nomic-embed-text",
+            )
+
+
+class TestPgvectorConnection:
+    @patch("lakehouse.pipeline.enrichment.get_pgvector_connection_string")
+    def test_connection_string_format(self, mock_conn_str: MagicMock):
+        mock_conn_str.return_value = "postgresql://user:pass@host:5433/db"
+        result = get_pgvector_connection_string(
+            host="myhost",
+            port=5433,
+            db="mydb",
+            user="myuser",
+            password="mypass",
+        )
+        assert result == "postgresql://myuser:mypass@myhost:5433/mydb"
+
+
+class TestEnsureGoldTables:
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_creates_schema_table_and_indexes(self, mock_connect: MagicMock):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        ensure_gold_tables(
+            conn_str="postgresql://user:pass@localhost:5433/mydb",
+        )
+
+        calls = [call[0][0] for call in mock_cursor.execute.call_args_list]
+        executed_sql = " ".join(calls)
+
+        assert "CREATE SCHEMA IF NOT EXISTS gold" in executed_sql
+        assert "CREATE TABLE IF NOT EXISTS gold.rag_corpus" in executed_sql
+        assert "vector(768)" in executed_sql
+        assert "chunk_key VARCHAR PRIMARY KEY" in executed_sql
+        assert "conference_date" in executed_sql
+        assert "participant" in executed_sql
+        assert "chunk_text" in executed_sql
+        assert "payload" in executed_sql
+        assert "embedding" in executed_sql
+        assert "ingested_at" in executed_sql
+        assert "idx_rag_corpus_conference_date" in executed_sql
+        assert "idx_rag_corpus_participant" in executed_sql
+        assert "idx_rag_corpus_embedding_hnsw" in executed_sql
+        assert "hnsw" in executed_sql
+        assert "vector_cosine_ops" in executed_sql
+
+
+class TestEnrichInterventions:
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_single_intervention_stored_correctly(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+        sample_intervention: InterventionRecord,
+    ):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        result = enrich_interventions(
+            interventions=[sample_intervention],
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+        )
+
+        assert result["total"] == 1
+        assert result["embedded"] == 1
+        assert result["failed"] == 0
+
+        execute_args = mock_cursor.execute.call_args_list
+        insert_call = None
+        for call in execute_args:
+            sql = call[0][0]
+            if "INSERT INTO gold.rag_corpus" in sql:
+                insert_call = call
+                break
+
+        assert insert_call is not None
+        params = insert_call[0][1]
+        assert params[0] == sample_intervention.intervention_key
+        assert params[1] == "2024-10-01"
+        assert params[2] == sample_intervention.participant
+        assert params[3] == sample_intervention.text
+        assert "Contexto: Conferencia del 2024-10-01" in params[4]
+        assert params[5] == [0.5] * 768
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_empty_interventions_list(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ):
+        result = enrich_interventions(
+            interventions=[],
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+        )
+
+        assert result["total"] == 0
+        assert result["embedded"] == 0
+        assert result["failed"] == 0
+        mock_embed.assert_not_called()
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_partial_embedding_failure_logs_and_continues(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_embed.side_effect = [
+            [0.1] * 768,
+            ConnectionError("Ollama embedding failed after 3 retries"),
+            [0.2] * 768,
+        ]
+
+        records = [
+            InterventionRecord(
+                intervention_key=f"rec_{i:03d}_hash",
+                conference_id="conf",
+                participant=f"PARTICIPANTE {i}",
+                text=f"Texto {i}",
+                pregunta_activa="",
+                chunk_index=i,
+            )
+            for i in range(3)
+        ]
+
+        result = enrich_interventions(
+            interventions=records,
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+        )
+
+        assert result["total"] == 3
+        assert result["embedded"] == 2
+        assert result["failed"] == 1
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_on_conflict_do_nothing(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+        sample_intervention: InterventionRecord,
+    ):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        class MockExecute:
+            def __init__(self) -> None:
+                self.call_count = 0
+
+            def __call__(self, sql: str, params: tuple | None = None) -> MagicMock:
+                self.call_count += 1
+                if self.call_count == 2:
+                    raise ValueError(
+                        'duplicate key value violates unique constraint "rag_corpus_pkey"'
+                    )
+                return MagicMock()
+
+        mock_cursor.execute = MockExecute()
+
+        result = enrich_interventions(
+            interventions=[sample_intervention],
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+        )
+
+        assert result["total"] == 1
+        assert result["embedded"] == 1
+        assert result["failed"] == 0

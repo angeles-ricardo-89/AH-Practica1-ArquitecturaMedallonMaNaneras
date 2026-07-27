@@ -6,7 +6,7 @@
 - **PRD:** `docs/prd/arquitectura_medallon_y_embbeding_CSP.md`
 - **Fecha de creacion:** 2026-07-26
 - **Estado actual:** Planeacion aprobada, pendiente de ejecucion
-- **Ultimo checkpoint completado:** N/A (ninguno iniciado)
+- **Ultimo checkpoint completado:** CP-14 (Idempotencia End-to-End)
 
 ## Reglas de Reanudacion
 
@@ -399,15 +399,15 @@ Criterios de Aceptacion del PRD se cumplen.
 | CP-01 | Backend | Schemas Pydantic | [x] |
 | CP-02 | Backend | Ingesta Bronze | [x] |
 | CP-03 | Backend | Parsing Silver | [x] |
-| CP-04 | Backend | Enriquecimiento Gold | [ ] |
-| CP-05 | Backend | FastAPI Health + Search | [ ] |
-| CP-06 | Backend | Chat Endpoint RAG | [ ] |
-| CP-07 | Backend | Observabilidad Endpoints | [ ] |
-| CP-08 | Backend | CLI Typer | [ ] |
-| CP-09 | Frontend | Setup Vue 3 + Vite + Tailwind | [ ] |
-| CP-10 | Frontend | Chat RAG UI | [ ] |
-| CP-11 | Frontend | Dashboard Observabilidad | [ ] |
-| CP-12 | QA | Test Suite + Coverage 90% | [ ] |
-| CP-13 | QA | Evaluacion RAG (LLM-as-a-Judge) | [ ] |
-| CP-14 | QA | Idempotencia End-to-End | [ ] |
-| CP-15 | Cierre | Docker Full Stack + DoD | [ ] |
+| CP-04 | Backend | Enriquecimiento Gold | [x] |
+| CP-05 | Backend | FastAPI Health + Search | [x] |
+| CP-06 | Backend | Chat Endpoint RAG | [x] |
+| CP-07 | Backend | Observabilidad Endpoints | [x] |
+| CP-08 | Backend | CLI Typer | [x] |
+| CP-09 | Frontend | Setup Vue 3 + Vite + Tailwind | [x] |
+| CP-10 | Frontend | Chat RAG UI | [x] |
+| CP-11 | Frontend | Dashboard Observabilidad | [x] |
+| CP-12 | QA | Test Suite + Coverage 90% | [x] |
+| CP-13 | QA | Evaluacion RAG (LLM-as-a-Judge) | [x] |
+| CP-14 | QA | Idempotencia End-to-End | [x] |
+| CP-15 | Cierre | Docker Full Stack + DoD | [x] |
