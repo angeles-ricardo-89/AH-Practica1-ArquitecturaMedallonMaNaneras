@@ -16,6 +16,44 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - lakehouse-net
+
+  backend:
+    build: ./backend
+    container_name: mananeras-backend
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+    environment:
+      APP_ENV: docker
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      OLLAMA_BASE_URL: http://ollama:11434
+      LLAMACPP_BASE_URL: http://llamacpp:9200/v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lakehouse-net
+
+  frontend:
+    build: ./frontend
+    container_name: mananeras-frontend
+    restart: unless-stopped
+    ports:
+      - "5174:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - lakehouse-net
+
+networks:
+  lakehouse-net:
+    driver: bridge
 
 volumes:
   pgdata:
