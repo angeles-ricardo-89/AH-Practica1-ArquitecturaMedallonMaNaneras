@@ -7,9 +7,9 @@ import duckdb
 import pytest
 
 from lakehouse.db.duckdb_conn import ensure_bronze_table, insert_bronze_record
-from lakehouse.db.merge import ensure_silver_tables, merge_intervention
+from lakehouse.db.merge import ensure_silver_tables, merge_conference, merge_intervention
 from lakehouse.pipeline.enrichment import enrich_interventions
-from lakehouse.schemas.silver import InterventionRecord
+from lakehouse.schemas.silver import ConferenceRecord, InterventionRecord
 
 
 @pytest.fixture
@@ -205,6 +205,35 @@ class TestSilverIdempotency:
 
         count = duck_conn.execute("SELECT COUNT(*) FROM silver.interventions").fetchone()[0]
         assert count == 2
+
+    def test_merge_conference_idempotent(
+        self,
+        duck_conn: duckdb.DuckDBPyConnection,
+    ) -> None:
+        ensure_silver_tables(duck_conn)
+
+        record = ConferenceRecord(
+            conference_id="conf_test_001",
+            date="2024-10-01",
+            title="Conferencia de prueba",
+            url="https://example.com/test",
+        )
+
+        merge_conference(duck_conn, record)
+        first = duck_conn.execute("SELECT COUNT(*) FROM silver.conferences").fetchone()[0]
+        assert first == 1
+
+        merge_conference(duck_conn, record)
+        second = duck_conn.execute("SELECT COUNT(*) FROM silver.conferences").fetchone()[0]
+        assert second == 1
+
+        row = duck_conn.execute(
+            "SELECT conference_id, date, title, url FROM silver.conferences"
+        ).fetchone()
+        assert row[0] == "conf_test_001"
+        assert row[1] == "2024-10-01"
+        assert row[2] == "Conferencia de prueba"
+        assert row[3] == "https://example.com/test"
 
 
 class TestGoldIdempotency:

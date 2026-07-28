@@ -9,9 +9,11 @@ class ChatRequest(BaseModel):
 
 class SourceChunk(BaseModel):
     conference_date: str = Field(...)
+    conference_id: str = Field(..., min_length=1)
     participant: str = Field(...)
     chunk_text: str = Field(...)
     similarity: float = Field(..., ge=0.0, le=1.0)
+    conference_url: str = Field(default="")
 
 
 class ChatResponse(BaseModel):

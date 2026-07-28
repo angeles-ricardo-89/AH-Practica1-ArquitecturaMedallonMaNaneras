@@ -18,11 +18,14 @@ class TestSourceChunk:
     def test_valid_source(self):
         s = SourceChunk(
             conference_date="2024-10-01",
+            conference_id="abc123",
             participant="PRESIDENTA",
             chunk_text="El día de hoy...",
             similarity=0.95,
+            conference_url="https://example.com",
         )
         assert s.similarity == 0.95
+        assert s.conference_url == "https://example.com"
 
 
 class TestChatResponse:
@@ -32,9 +35,11 @@ class TestChatResponse:
             sources=[
                 SourceChunk(
                     conference_date="2024-10-01",
+                    conference_id="abc123",
                     participant="PRESIDENTA",
                     chunk_text="El día de hoy...",
                     similarity=0.95,
+                    conference_url="https://example.com",
                 )
             ],
             token_usage={"prompt": 100, "completion": 50},

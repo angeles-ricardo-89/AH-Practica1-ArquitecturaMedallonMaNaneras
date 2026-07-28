@@ -2,10 +2,12 @@ CREATE SCHEMA IF NOT EXISTS gold;
 
 CREATE TABLE IF NOT EXISTS gold.rag_corpus (
     chunk_key        VARCHAR PRIMARY KEY,
+    conference_id    VARCHAR NOT NULL,
     conference_date  DATE NOT NULL,
     participant      VARCHAR NOT NULL,
     chunk_text       TEXT NOT NULL,
     payload          TEXT NOT NULL,
+    url              VARCHAR DEFAULT '',
     embedding        vector(768),
     ingested_at      TIMESTAMPTZ DEFAULT NOW()
 );

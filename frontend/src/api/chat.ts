@@ -5,6 +5,7 @@ export interface SourceChunk {
   participant: string
   chunk_text: string
   similarity: number
+  conference_url: string
 }
 
 export interface ChatResponse {

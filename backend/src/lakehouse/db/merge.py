@@ -1,6 +1,6 @@
 import duckdb
 
-from lakehouse.schemas.silver import DLQRejectRecord, InterventionRecord
+from lakehouse.schemas.silver import ConferenceRecord, DLQRejectRecord, InterventionRecord
 
 
 def ensure_silver_tables(conn: duckdb.DuckDBPyConnection) -> None:
@@ -13,6 +13,7 @@ def ensure_silver_tables(conn: duckdb.DuckDBPyConnection) -> None:
             text VARCHAR NOT NULL,
             pregunta_activa VARCHAR DEFAULT '',
             chunk_index INTEGER NOT NULL,
+            url VARCHAR DEFAULT '',
             ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -20,6 +21,7 @@ def ensure_silver_tables(conn: duckdb.DuckDBPyConnection) -> None:
         CREATE TABLE IF NOT EXISTS silver.conferences (
             conference_id VARCHAR PRIMARY KEY,
             date VARCHAR NOT NULL,
+            title VARCHAR DEFAULT '',
             url VARCHAR NOT NULL
         )
     """)
@@ -39,8 +41,8 @@ def merge_intervention(conn: duckdb.DuckDBPyConnection, record: InterventionReco
     conn.execute(
         """
         INSERT OR IGNORE INTO silver.interventions
-            (intervention_key, conference_id, participant, text, pregunta_activa, chunk_index)
-        VALUES (?, ?, ?, ?, ?, ?)
+            (intervention_key, conference_id, participant, text, pregunta_activa, chunk_index, url)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         (
             record.intervention_key,
@@ -49,7 +51,19 @@ def merge_intervention(conn: duckdb.DuckDBPyConnection, record: InterventionReco
             record.text,
             record.pregunta_activa,
             record.chunk_index,
+            record.url,
         ),
+    )
+
+
+def merge_conference(conn: duckdb.DuckDBPyConnection, record: ConferenceRecord) -> None:
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO silver.conferences
+            (conference_id, date, title, url)
+        VALUES (?, ?, ?, ?)
+        """,
+        (record.conference_id, record.date, record.title, record.url),
     )
 
 

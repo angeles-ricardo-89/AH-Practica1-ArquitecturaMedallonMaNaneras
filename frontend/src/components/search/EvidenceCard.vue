@@ -17,7 +17,15 @@ function truncatedText(text: string, max = 150): string {
       <span class="text-xs text-gray-500">{{ source.conference_date }}</span>
     </div>
     <p class="text-sm text-gray-600">{{ truncatedText(source.chunk_text) }}</p>
-    <div class="mt-1">
+    <div class="mt-1 flex items-center gap-2">
+      <a
+        v-if="source.conference_url"
+        :href="source.conference_url"
+        target="_blank"
+        class="text-xs text-blue-500 hover:text-blue-700 underline"
+      >
+        Ver fuente
+      </a>
       <span class="text-xs text-gray-400">
         Similaridad: {{ (source.similarity * 100).toFixed(1) }}%
       </span>

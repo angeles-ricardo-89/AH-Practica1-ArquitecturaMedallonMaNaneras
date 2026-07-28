@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 logger = get_logger(__name__, layer="gold")
 
 
-
 def build_embedding_payload(
     intervention: InterventionRecord,
     conference_date: str,
@@ -98,13 +97,23 @@ def ensure_gold_tables(conn_str: str) -> None:
         cur.execute("""
             CREATE TABLE IF NOT EXISTS gold.rag_corpus (
                 chunk_key VARCHAR PRIMARY KEY,
+                conference_id VARCHAR NOT NULL,
                 conference_date DATE NOT NULL,
                 participant VARCHAR NOT NULL,
                 chunk_text TEXT NOT NULL,
                 payload TEXT NOT NULL,
+                url VARCHAR DEFAULT '',
                 embedding vector(768),
                 ingested_at TIMESTAMPTZ DEFAULT NOW()
             )
+        """)
+        cur.execute("""
+            ALTER TABLE gold.rag_corpus
+            ADD COLUMN IF NOT EXISTS conference_id VARCHAR
+        """)
+        cur.execute("""
+            ALTER TABLE gold.rag_corpus
+            ADD COLUMN IF NOT EXISTS url VARCHAR DEFAULT ''
         """)
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_rag_corpus_conference_date
@@ -165,17 +174,19 @@ def enrich_interventions(
             try:
                 cur.execute(
                     """
-                    INSERT INTO gold.rag_corpus
-                        (chunk_key, conference_date, participant, chunk_text, payload, embedding)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (chunk_key) DO NOTHING
-                    """,
+                        INSERT INTO gold.rag_corpus
+                            (chunk_key, conference_id, conference_date, participant, chunk_text, payload, url, embedding)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (chunk_key) DO NOTHING
+                        """,
                     (
                         intervention.intervention_key,
+                        intervention.conference_id,
                         conference_date,
                         intervention.participant,
                         intervention.text,
                         payload,
+                        intervention.url,
                         embedding,
                     ),
                 )

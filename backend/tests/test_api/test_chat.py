@@ -91,14 +91,17 @@ class TestChatSourceDetails:
     def test_source_includes_required_fields(self) -> None:
         source = SourceChunk(
             conference_date="2024-10-01",
+            conference_id="abc123",
             participant="PRESIDENTA",
             chunk_text="El día de hoy...",
             similarity=0.95,
+            conference_url="https://example.com",
         )
         assert source.conference_date == "2024-10-01"
         assert source.participant == "PRESIDENTA"
         assert source.chunk_text == "El día de hoy..."
         assert source.similarity == 0.95
+        assert source.conference_url == "https://example.com"
 
 
 class TestTokenEstimator:
@@ -162,9 +165,11 @@ class TestContextBuilder:
         sources = [
             SourceChunk(
                 conference_date="2024-10-01",
+                conference_id="abc123",
                 participant="PRESIDENTA",
                 chunk_text="Contenido de la fuente.",
                 similarity=0.95,
+                conference_url="https://example.com",
             ),
         ]
         context, _usage = builder.build(

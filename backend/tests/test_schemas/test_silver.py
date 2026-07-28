@@ -33,8 +33,10 @@ class TestInterventionRecord:
             text="Buenos días. El día de hoy vamos a informar...",
             pregunta_activa="¿Cómo va la reforma?",
             chunk_index=0,
+            url="https://example.com/conf-2024-10-01",
         )
         assert r.parent_key == "parent_conf_20241001"
+        assert r.url == "https://example.com/conf-2024-10-01"
 
     def test_participant_defaults_to_desconocido(self):
         r = InterventionRecord(
@@ -43,6 +45,7 @@ class TestInterventionRecord:
             text="Hello",
             pregunta_activa="",
             chunk_index=0,
+            url="https://example.com",
         )
         assert r.participant == "DESCONOCIDO"
 

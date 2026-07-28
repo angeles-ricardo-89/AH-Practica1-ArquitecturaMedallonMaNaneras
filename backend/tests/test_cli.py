@@ -61,6 +61,21 @@ class TestPipelineParse:
         result = runner.invoke(app, ["pipeline", "parse"])
         assert result.exit_code == 0
 
+    @patch("lakehouse.cli.insert_dlq_record")
+    @patch("lakehouse.cli.parse_conference_date")
+    @patch("lakehouse.cli.get_connection")
+    def test_parse_unknown_date_sends_to_dlq(self, mock_conn, mock_parse_date, mock_insert):
+        mock_conn.return_value.execute.return_value.fetchall.return_value = [
+            ("https://example.com/no-date", "<html></html>"),
+        ]
+        mock_parse_date.return_value = None
+        result = runner.invoke(app, ["pipeline", "parse"])
+        assert result.exit_code == 0
+        mock_insert.assert_called_once()
+        args = mock_insert.call_args[0]
+        assert args[1].rejection_reason == "unknown_date"
+        assert args[1].raw_data == "https://example.com/no-date"
+
 
 class TestPipelineEnrich:
     @patch("lakehouse.cli.get_connection")
@@ -74,7 +89,7 @@ class TestPipelineEnrich:
     @patch("lakehouse.cli.enrich_interventions")
     def test_enrich_no_dry_run(self, mock_enrich_fn, mock_ensure, mock_conn):
         mock_conn.return_value.execute.return_value.fetchall.return_value = [
-            ("key1", "conf1", "PARTICIPANTE", "texto", "pregunta", 0)
+            ("key1", "conf1", "PARTICIPANTE", "texto", "pregunta", 0, "https://example.com")
         ]
         mock_enrich_fn.return_value = {"embedded": 1, "failed": 0, "total": 1}
         result = runner.invoke(app, ["pipeline", "enrich"])

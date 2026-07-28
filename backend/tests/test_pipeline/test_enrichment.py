@@ -25,6 +25,7 @@ def sample_intervention() -> InterventionRecord:
         text="Buenos días. Hoy vamos a informar sobre los avances del país.",
         pregunta_activa="¿Cómo va la reforma energética?",
         chunk_index=0,
+        url="https://example.com/conf-2024-10-01",
         ingested_at=datetime.now(UTC),
     )
 
@@ -38,6 +39,7 @@ def sample_intervention_no_question() -> InterventionRecord:
         text="Informamos que los programas sociales continúan.",
         pregunta_activa="",
         chunk_index=1,
+        url="https://example.com/conf-2024-10-01",
         ingested_at=datetime.now(UTC),
     )
 
@@ -87,6 +89,7 @@ class TestBuildEmbeddingPayload:
             text="Costo: $1,234.56 — 100% real. ¡Vamos! ¿De acuerdo?",
             pregunta_activa="¿Costo total? $500 pesos",
             chunk_index=0,
+            url="https://example.com",
         )
         payload = build_embedding_payload(
             intervention=record,
@@ -251,10 +254,12 @@ class TestEnsureGoldTables:
         assert "CREATE TABLE IF NOT EXISTS gold.rag_corpus" in executed_sql
         assert "vector(768)" in executed_sql
         assert "chunk_key VARCHAR PRIMARY KEY" in executed_sql
+        assert "conference_id" in executed_sql
         assert "conference_date" in executed_sql
         assert "participant" in executed_sql
         assert "chunk_text" in executed_sql
         assert "payload" in executed_sql
+        assert "url" in executed_sql
         assert "embedding" in executed_sql
         assert "ingested_at" in executed_sql
         assert "idx_rag_corpus_conference_date" in executed_sql
@@ -302,11 +307,13 @@ class TestEnrichInterventions:
         assert insert_call is not None
         params = insert_call[0][1]
         assert params[0] == sample_intervention.intervention_key
-        assert params[1] == "2024-10-01"
-        assert params[2] == sample_intervention.participant
-        assert params[3] == sample_intervention.text
-        assert "Contexto: Conferencia del 2024-10-01" in params[4]
-        assert params[5] == [0.5] * 768
+        assert params[1] == sample_intervention.conference_id
+        assert params[2] == "2024-10-01"
+        assert params[3] == sample_intervention.participant
+        assert params[4] == sample_intervention.text
+        assert "Contexto: Conferencia del 2024-10-01" in params[5]
+        assert params[6] == sample_intervention.url
+        assert params[7] == [0.5] * 768
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
@@ -354,6 +361,7 @@ class TestEnrichInterventions:
                 text=f"Texto {i}",
                 pregunta_activa="",
                 chunk_index=i,
+                url="https://example.com",
             )
             for i in range(3)
         ]

@@ -1,15 +1,25 @@
+import hashlib
 from datetime import UTC, datetime
 
 import typer
 
 from lakehouse.config import Settings
 from lakehouse.db.duckdb_conn import get_connection
-from lakehouse.db.merge import ensure_silver_tables, insert_dlq_record, merge_intervention
+from lakehouse.db.merge import (
+    ensure_silver_tables,
+    insert_dlq_record,
+    merge_conference,
+    merge_intervention,
+)
 from lakehouse.log_config import get_logger
 from lakehouse.pipeline.enrichment import enrich_interventions, ensure_gold_tables
 from lakehouse.pipeline.evaluate_rag import evaluate_rag as evaluate_rag_fn
 from lakehouse.pipeline.ingestion import Ingestor
-from lakehouse.pipeline.parsing import parse_html_to_interventions
+from lakehouse.pipeline.parsing import (
+    build_conference_record,
+    parse_conference_date,
+    parse_html_to_interventions,
+)
 from lakehouse.schemas.silver import DLQRejectRecord, InterventionRecord
 
 logger = get_logger(__name__, layer="cli")
@@ -58,12 +68,31 @@ def parse(
     total_dlq = 0
     logger.info("Iniciando parseo Silver", html_count=len(rows))
     for source_url, raw_html in rows:
-        date = conference_date or "desconocida"
+        date = conference_date or parse_conference_date(raw_html, source_url)
+        if date is None:
+            conference_id = hashlib.sha256(source_url.encode()).hexdigest()[:20]
+            dlq = DLQRejectRecord(
+                source_record_id=conference_id,
+                rejection_reason="unknown_date",
+                raw_data=source_url,
+            )
+            if not dry_run:
+                insert_dlq_record(conn, dlq)
+            total_dlq += 1
+            logger.warning("Fecha desconocida, articulo enviado a DLQ", source_url=source_url)
+            continue
         records = parse_html_to_interventions(
             raw_html=raw_html,
             source_url=source_url,
             conference_date=date,
         )
+        if not dry_run:
+            conference = build_conference_record(
+                source_url=source_url,
+                conference_date=date,
+                raw_html=raw_html,
+            )
+            merge_conference(conn, conference)
         for record in records:
             if not dry_run:
                 if isinstance(record, DLQRejectRecord):
@@ -94,8 +123,8 @@ def enrich(
     settings = Settings()
     conn = get_connection(settings.ducklake_data_path)
     rows = conn.execute(
-        "SELECT intervention_key, conference_id, participant, text, pregunta_activa, chunk_index "
-        "FROM silver.interventions"
+        "SELECT i.intervention_key, i.conference_id, i.participant, i.text, i.pregunta_activa, i.chunk_index, i.url "
+        "FROM silver.interventions i"
     ).fetchall()
     conn.close()
 
@@ -107,6 +136,7 @@ def enrich(
             text=r[3],
             pregunta_activa=r[4],
             chunk_index=r[5],
+            url=r[6],
         )
         for r in rows
     ]

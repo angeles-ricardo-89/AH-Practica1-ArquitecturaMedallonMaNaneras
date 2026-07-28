@@ -3,7 +3,7 @@ from fastapi import APIRouter
 
 from lakehouse.config import Settings
 from lakehouse.log_config import get_logger
-from lakehouse.schemas.chat import ChatRequest, ChatResponse, SourceChunk
+from lakehouse.schemas.chat import ChatRequest, ChatResponse
 from lakehouse.services.context_builder import ContextBuilder
 from lakehouse.services.rag_search import search_sources
 from lakehouse.services.token_estimator import estimate_tokens

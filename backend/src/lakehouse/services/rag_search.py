@@ -70,9 +70,7 @@ def _embed_query(
                 )
                 time.sleep(delay)
 
-    raise ConnectionError(
-        f"Ollama embedding failed after {max_retries} retries"
-    ) from last_error
+    raise ConnectionError(f"Ollama embedding failed after {max_retries} retries") from last_error
 
 
 def search_gold_corpus(
@@ -98,7 +96,7 @@ def search_gold_corpus(
             cur = conn.cursor()
             cur.execute(
                 """
-                SELECT conference_date, participant, chunk_text,
+                SELECT conference_date, conference_id, participant, chunk_text, url,
                        1 - (embedding <=> %s::vector) AS similarity
                 FROM gold.rag_corpus
                 ORDER BY embedding <=> %s::vector
@@ -113,12 +111,16 @@ def search_gold_corpus(
 
     results = []
     for row in rows:
-        results.append({
-            "conference_date": str(row[0]),
-            "participant": row[1],
-            "chunk_text": row[2],
-            "similarity": float(row[3]),
-        })
+        results.append(
+            {
+                "conference_date": str(row[0]),
+                "conference_id": row[1],
+                "participant": row[2],
+                "chunk_text": row[3],
+                "url": row[4],
+                "similarity": float(row[5]),
+            }
+        )
 
     logger.info("Busqueda completada", query=query[:100], resultados=len(results))
     return results
@@ -129,9 +131,11 @@ def search_sources(query: str, top_k: int) -> list[SourceChunk]:
     return [
         SourceChunk(
             conference_date=r["conference_date"],
+            conference_id=r["conference_id"],
             participant=r["participant"],
             chunk_text=r["chunk_text"],
             similarity=r["similarity"],
+            conference_url=r["url"],
         )
         for r in results
     ]

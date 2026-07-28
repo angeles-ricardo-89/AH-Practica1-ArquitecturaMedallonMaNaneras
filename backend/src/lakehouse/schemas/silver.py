@@ -19,6 +19,7 @@ class InterventionRecord(BaseModel):
     text: str = Field(...)
     pregunta_activa: str = Field(default="")
     chunk_index: int = Field(..., ge=0)
+    url: str = Field(default="")
 
     ingested_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
