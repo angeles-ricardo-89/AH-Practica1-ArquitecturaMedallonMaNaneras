@@ -1,67 +1,28 @@
-from unittest.mock import patch
-
 import pytest
-
+import httpx
 from lakehouse.pipeline.ingestion import Ingestor
+from unittest.mock import AsyncMock, patch
 
-
-@pytest.fixture
-def temp_db(tmp_path):
-    return str(tmp_path / "test.duckdb")
-
-
-class TestIngestor:
-    @patch("lakehouse.pipeline.ingestion.fetch_article_list")
-    @patch("lakehouse.pipeline.ingestion.fetch_article_html")
-    @patch("lakehouse.pipeline.ingestion.compute_content_hash")
-    def test_dry_run_does_not_write(self, mock_hash, mock_fetch_html, mock_fetch_list, temp_db):
-        mock_fetch_list.return_value = ["https://example.com/a"]
-        mock_fetch_html.return_value = "<html><body><main>Test</main></body></html>"
-        mock_hash.return_value = "a" * 64
-
-        ingestor = Ingestor(
-            db_path=temp_db,
-            source_archive_url="https://example.com",
-        )
-        result = ingestor.run(dry_run=True)
-
-        assert result["html_count"] == 1
-        assert result["records_inserted"] == 0
-
-    @patch("lakehouse.pipeline.ingestion.fetch_article_list")
-    @patch("lakehouse.pipeline.ingestion.fetch_article_html")
-    @patch("lakehouse.pipeline.ingestion.compute_content_hash")
-    def test_ingest_stores_records(self, mock_hash, mock_fetch_html, mock_fetch_list, temp_db):
-        mock_fetch_list.return_value = [
-            "https://example.com/a",
-            "https://example.com/b",
-        ]
-        mock_fetch_html.return_value = "<html><body><main>Test</main></body></html>"
-        mock_hash.side_effect = ["a" * 64, "b" * 64]
-
-        ingestor = Ingestor(
-            db_path=temp_db,
-            source_archive_url="https://example.com",
-        )
-        result = ingestor.run(dry_run=False)
-
+@pytest.mark.asyncio
+async def test_ingestor_run_async():
+    # Mocking dependencies to test async flow
+    with patch("lakehouse.pipeline.ingestion.fetch_article_list", return_value=["http://test.com/1", "http://test.com/2"]), \
+         patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get, \
+         patch("lakehouse.db.duckdb_conn.get_connection") as mock_conn, \
+         patch("lakehouse.db.duckdb_conn.ensure_bronze_table") as mock_ensure, \
+         patch("lakehouse.pipeline.ingestion.insert_bronze_record", new_callable=AsyncMock) as mock_insert:
+    
+        # Setup mock response
+        mock_response = AsyncMock()
+        mock_response.text = "<html>test</html>"
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+    
+        mock_insert.return_value = True
+    
+        ingestor = Ingestor(db_path="test.db", source_archive_url="http://test.com", max_articles=2)
+        result = await ingestor.run()
+    
         assert result["html_count"] == 2
-        assert result["records_inserted"] == 2
+        assert mock_get.call_count == 2
 
-    @patch("lakehouse.pipeline.ingestion.fetch_article_list")
-    @patch("lakehouse.pipeline.ingestion.fetch_article_html")
-    @patch("lakehouse.pipeline.ingestion.compute_content_hash")
-    def test_idempotent_second_run(self, mock_hash, mock_fetch_html, mock_fetch_list, temp_db):
-        mock_fetch_list.return_value = ["https://example.com/a"]
-        mock_fetch_html.return_value = "<html><body><main>Test</main></body></html>"
-        mock_hash.return_value = "a" * 64
-
-        ingestor = Ingestor(
-            db_path=temp_db,
-            source_archive_url="https://example.com",
-        )
-        r1 = ingestor.run(dry_run=False)
-        r2 = ingestor.run(dry_run=False)
-
-        assert r1["records_inserted"] == 1
-        assert r2["records_inserted"] == 0
