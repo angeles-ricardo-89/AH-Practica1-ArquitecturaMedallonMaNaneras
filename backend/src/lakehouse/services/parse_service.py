@@ -1,14 +1,23 @@
 import hashlib
 
 from lakehouse.config import Settings
-from lakehouse.db.merge import ensure_silver_tables, insert_dlq_record, merge_conference, merge_intervention
+from lakehouse.db.merge import (
+    ensure_silver_tables,
+    insert_dlq_record,
+    merge_conference,
+    merge_intervention,
+)
 from lakehouse.log_config import get_logger
-from lakehouse.pipeline.parsing import build_conference_record, parse_conference_date, parse_html_to_interventions
+from lakehouse.pipeline.parsing import (
+    build_conference_record,
+    parse_conference_date,
+    parse_html_to_interventions,
+)
 from lakehouse.schemas.silver import DLQRejectRecord
 
 
 class ParseService:
-    def __init__(self, settings: Settings, duckdb_conn):
+    def __init__(self, settings: Settings, duckdb_conn) -> None:
         self._settings = settings
         self._conn = duckdb_conn
         self._logger = get_logger(__name__, layer="service")

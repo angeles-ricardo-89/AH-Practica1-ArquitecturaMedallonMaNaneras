@@ -5,7 +5,7 @@ from lakehouse.pipeline.ingestion import Ingestor
 
 
 class IngestService:
-    def __init__(self, settings: Settings, duckdb_conn):
+    def __init__(self, settings: Settings, duckdb_conn) -> None:
         self._settings = settings
         self._conn = duckdb_conn
         self._logger = get_logger(__name__, layer="service")

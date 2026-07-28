@@ -52,7 +52,7 @@ def configure_logging(level: int = logging.INFO) -> None:
             structlog.processors.StackInfoRenderer(),
             _pipeline_file_processor,
             structlog.dev.ConsoleRenderer(colors=True),
-        
+
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         context_class=dict,

@@ -21,7 +21,7 @@ import duckdb
 
 def get_duckdb_connection(
     catalog_dsn: str,
-    data_path: str = "/data/lakehouse/ducklake_files",
+    data_path: str = "/data/lakehouse/ducklake_files.duckdb",
 ) -> duckdb.DuckDBPyConnection:
     conn = duckdb.connect()
     conn.execute("INSTALL postgres; LOAD postgres;")

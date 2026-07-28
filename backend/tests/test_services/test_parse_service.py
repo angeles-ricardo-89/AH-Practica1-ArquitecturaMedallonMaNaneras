@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, patch
 
 from lakehouse.config import Settings
+from lakehouse.schemas.silver import InterventionRecord
 from lakehouse.services.parse_service import ParseService
-from lakehouse.schemas.silver import DLQRejectRecord, InterventionRecord
 
 
 class TestParseService:

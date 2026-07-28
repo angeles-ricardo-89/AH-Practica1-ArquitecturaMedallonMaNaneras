@@ -86,8 +86,9 @@ def search_gold_corpus(
     try:
         query_embedding = _embed_query(query, settings.ollama_base_url, settings.ollama_embed_model)
     except (ConnectionError, ValueError) as e:
-        logger.error("No se pudo generar embedding para la consulta", error=str(e))
+        logger.exception("No se pudo generar embedding para la consulta")
         raise RuntimeError("Search unavailable: embedding generation failed") from e
+
 
     embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
@@ -97,7 +98,7 @@ def search_gold_corpus(
             cur.execute(
                 """
                 SELECT conference_date, conference_id, participant, chunk_text, url,
-                       1 - (embedding <=> %s::vector) AS similarity
+                   1 - (embedding <=> %s::vector) AS similarity
                 FROM gold.rag_corpus
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
@@ -106,8 +107,10 @@ def search_gold_corpus(
             )
             rows = cur.fetchall()
     except Exception as e:
-        logger.error("Error al consultar pgvector", error=str(e))
+        logger.exception("Error al consultar pgvector")
         raise RuntimeError("Search unavailable: database query failed") from e
+
+
 
     results = []
     for row in rows:

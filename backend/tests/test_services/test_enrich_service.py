@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 from lakehouse.config import Settings
 from lakehouse.services.enrich_service import EnrichService
-from lakehouse.schemas.silver import InterventionRecord
 
 
 class TestEnrichService:

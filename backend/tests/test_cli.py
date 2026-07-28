@@ -3,7 +3,6 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from lakehouse.cli import app
-import sys
 
 runner = CliRunner()
 

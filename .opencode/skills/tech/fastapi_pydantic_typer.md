@@ -109,7 +109,7 @@ class Settings(BaseSettings):
     postgres_host: str = "postgres"
     postgres_db: str = "mananeras"
     ducklake_catalog: str = "postgres"
-    ducklake_data_path: str = "/data/lakehouse/ducklake_files"
+    ducklake_data_path: str = "/data/lakehouse/ducklake_files.duckdb"
     ollama_base_url: str = "http://localhost:11434"
     ollama_embed_model: str = "nomic-embed-text"
     llamacpp_base_url: str = "http://localhost:9200/v1"

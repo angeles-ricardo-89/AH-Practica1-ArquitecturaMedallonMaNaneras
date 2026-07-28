@@ -86,7 +86,7 @@ SOURCE_ARCHIVE_URL=[https://www.gob.mx/presidencia/es/archivo/articulos](https:/
 POSTGRES_HOST=postgres
 POSTGRES_DB=mananeras
 DUCKLAKE_CATALOG=postgres
-DUCKLAKE_DATA_PATH=/data/lakehouse/ducklake_files
+DUCKLAKE_DATA_PATH=/data/lakehouse/ducklake_files.duckdb
 
 # Motores Duales
 OLLAMA_BASE_URL=http://localhost:11434

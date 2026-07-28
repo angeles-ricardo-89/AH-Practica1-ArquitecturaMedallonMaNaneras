@@ -7,7 +7,7 @@ from lakehouse.schemas.silver import InterventionRecord
 
 
 class EnrichService:
-    def __init__(self, settings: Settings, duckdb_conn, pg_conn_str: str):
+    def __init__(self, settings: Settings, duckdb_conn, pg_conn_str: str) -> None:
         self._settings = settings
         self._conn = duckdb_conn
         self._pg_conn_str = pg_conn_str
@@ -45,11 +45,10 @@ class EnrichService:
             intervenciones=len(interventions), conference_date=date,
         )
         ensure_gold_tables(self._pg_conn_str)
-        result = enrich_interventions(
+        return enrich_interventions(
             interventions=interventions,
             conference_date=date,
             pg_conn_str=self._pg_conn_str,
             ollama_base_url=self._settings.ollama_base_url,
             ollama_model=self._settings.ollama_embed_model,
         )
-        return result
