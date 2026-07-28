@@ -46,3 +46,5 @@ backend/uv.lock
 
 # pnpm lock (generated)
 frontend/pnpm-lock.yaml
+
+backend/logs/*
