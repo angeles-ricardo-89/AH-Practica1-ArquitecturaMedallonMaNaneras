@@ -1,13 +1,13 @@
 import json
-import logging
 import re
 from pathlib import Path
 
 import httpx
 
 from lakehouse.config import Settings
+from lakehouse.log_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, layer="qa")
 
 GOLDEN_DATASET_PATH = Path(__file__).resolve().parents[3] / "data" / "golden_dataset.json"
 
@@ -153,7 +153,7 @@ def evaluate_rag() -> dict:
     avg_relevance = sum(r["relevance"] for r in scored) / len(scored) if scored else 0.0
 
     output_path = (
-        Path(GOLDEN_DATASET_PATH).resolve().parent.parent
+        Path(GOLDEN_DATASET_PATH).resolve().parent
         / "lakehouse"
         / "logs"
         / "evaluate_rag_results.json"

@@ -24,6 +24,9 @@ dev = [
     "requests>=2.32",
 ]
 
+[tool.uv]
+package = true
+
 [tool.ruff]
 target-version = "py313"
 line-length = 100

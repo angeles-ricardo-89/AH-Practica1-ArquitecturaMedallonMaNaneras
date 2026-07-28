@@ -23,9 +23,10 @@ def ensure_silver_tables(conn: duckdb.DuckDBPyConnection) -> None:
             url VARCHAR NOT NULL
         )
     """)
+    conn.execute("CREATE SEQUENCE IF NOT EXISTS silver.dlq_seq")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS silver.dlq (
-            rejection_id INTEGER PRIMARY KEY,
+            rejection_id BIGINT PRIMARY KEY DEFAULT nextval('silver.dlq_seq'),
             source_record_id VARCHAR NOT NULL,
             rejection_reason VARCHAR NOT NULL,
             raw_data VARCHAR NOT NULL,

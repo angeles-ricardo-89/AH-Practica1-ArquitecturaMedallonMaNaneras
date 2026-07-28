@@ -63,11 +63,20 @@ class TestPipelineParse:
 
 
 class TestPipelineEnrich:
-    def test_enrich_dry_run(self):
+    @patch("lakehouse.cli.get_connection")
+    def test_enrich_dry_run(self, mock_conn):
+        mock_conn.return_value.execute.return_value.fetchall.return_value = []
         result = runner.invoke(app, ["pipeline", "enrich", "--dry-run"])
         assert result.exit_code == 0
 
-    def test_enrich_no_dry_run(self):
+    @patch("lakehouse.cli.get_connection")
+    @patch("lakehouse.cli.ensure_gold_tables")
+    @patch("lakehouse.cli.enrich_interventions")
+    def test_enrich_no_dry_run(self, mock_enrich_fn, mock_ensure, mock_conn):
+        mock_conn.return_value.execute.return_value.fetchall.return_value = [
+            ("key1", "conf1", "PARTICIPANTE", "texto", "pregunta", 0)
+        ]
+        mock_enrich_fn.return_value = {"embedded": 1, "failed": 0, "total": 1}
         result = runner.invoke(app, ["pipeline", "enrich"])
         assert result.exit_code == 0
 

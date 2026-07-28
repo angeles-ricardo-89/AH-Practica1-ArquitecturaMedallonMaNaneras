@@ -25,12 +25,14 @@ services:
     restart: unless-stopped
     volumes:
       - ./backend:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       APP_ENV: docker
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
-      OLLAMA_BASE_URL: http://ollama:11434
-      LLAMACPP_BASE_URL: http://llamacpp:9200/v1
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      LLAMACPP_BASE_URL: http://host.docker.internal:9200/v1
     depends_on:
       postgres:
         condition: service_healthy

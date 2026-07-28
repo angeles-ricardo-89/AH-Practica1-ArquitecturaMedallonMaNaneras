@@ -7,10 +7,16 @@ from typing import TYPE_CHECKING
 import httpx
 import psycopg
 
+from lakehouse.log_config import get_logger
+
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
+
 if TYPE_CHECKING:
     from lakehouse.schemas.silver import InterventionRecord
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, layer="gold")
+
 
 
 def build_embedding_payload(
@@ -129,18 +135,29 @@ def enrich_interventions(
     failed = 0
 
     if not interventions:
+        logger.info("No hay intervenciones para enriquecer")
         return {"total": 0, "embedded": 0, "failed": 0}
+
+    logger.info("Iniciando enriquecimiento Gold", total_intervenciones=total, modelo=ollama_model)
 
     with psycopg.connect(pg_conn_str) as conn:
         cur = conn.cursor()
-        for intervention in interventions:
+        for idx, intervention in enumerate(interventions):
             payload = build_embedding_payload(intervention, conference_date)
             try:
                 embedding = embed_text(payload, ollama_base_url, ollama_model)
+                logger.info(
+                    "Embedding generado para intervención %d/%d",
+                    idx + 1,
+                    total,
+                    intervention_key=intervention.intervention_key,
+                    participant=intervention.participant,
+                    dim=len(embedding),
+                )
             except (ConnectionError, ValueError):
                 logger.exception(
-                    "Failed to embed %s",
-                    intervention.intervention_key,
+                    "Error al generar embedding",
+                    intervention_key=intervention.intervention_key,
                 )
                 failed += 1
                 continue
@@ -164,10 +181,16 @@ def enrich_interventions(
                 )
             except psycopg.errors.UniqueViolation:
                 logger.warning(
-                    "Duplicate chunk_key %s, skipping",
-                    intervention.intervention_key,
+                    "Chunk duplicado en Gold, omitido",
+                    chunk_key=intervention.intervention_key,
                 )
             embedded += 1
         conn.commit()
+        logger.info(
+            "Enriquecimiento Gold completado",
+            embedded=embedded,
+            failed=failed,
+            total=total,
+        )
 
     return {"total": total, "embedded": embedded, "failed": failed}

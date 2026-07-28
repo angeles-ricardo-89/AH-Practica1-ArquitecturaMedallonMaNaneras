@@ -15,22 +15,22 @@ logs:
 
 # ─── Pipeline ─────────────────────────────────────────────
 pipeline-ingest:
-	cd backend && uv run python -m lakehouse pipeline ingest
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest
 
 pipeline-ingest-dry:
-	cd backend && uv run python -m lakehouse pipeline ingest --dry-run
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest --dry-run
 
 pipeline-parse:
-	cd backend && uv run python -m lakehouse pipeline parse
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline parse
 
 pipeline-enrich:
-	cd backend && uv run python -m lakehouse pipeline enrich
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline enrich
 
 pipeline-full:
-	cd backend && uv run python -m lakehouse pipeline ingest && uv run python -m lakehouse pipeline parse && uv run python -m lakehouse pipeline enrich
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest && PYTHONPATH=src uv run python -m lakehouse pipeline parse && PYTHONPATH=src uv run python -m lakehouse pipeline enrich
 
 evaluate-rag:
-	cd backend && uv run python -m lakehouse evaluate-rag
+	cd backend && PYTHONPATH=src uv run python -m lakehouse evaluate-rag
 
 # ─── Tests ────────────────────────────────────────────────
 test-backend:

@@ -1,14 +1,14 @@
-import logging
-
 import httpx
 from fastapi import APIRouter
 
 from lakehouse.config import Settings
+from lakehouse.log_config import get_logger
 from lakehouse.schemas.chat import ChatRequest, ChatResponse, SourceChunk
 from lakehouse.services.context_builder import ContextBuilder
+from lakehouse.services.rag_search import search_sources
 from lakehouse.services.token_estimator import estimate_tokens
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, layer="api")
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 SYSTEM_PROMPT = (
@@ -19,10 +19,6 @@ SYSTEM_PROMPT = (
 )
 
 
-def search_sources(query: str, top_k: int) -> list[SourceChunk]:
-    return []
-
-
 @router.post(
     "/",
     response_model=ChatResponse,
@@ -31,13 +27,20 @@ def search_sources(query: str, top_k: int) -> list[SourceChunk]:
 )
 def chat(request: ChatRequest) -> ChatResponse:
     settings = Settings()
+    logger.info(
+        "Chat request recibido",
+        query=request.query[:100],
+        top_k=request.top_k,
+    )
     sources = search_sources(request.query, request.top_k)
+    logger.info("Fuentes recuperadas para chat", source_count=len(sources))
     builder = ContextBuilder(max_context_tokens=settings.max_context_tokens)
-    context, _token_usage = builder.build(
+    context, token_usage = builder.build(
         query=request.query,
         system_prompt=SYSTEM_PROMPT,
         sources=sources,
     )
+    logger.info("Contexto construido para LLM", tokens_estimados=token_usage)
     try:
         with httpx.Client(timeout=60.0) as client:
             payload = {
@@ -59,8 +62,13 @@ def chat(request: ChatRequest) -> ChatResponse:
             completion_tokens = data.get("usage", {}).get(
                 "completion_tokens", estimate_tokens(answer)
             )
+            logger.info(
+                "Chat response generado",
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+            )
     except Exception as e:
-        logger.exception("llamacpp unavailable")
+        logger.exception("Backend LLM no disponible")
         raise RuntimeError("LLM backend unavailable") from e
     return ChatResponse(
         answer=answer,

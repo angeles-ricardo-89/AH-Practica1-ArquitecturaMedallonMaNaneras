@@ -1,10 +1,14 @@
 import hashlib
+import html as html_mod
 import re
 
+from lakehouse.log_config import get_logger
 from lakehouse.schemas.silver import DLQRejectRecord, InterventionRecord
 
+logger = get_logger(__name__, layer="silver")
+
 PARTICIPANT_RE = re.compile(
-    r"<strong>\s*([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)*?)\s*:</strong>\s*(.*?)</p>",
+    r"<strong>\s*([A-Za-zÀ-ÿ&;0-9#,]+(?:\s+[A-Za-zÀ-ÿ&;0-9#,]+)*?)\s*:</strong>\s*(.*?)</p>",
     re.DOTALL | re.IGNORECASE,
 )
 
@@ -28,6 +32,9 @@ def parse_html_to_interventions(
     conference_date: str,
 ) -> list[InterventionRecord | DLQRejectRecord]:
     conference_id = hashlib.sha256(source_url.encode()).hexdigest()[:20]
+    logger.info(
+        "Parseando HTML a intervenciones", source_url=source_url, conference_id=conference_id
+    )
 
     main_match = re.search(r"<main[^>]*>(.*?)</main>", raw_html, re.DOTALL | re.IGNORECASE)
     body = main_match.group(1) if main_match else raw_html
@@ -36,12 +43,15 @@ def parse_html_to_interventions(
     records: list[InterventionRecord | DLQRejectRecord] = []
     chunk_index = 0
 
-    for match in PARTICIPANT_RE.finditer(body):
+    body_decoded = html_mod.unescape(body)
+
+    for match in PARTICIPANT_RE.finditer(body_decoded):
         participant = match.group(1).strip().upper()
         raw_text = match.group(2)
 
         if participant == "PREGUNTA":
             pregunta_activa = _clean_html_text(raw_text)
+            logger.debug("Pregunta activa detectada", pregunta=pregunta_activa)
             continue
 
         clean_text = _clean_html_text(raw_text)
@@ -49,9 +59,14 @@ def parse_html_to_interventions(
             dlq = DLQRejectRecord(
                 source_record_id=f"{conference_id}_{chunk_index}",
                 rejection_reason="empty_after_clean",
-                raw_data=raw_text,
+                raw_data=raw_text or "[empty content]",
             )
             records.append(dlq)
+            logger.warning(
+                "Intervención enviada a DLQ: texto vacío tras limpieza",
+                participant=participant,
+                chunk_index=chunk_index,
+            )
             continue
 
         text_hash = hashlib.sha256(clean_text.encode()).hexdigest()[:6]
@@ -68,4 +83,10 @@ def parse_html_to_interventions(
         records.append(record)
         chunk_index += 1
 
+    logger.info(
+        "Parseo completado",
+        source_url=source_url,
+        interventions=len([r for r in records if not isinstance(r, DLQRejectRecord)]),
+        dlq=len([r for r in records if isinstance(r, DLQRejectRecord)]),
+    )
     return records

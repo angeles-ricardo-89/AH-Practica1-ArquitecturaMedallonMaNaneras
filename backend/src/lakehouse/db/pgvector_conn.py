@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import logging
+from lakehouse.log_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, layer="db")
 
 
 def get_pgvector_connection_string(

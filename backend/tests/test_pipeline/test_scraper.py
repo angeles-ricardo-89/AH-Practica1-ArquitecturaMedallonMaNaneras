@@ -6,10 +6,10 @@ SAMPLE_ARCHIVE_HTML = """
 <html><body>
 <div class="article-list">
   <article>
-    <a href="/presidencia/es/articulo/versiones-estenograficas-conferencia-matutina-2024-10-01">Conferencia 1 oct</a>
+    <a href="/presidencia/es/articulos/versiones-estenograficas-conferencia-matutina-2024-10-01">Conferencia 1 oct</a>
   </article>
   <article>
-    <a href="/presidencia/es/articulo/otra-conferencia-2024-10-02">Conferencia 2 oct</a>
+    <a href="/presidencia/es/articulos/otra-conferencia-2024-10-02">Conferencia 2 oct</a>
   </article>
 </div>
 </body></html>

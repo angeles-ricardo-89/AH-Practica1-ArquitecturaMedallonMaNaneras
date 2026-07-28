@@ -1,8 +1,18 @@
+from unittest.mock import patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 from lakehouse.main import app
 
 client = TestClient(app)
+
+
+@pytest.fixture
+def mock_search():
+    with patch("lakehouse.api.deps.search_gold_corpus") as mock:
+        mock.return_value = []
+        yield
 
 
 class TestHealth:
@@ -14,7 +24,7 @@ class TestHealth:
 
 
 class TestSearchEndpoint:
-    def test_search_valid_query(self):
+    def test_search_valid_query(self, mock_search):
         response = client.post("/search/", json={"query": "reforma energética"})
         assert response.status_code == 200
         data = response.json()
@@ -33,11 +43,11 @@ class TestSearchEndpoint:
         response = client.post("/search/", json={"query": "x" * 501})
         assert response.status_code == 422
 
-    def test_search_custom_top_k(self):
+    def test_search_custom_top_k(self, mock_search):
         response = client.post("/search/", json={"query": "salud", "top_k": 3})
         assert response.status_code == 200
 
-    def test_search_with_filters(self):
+    def test_search_with_filters(self, mock_search):
         response = client.post(
             "/search/",
             json={
@@ -47,7 +57,7 @@ class TestSearchEndpoint:
         )
         assert response.status_code == 200
 
-    def test_search_with_strategy_hnsw(self):
+    def test_search_with_strategy_hnsw(self, mock_search):
         response = client.post("/search/", json={"query": "test"})
         assert response.status_code == 200
         assert response.json()["strategy"] == "hnsw"
@@ -58,7 +68,7 @@ class TestSearchEndpoint:
         response = client.post("/search/", json={"query": "test", "top_k": 51})
         assert response.status_code == 422
 
-    def test_search_empty_results(self):
+    def test_search_empty_results(self, mock_search):
         response = client.post("/search/", json={"query": "xyz"})
         assert response.status_code == 200
         data = response.json()

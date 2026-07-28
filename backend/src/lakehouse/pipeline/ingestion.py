@@ -5,11 +5,14 @@ from lakehouse.db.duckdb_conn import (
     get_connection,
     insert_bronze_record,
 )
+from lakehouse.log_config import get_logger
 from lakehouse.pipeline.scraper import (
     compute_content_hash,
     fetch_article_html,
     fetch_article_list,
 )
+
+logger = get_logger(__name__, layer="bronze")
 
 
 class Ingestor:
@@ -25,12 +28,12 @@ class Ingestor:
 
     def run(self, dry_run: bool = False) -> dict:
         ingestion_run_id = datetime.now(UTC).strftime("run_%Y%m%d_%H%M%S")
-        article_urls = fetch_article_list(self.source_archive_url)
+        logger.info("Iniciando ingesta Bronze", run_id=ingestion_run_id)
 
-        if self.max_articles:
-            article_urls = article_urls[: self.max_articles]
-
+        article_urls = fetch_article_list(self.source_archive_url, max_articles=self.max_articles)
         html_count = len(article_urls)
+        logger.info("Artículos encontrados para descargar", cantidad=html_count)
+
         records_inserted = 0
 
         if not dry_run:
@@ -49,8 +52,17 @@ class Ingestor:
                 )
                 if inserted:
                     records_inserted += 1
+                    logger.info("Artículo insertado en Bronze", url=url, hash=content_hash)
+                else:
+                    logger.warning("Artículo duplicado, omitido", url=url, hash=content_hash)
 
             conn.close()
+            logger.info(
+                "Ingesta Bronze completada",
+                run_id=ingestion_run_id,
+                html_count=html_count,
+                records_inserted=records_inserted,
+            )
 
         return {
             "ingestion_run_id": ingestion_run_id,

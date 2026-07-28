@@ -21,10 +21,14 @@ def mock_llamacpp():
     mock_resp.status_code = 200
     mock_resp.json.return_value = response_data
 
-    with patch("lakehouse.api.routers.chat.httpx.Client") as mock_cls:
+    with (
+        patch("lakehouse.api.routers.chat.httpx.Client") as mock_cls,
+        patch("lakehouse.services.rag_search.search_gold_corpus") as mock_search,
+    ):
         mock_instance = MagicMock()
         mock_cls.return_value.__enter__.return_value = mock_instance
         mock_instance.post.return_value = mock_resp
+        mock_search.return_value = []
         yield
 
 
@@ -61,10 +65,14 @@ class TestChatEndpoint:
         assert resp.status_code == 422
 
     def test_chat_handles_llamacpp_unavailable(self) -> None:
-        with patch("lakehouse.api.routers.chat.httpx.Client") as mock_cls:
+        with (
+            patch("lakehouse.api.routers.chat.httpx.Client") as mock_cls,
+            patch("lakehouse.services.rag_search.search_gold_corpus") as mock_search,
+        ):
             mock_instance = MagicMock()
             mock_cls.return_value.__enter__.return_value = mock_instance
             mock_instance.post.side_effect = Exception("Connection refused")
+            mock_search.return_value = []
             resp = client.post("/chat/", json={"query": "test query"})
             assert resp.status_code == 503
 

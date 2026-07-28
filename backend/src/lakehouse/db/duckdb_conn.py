@@ -1,7 +1,10 @@
+from pathlib import Path
+
 import duckdb
 
 
 def get_connection(db_path: str) -> duckdb.DuckDBPyConnection:
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     return duckdb.connect(db_path)
 
 
