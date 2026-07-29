@@ -1,5 +1,4 @@
 from pathlib import Path
-
 import duckdb
 
 
@@ -29,13 +28,18 @@ def insert_bronze_record(
     raw_html: str,
     content_hash: str,
 ) -> bool:
-    before = conn.execute("SELECT COUNT(*) FROM bronze.raw_html").fetchall()[0][0]
+    # Use fetchone() which is more appropriate for single-row aggregation results
+    res_before = conn.execute("SELECT COUNT(*) FROM bronze.raw_html").fetchone()
+    before = res_before[0] if res_before else 0
+
     conn.execute(
         """
         INSERT OR IGNORE INTO bronze.raw_html (ingestion_run_id, source_url, raw_html, content_hash)
         VALUES (?, ?, ?, ?)
-    """,
+        """,
         (ingestion_run_id, source_url, raw_html, content_hash),
     )
-    after = conn.execute("SELECT COUNT(*) FROM bronze.raw_html").fetchall()[0][0]
+    
+    res_after = conn.execute("SELECT COUNT(*) FROM bronze.raw_html").fetchone()
+    after = res_after[0] if res_after else 0
     return after > before

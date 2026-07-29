@@ -22,8 +22,15 @@ _MESES = {
     "diciembre": 12,
 }
 
+# PARTICIPANT_RE = re.compile(
+#     r"<strong>\s*([A-Za-zÀ-ÿ&;0-9#,]+(?:\s+[A-Za-zÀ-ÿ&;0-9#,]+)*?)\s*:</strong>\s*(.*?)</p>",
+#     re.DOTALL | re.IGNORECASE,
+# )
+
+
+
 PARTICIPANT_RE = re.compile(
-    r"<strong>\s*([A-Za-zÀ-ÿ&;0-9#,]+(?:\s+[A-Za-zÀ-ÿ&;0-9#,]+)*?)\s*:</strong>\s*(.*?)</p>",
+    r"<strong>\s*([A-Za-zÀ-ÿ&;0-9#,]+(?:\s+[A-Za-zÀ-ÿ&;0-9#,]+)*?)\s*:</strong>\s*(.+?)</p>",
     re.DOTALL | re.IGNORECASE,
 )
 
@@ -109,7 +116,7 @@ def parse_html_to_interventions(
 
         if participant == "PREGUNTA":
             pregunta_activa = _clean_html_text(raw_text)
-            logger.debug("Pregunta activa detectada", pregunta=pregunta_activa)
+            logger.info("Pregunta activa detectada", pregunta=pregunta_activa)
             continue
 
         clean_text = _clean_html_text(raw_text)

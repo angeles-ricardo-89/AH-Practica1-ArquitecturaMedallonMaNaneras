@@ -55,6 +55,9 @@ class ParseService:
                     source_url=source_url, conference_date=date, raw_html=raw_html,
                 )
                 merge_conference(self._conn, conference)
+                self._logger.info(
+                    "Registro de conferencia insertado", conference_id=conference.conference_id
+                )
             for record in records:
                 if not dry_run:
                     if isinstance(record, DLQRejectRecord):

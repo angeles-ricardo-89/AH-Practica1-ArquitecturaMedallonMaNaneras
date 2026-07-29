@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from typer.testing import CliRunner
 
@@ -12,7 +12,7 @@ class TestPipelineIngest:
     @patch("lakehouse.cli.get_connection")
     def test_ingest_dry_run(self, mock_conn, mock_svc_cls):
         mock_svc = mock_svc_cls.return_value
-        mock_svc.run.return_value = {"html_count": 5, "records_inserted": 0}
+        mock_svc.run = AsyncMock(return_value={"html_count": 5, "records_inserted": 0})
         result = runner.invoke(app, ["pipeline", "ingest", "--dry-run"])
         assert result.exit_code == 0
         mock_svc.run.assert_called_once_with(dry_run=True, max_articles=None)
@@ -21,7 +21,7 @@ class TestPipelineIngest:
     @patch("lakehouse.cli.get_connection")
     def test_ingest_no_dry_run(self, mock_conn, mock_svc_cls):
         mock_svc = mock_svc_cls.return_value
-        mock_svc.run.return_value = {"html_count": 5, "records_inserted": 5}
+        mock_svc.run = AsyncMock(return_value={"html_count": 5, "records_inserted": 5})
         result = runner.invoke(app, ["pipeline", "ingest"])
         assert result.exit_code == 0
         mock_svc.run.assert_called_once_with(dry_run=False, max_articles=None)

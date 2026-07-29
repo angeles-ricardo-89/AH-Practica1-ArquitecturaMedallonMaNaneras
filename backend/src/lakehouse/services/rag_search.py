@@ -131,6 +131,7 @@ def search_gold_corpus(
 
 def search_sources(query: str, top_k: int) -> list[SourceChunk]:
     results = search_gold_corpus(query, top_k)
+    logger.info("Busqueda de fuentes completada", query=query[:100], resultados=len(results))
     return [
         SourceChunk(
             conference_date=r["conference_date"],

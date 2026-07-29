@@ -1,5 +1,5 @@
+import asyncio
 import typer
-
 from lakehouse.config import Settings
 from lakehouse.db.duckdb_conn import get_connection
 from lakehouse.log_config import get_logger
@@ -22,7 +22,7 @@ def ingest(
     settings = Settings()
     conn = get_connection(settings.ducklake_data_path)
     service = IngestService(settings=settings, duckdb_conn=conn)
-    result = service.run(dry_run=dry_run, max_articles=max_articles)
+    result = asyncio.run(service.run(dry_run=dry_run, max_articles=max_articles))
     if dry_run:
         typer.echo(f"Simulacion: {result['html_count']} articulos encontrados")
     else:
@@ -85,6 +85,7 @@ def evaluate_rag() -> None:
         f"fidelidad={result['avg_fidelity']}%, "
         f"relevancia={result['avg_relevance']}%"
     )
+
 
 if __name__ == "__main__":
     app()
