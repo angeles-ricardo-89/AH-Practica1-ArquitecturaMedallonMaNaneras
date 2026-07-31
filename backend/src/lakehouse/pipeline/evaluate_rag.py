@@ -1,6 +1,7 @@
 import json
 import re
 from pathlib import Path
+from typing import NotRequired, TypedDict
 
 import httpx
 
@@ -17,6 +18,16 @@ JUDGE_SYSTEM_PROMPT = (
     "represente el porcentaje de fidelidad (qué tan fiel es a la referencia, "
     "sin alucinaciones ni información inventada)."
 )
+
+
+class EvalResult(TypedDict):
+    id: int
+    question: str
+    answer: str
+    fidelity: float
+    relevance: float
+    error: NotRequired[str]
+
 
 RELEVANCE_JUDGE_PROMPT = (
     "Eres un juez de relevancia. Evalúa qué tan relevante es la respuesta generada "
@@ -88,7 +99,7 @@ def evaluate_rag() -> dict:
 
     golden = json.loads(GOLDEN_DATASET_PATH.read_text())
 
-    results = []
+    results: list[EvalResult] = []
     reporter = ProgressReporter(total=len(golden), label="qa")
     for idx, item in enumerate(golden):
         qid = item["id"]
