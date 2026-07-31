@@ -74,3 +74,29 @@ class TestPipelineEnrich:
         result = runner.invoke(app, ["pipeline", "enrich"])
         assert result.exit_code == 0
         mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None)
+
+
+class TestEvaluateRagCommand:
+    @patch("lakehouse.cli.evaluate_rag_fn")
+    def test_evaluate_rag_success(self, mock_eval):
+        mock_eval.return_value = {
+            "status": "completed",
+            "total": 3,
+            "avg_fidelity": 95.0,
+            "avg_relevance": 90.0,
+        }
+        result = runner.invoke(app, ["evaluate-rag"])
+        assert result.exit_code == 0
+        assert "RAG Evaluation: 3 preguntas" in result.output
+        assert "fidelidad=95.0%" in result.output
+        assert "relevancia=90.0%" in result.output
+
+    @patch("lakehouse.cli.evaluate_rag_fn")
+    def test_evaluate_rag_error(self, mock_eval):
+        mock_eval.return_value = {
+            "status": "error",
+            "message": "Golden dataset not found",
+        }
+        result = runner.invoke(app, ["evaluate-rag"])
+        assert result.exit_code == 1
+        assert "RAG Evaluation failed: Golden dataset not found" in result.output

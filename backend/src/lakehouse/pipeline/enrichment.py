@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import httpx
 import psycopg
 
-from lakehouse.log_config import get_logger
+from lakehouse.log_config import ProgressReporter, get_logger
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -134,7 +134,7 @@ def ensure_gold_tables(conn_str: str) -> None:
 
 def enrich_interventions(
     interventions: list[InterventionRecord],
-    conference_date: str,
+    conference_date: str | None,
     pg_conn_str: str,
     ollama_base_url: str,
     ollama_model: str,
@@ -151,8 +151,18 @@ def enrich_interventions(
 
     with psycopg.connect(pg_conn_str) as conn:
         cur = conn.cursor()
+        reporter = ProgressReporter(total=total, label="gold")
         for idx, intervention in enumerate(interventions):
-            payload = build_embedding_payload(intervention, conference_date)
+            reporter.update(idx + 1)
+            effective_date = conference_date or intervention.conference_date
+            if not effective_date:
+                logger.error(
+                    "Intervención sin fecha de conferencia, omitida",
+                    intervention_key=intervention.intervention_key,
+                )
+                failed += 1
+                continue
+            payload = build_embedding_payload(intervention, effective_date)
             try:
                 embedding = embed_text(payload, ollama_base_url, ollama_model)
                 logger.info(
@@ -177,12 +187,16 @@ def enrich_interventions(
                         INSERT INTO gold.rag_corpus
                             (chunk_key, conference_id, conference_date, participant, chunk_text, payload, url, embedding)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (chunk_key) DO NOTHING
+                        ON CONFLICT (chunk_key) DO UPDATE SET
+                            conference_id = EXCLUDED.conference_id,
+                            conference_date = EXCLUDED.conference_date,
+                            payload = EXCLUDED.payload,
+                            url = EXCLUDED.url
                         """,
                     (
                         intervention.intervention_key,
                         intervention.conference_id,
-                        conference_date,
+                        effective_date,
                         intervention.participant,
                         intervention.text,
                         payload,
@@ -196,6 +210,7 @@ def enrich_interventions(
                     chunk_key=intervention.intervention_key,
                 )
             embedded += 1
+        reporter.finish()
         conn.commit()
         logger.info(
             "Enriquecimiento Gold completado",

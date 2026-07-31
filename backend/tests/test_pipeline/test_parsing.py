@@ -6,7 +6,7 @@ from lakehouse.pipeline.parsing import (
     parse_conference_date,
     parse_html_to_interventions,
 )
-from lakehouse.schemas.silver import ConferenceRecord, InterventionRecord
+from lakehouse.schemas.silver import ConferenceRecord, DLQRejectRecord, InterventionRecord
 
 SAMPLE_HTML = """
 <html><body><main>
@@ -26,6 +26,21 @@ class TestParseHtml:
         )
         interventions = [r for r in result if isinstance(r, InterventionRecord)]
         assert len(interventions) == 2
+
+    def test_empty_content_sends_to_dlq(self):
+        html = """
+        <html><body><main>
+        <p><strong>PRESIDENTA:</strong><br></p>
+        </main></body></html>
+        """
+        result = parse_html_to_interventions(
+            raw_html=html,
+            source_url="https://example.com/a",
+            conference_date="2024-10-01",
+        )
+        dlq = [r for r in result if isinstance(r, DLQRejectRecord)]
+        assert len(dlq) == 1
+        assert dlq[0].rejection_reason == "empty_after_clean"
 
     def test_detects_participant_names(self):
         result = parse_html_to_interventions(

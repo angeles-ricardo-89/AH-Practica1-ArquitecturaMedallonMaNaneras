@@ -1,8 +1,10 @@
 import asyncio
+
 from lakehouse.config import Settings
 from lakehouse.db.duckdb_conn import ensure_bronze_table
 from lakehouse.log_config import get_logger
 from lakehouse.pipeline.ingestion import Ingestor
+
 
 class IngestService:
     def __init__(self, settings: Settings, duckdb_conn) -> None:
@@ -14,7 +16,7 @@ class IngestService:
         self._logger.info("Ejecutando ingesta Bronze", dry_run=dry_run)
         if not dry_run:
             await asyncio.to_thread(ensure_bronze_table, self._conn)
-            
+
         ingestor = Ingestor(
             db_path=self._settings.ducklake_data_path,
             source_archive_url=self._settings.source_archive_url,

@@ -15,6 +15,27 @@ SAMPLE_ARCHIVE_HTML = """
 </body></html>
 """
 
+PAGINATED_ARCHIVE_HTML = """
+<html><body>
+<a href="/presidencia/es/articulos/conf-2024-10-01">Conferencia 1</a>
+<a href="/presidencia/es/articulos/conf-2024-10-02">Conferencia 2</a>
+<a href="?page=2\\"">Siguiente</a>
+</body></html>
+"""
+
+PAGE1_ONE_ARTICLE_HTML = """
+<html><body>
+<a href="/presidencia/es/articulos/conf-2024-10-01">Conferencia 1</a>
+<a href="?page=2\\"">Siguiente</a>
+</body></html>
+"""
+
+PAGE_TWO_HTML = """
+<html><body>
+<a href="/presidencia/es/articulos/conf-2024-10-03">Conferencia 3</a>
+</body></html>
+"""
+
 
 class TestFetchArticleList:
     @patch("lakehouse.pipeline.scraper.httpx.Client")
@@ -38,6 +59,53 @@ class TestFetchArticleList:
 
         urls = fetch_article_list("https://example.com/empty")
         assert urls == []
+
+    @patch("lakehouse.pipeline.scraper.httpx.Client")
+    def test_paginates_multiple_pages(self, mock_client):
+        resp1 = Mock(text=PAGINATED_ARCHIVE_HTML)
+        resp1.raise_for_status = Mock()
+        resp2 = Mock(text=PAGE_TWO_HTML)
+        resp2.raise_for_status = Mock()
+        client = mock_client.return_value.__enter__.return_value
+        client.get.side_effect = [resp1, resp2]
+
+        urls = fetch_article_list("https://www.gob.mx/presidencia/es/archivo/articulos")
+
+        assert len(urls) == 3
+        assert client.get.call_count == 2
+        assert any("conf-2024-10-03" in u for u in urls)
+
+    @patch("lakehouse.pipeline.scraper.httpx.Client")
+    def test_max_articles_stops_after_first_page(self, mock_client):
+        mock_resp = Mock(text=SAMPLE_ARCHIVE_HTML)
+        mock_resp.raise_for_status = Mock()
+        client = mock_client.return_value.__enter__.return_value
+        client.get.return_value = mock_resp
+
+        urls = fetch_article_list(
+            "https://www.gob.mx/presidencia/es/archivo/articulos",
+            max_articles=1,
+        )
+
+        assert len(urls) == 1
+        assert client.get.call_count == 1
+
+    @patch("lakehouse.pipeline.scraper.httpx.Client")
+    def test_max_articles_stops_during_pagination(self, mock_client):
+        resp1 = Mock(text=PAGE1_ONE_ARTICLE_HTML)
+        resp1.raise_for_status = Mock()
+        resp2 = Mock(text=PAGE_TWO_HTML)
+        resp2.raise_for_status = Mock()
+        client = mock_client.return_value.__enter__.return_value
+        client.get.side_effect = [resp1, resp2]
+
+        urls = fetch_article_list(
+            "https://www.gob.mx/presidencia/es/archivo/articulos",
+            max_articles=2,
+        )
+
+        assert len(urls) == 2
+        assert client.get.call_count == 2
 
 
 class TestFetchArticleHtml:

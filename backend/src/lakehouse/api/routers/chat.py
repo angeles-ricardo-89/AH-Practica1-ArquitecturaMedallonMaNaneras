@@ -49,7 +49,7 @@ def chat(request: ChatRequest) -> ChatResponse:
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": context},
                 ],
-                "max_tokens": 1024,
+                "max_tokens": 2048,
             }
             resp = client.post(
                 f"{settings.llamacpp_base_url}/chat/completions",

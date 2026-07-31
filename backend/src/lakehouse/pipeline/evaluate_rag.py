@@ -5,7 +5,7 @@ from pathlib import Path
 import httpx
 
 from lakehouse.config import Settings
-from lakehouse.log_config import get_logger
+from lakehouse.log_config import ProgressReporter, get_logger
 
 logger = get_logger(__name__, layer="qa")
 
@@ -89,10 +89,12 @@ def evaluate_rag() -> dict:
     golden = json.loads(GOLDEN_DATASET_PATH.read_text())
 
     results = []
-    for item in golden:
+    reporter = ProgressReporter(total=len(golden), label="qa")
+    for idx, item in enumerate(golden):
         qid = item["id"]
         question = item["question"]
         reference = item["reference_answer"]
+        reporter.update(idx + 1)
 
         logger.info("Evaluating question %d: %s", qid, question[:60])
 
@@ -147,6 +149,7 @@ def evaluate_rag() -> dict:
             }
         )
 
+    reporter.finish()
     total = len(results)
     scored = [r for r in results if "error" not in r]
     avg_fidelity = sum(r["fidelity"] for r in scored) / len(scored) if scored else 0.0

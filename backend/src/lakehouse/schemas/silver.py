@@ -20,6 +20,7 @@ class InterventionRecord(BaseModel):
     pregunta_activa: str = Field(default="")
     chunk_index: int = Field(..., ge=0)
     url: str = Field(default="")
+    conference_date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
     ingested_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

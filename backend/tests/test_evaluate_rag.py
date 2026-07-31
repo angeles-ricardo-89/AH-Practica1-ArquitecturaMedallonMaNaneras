@@ -6,7 +6,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from lakehouse.config import Settings
 from lakehouse.pipeline.evaluate_rag import (
+    _call_chat,
+    _call_llamacpp,
     _parse_score,
     evaluate_rag,
 )
@@ -142,8 +145,10 @@ class TestEvaluateRag:
         assert result["total"] == 50
 
     @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    @patch("lakehouse.pipeline.evaluate_rag.logger")
     def test_evaluate_rag_handles_chat_failure(
         self,
+        mock_logger: MagicMock,
         mock_chat: MagicMock,
     ) -> None:
         mock_chat.side_effect = RuntimeError("Chat unavailable")
@@ -224,3 +229,82 @@ class TestParseScore:
 
     def test_parse_puntaje_prefix(self) -> None:
         assert _parse_score("puntaje: 76") == 76.0
+
+
+class TestCallFunctions:
+    @patch("lakehouse.pipeline.evaluate_rag.httpx.Client")
+    def test_call_llamacpp_returns_content(self, mock_client_class: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"choices": [{"message": {"content": "95"}}]}
+        mock_client.post.return_value = mock_response
+
+        result = _call_llamacpp(
+            prompt="Pregunta: x",
+            system_prompt="system",
+            settings=Settings(),
+        )
+
+        assert result == "95"
+        post_args, _ = mock_client.post.call_args
+        assert post_args[0] == "http://localhost:9200/v1/chat/completions"
+        assert mock_client.post.call_args.kwargs["json"]["model"] == "gemma4"
+
+    @patch("lakehouse.pipeline.evaluate_rag.httpx.Client")
+    def test_call_chat_returns_content(self, mock_client_class: MagicMock) -> None:
+        mock_client = MagicMock()
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Respuesta."}}]}
+        mock_client.post.return_value = mock_response
+
+        result = _call_chat(query="¿Hola?", settings=Settings())
+
+        assert result == "Respuesta."
+
+    def test_evaluate_rag_returns_error_when_golden_missing(self) -> None:
+        mock_path = MagicMock()
+        mock_path.exists.return_value = False
+        with patch("lakehouse.pipeline.evaluate_rag.GOLDEN_DATASET_PATH", mock_path):
+            result = evaluate_rag()
+
+        assert result["status"] == "error"
+        assert "not found" in result["message"]
+
+
+class TestEvaluateRagFailures:
+    @patch("lakehouse.pipeline.evaluate_rag.logger")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    def test_chat_failure_appends_error_results(
+        self,
+        mock_chat: MagicMock,
+        mock_logger: MagicMock,
+    ) -> None:
+        mock_chat.side_effect = RuntimeError("Chat unavailable")
+
+        result = evaluate_rag()
+
+        assert result["status"] == "completed"
+        assert result["failed"] == 50
+        assert all(r.get("error") == "chat_failed" for r in result["results"])
+
+    @patch("lakehouse.pipeline.evaluate_rag.logger")
+    @patch("lakehouse.pipeline.evaluate_rag._call_llamacpp")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    def test_judge_failure_uses_zero_scores(
+        self,
+        mock_chat: MagicMock,
+        mock_llamacpp: MagicMock,
+        mock_logger: MagicMock,
+    ) -> None:
+        mock_chat.return_value = "Respuesta."
+        mock_llamacpp.side_effect = RuntimeError("Judge unavailable")
+
+        result = evaluate_rag()
+
+        assert result["status"] == "completed"
+        assert result["failed"] == 0
+        for r in result["results"]:
+            assert r["fidelity"] == 0.0
+            assert r["relevance"] == 0.0

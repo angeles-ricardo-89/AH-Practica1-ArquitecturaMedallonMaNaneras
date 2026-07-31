@@ -1,5 +1,3 @@
-from datetime import UTC, datetime
-
 from lakehouse.config import Settings
 from lakehouse.log_config import get_logger
 from lakehouse.pipeline.enrichment import enrich_interventions, ensure_gold_tables
@@ -15,16 +13,25 @@ class EnrichService:
 
     def run(self, dry_run: bool = False, conference_date: str | None = None) -> dict:
         rows = self._conn.execute(
-            "SELECT intervention_key, conference_id, participant, text, "
-            "pregunta_activa, chunk_index, url "
-            "FROM silver.interventions"
+            """
+            SELECT i.intervention_key, i.conference_id, i.participant, i.text,
+                   i.pregunta_activa, i.chunk_index, i.url, c.date AS conference_date
+            FROM silver.interventions i
+            LEFT JOIN silver.conferences c ON c.conference_id = i.conference_id
+            """
         ).fetchall()
         self._conn.close()
 
         interventions = [
             InterventionRecord(
-                intervention_key=r[0], conference_id=r[1], participant=r[2],
-                text=r[3], pregunta_activa=r[4], chunk_index=r[5], url=r[6],
+                intervention_key=r[0],
+                conference_id=r[1],
+                participant=r[2],
+                text=r[3],
+                pregunta_activa=r[4],
+                chunk_index=r[5],
+                url=r[6],
+                conference_date=r[7],
             )
             for r in rows
         ]
@@ -35,19 +42,20 @@ class EnrichService:
 
         if dry_run:
             self._logger.info(
-                "Simulacion: intervenciones listas para Gold", cantidad=len(interventions),
+                "Simulacion: intervenciones listas para Gold",
+                cantidad=len(interventions),
             )
             return {"embedded": 0, "failed": 0, "total": len(interventions)}
 
-        date = conference_date or str(datetime.now(UTC).date())
         self._logger.info(
             "Iniciando enriquecimiento Gold",
-            intervenciones=len(interventions), conference_date=date,
+            intervenciones=len(interventions),
+            conference_date=conference_date,
         )
         ensure_gold_tables(self._pg_conn_str)
         return enrich_interventions(
             interventions=interventions,
-            conference_date=date,
+            conference_date=conference_date,
             pg_conn_str=self._pg_conn_str,
             ollama_base_url=self._settings.ollama_base_url,
             ollama_model=self._settings.ollama_embed_model,

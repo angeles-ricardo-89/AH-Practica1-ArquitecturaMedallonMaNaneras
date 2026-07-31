@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import httpx
+import psycopg
 import pytest
 
 from lakehouse.pipeline.enrichment import (
@@ -270,6 +271,203 @@ class TestEnsureGoldTables:
 
 
 class TestEnrichInterventions:
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_uses_record_conference_date_when_param_none(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        record = InterventionRecord(
+            intervention_key="k1",
+            conference_id="c1",
+            participant="PRESIDENTA",
+            text="Texto de prueba.",
+            pregunta_activa="",
+            chunk_index=0,
+            url="https://example.com",
+            conference_date="2025-03-01",
+        )
+
+        result = enrich_interventions(
+            interventions=[record],
+            conference_date=None,
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+        )
+
+        assert result["total"] == 1
+        assert result["embedded"] == 1
+        insert_call = next(
+            c
+            for c in mock_cursor.execute.call_args_list
+            if "INSERT INTO gold.rag_corpus" in c[0][0]
+        )
+        params = insert_call[0][1]
+        assert params[2] == "2025-03-01"
+        assert "Contexto: Conferencia del 2025-03-01" in params[5]
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_param_overrides_record_conference_date(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        record = InterventionRecord(
+            intervention_key="k2",
+            conference_id="c2",
+            participant="PRESIDENTA",
+            text="Texto de prueba.",
+            pregunta_activa="",
+            chunk_index=0,
+            url="https://example.com",
+            conference_date="2025-03-01",
+        )
+
+        result = enrich_interventions(
+            interventions=[record],
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+        )
+
+        assert result["total"] == 1
+        assert result["embedded"] == 1
+        insert_call = next(
+            c
+            for c in mock_cursor.execute.call_args_list
+            if "INSERT INTO gold.rag_corpus" in c[0][0]
+        )
+        params = insert_call[0][1]
+        assert params[2] == "2024-10-01"
+        assert "Contexto: Conferencia del 2024-10-01" in params[5]
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_record_without_date_is_failed(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        record = InterventionRecord(
+            intervention_key="k3",
+            conference_id="c3",
+            participant="PRESIDENTA",
+            text="Texto de prueba.",
+            pregunta_activa="",
+            chunk_index=0,
+            url="https://example.com",
+        )
+
+        result = enrich_interventions(
+            interventions=[record],
+            conference_date=None,
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+        )
+
+        assert result["total"] == 1
+        assert result["embedded"] == 0
+        assert result["failed"] == 1
+        mock_embed.assert_not_called()
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_unique_violation_logs_and_counts_embedded(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        class MockExecute:
+            def __call__(self, sql: str, params: tuple | None = None) -> MagicMock:
+                raise psycopg.errors.UniqueViolation("duplicate key")
+
+        mock_cursor.execute = MockExecute()
+
+        record = InterventionRecord(
+            intervention_key="k4",
+            conference_id="c4",
+            participant="PRESIDENTA",
+            text="Texto de prueba.",
+            pregunta_activa="",
+            chunk_index=0,
+            url="https://example.com",
+            conference_date="2025-03-01",
+        )
+
+        result = enrich_interventions(
+            interventions=[record],
+            conference_date=None,
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+        )
+
+        assert result["total"] == 1
+        assert result["embedded"] == 1
+        assert result["failed"] == 0
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_on_conflict_updates_metadata(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+        sample_intervention: InterventionRecord,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        enrich_interventions(
+            interventions=[sample_intervention],
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+        )
+
+        insert_call = next(
+            c
+            for c in mock_cursor.execute.call_args_list
+            if "INSERT INTO gold.rag_corpus" in c[0][0]
+        )
+        sql = insert_call[0][0]
+        assert "ON CONFLICT (chunk_key) DO UPDATE" in sql
+        assert "conference_date" in sql
+        assert "url" in sql
+        assert "payload" in sql
+
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
     def test_single_intervention_stored_correctly(

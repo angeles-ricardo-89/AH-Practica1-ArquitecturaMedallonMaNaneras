@@ -7,7 +7,7 @@ from lakehouse.db.merge import (
     merge_conference,
     merge_intervention,
 )
-from lakehouse.log_config import get_logger
+from lakehouse.log_config import ProgressReporter, get_logger
 from lakehouse.pipeline.parsing import (
     build_conference_record,
     parse_conference_date,
@@ -25,13 +25,13 @@ class ParseService:
     def run(self, dry_run: bool = False, conference_date: str | None = None) -> dict:
         if not dry_run:
             ensure_silver_tables(self._conn)
-        rows = self._conn.execute(
-            "SELECT source_url, raw_html FROM bronze.raw_html"
-        ).fetchall()
+        rows = self._conn.execute("SELECT source_url, raw_html FROM bronze.raw_html").fetchall()
         total_interventions = 0
         total_dlq = 0
         self._logger.info("Iniciando parseo Silver", html_count=len(rows))
-        for source_url, raw_html in rows:
+        reporter = ProgressReporter(total=len(rows), label="silver")
+        for idx, (source_url, raw_html) in enumerate(rows):
+            reporter.update(idx + 1)
             date = conference_date or parse_conference_date(raw_html, source_url)
             if date is None:
                 conference_id = hashlib.sha256(source_url.encode()).hexdigest()[:20]
@@ -48,11 +48,15 @@ class ParseService:
                 )
                 continue
             records = parse_html_to_interventions(
-                raw_html=raw_html, source_url=source_url, conference_date=date,
+                raw_html=raw_html,
+                source_url=source_url,
+                conference_date=date,
             )
             if not dry_run:
                 conference = build_conference_record(
-                    source_url=source_url, conference_date=date, raw_html=raw_html,
+                    source_url=source_url,
+                    conference_date=date,
+                    raw_html=raw_html,
                 )
                 merge_conference(self._conn, conference)
                 self._logger.info(
@@ -71,7 +75,10 @@ class ParseService:
                     total_dlq += 1
                 else:
                     total_interventions += 1
+        reporter.finish()
         self._logger.info(
-            "Parseo Silver completado", interventions=total_interventions, dlq=total_dlq,
+            "Parseo Silver completado",
+            interventions=total_interventions,
+            dlq=total_dlq,
         )
         return {"interventions": total_interventions, "dlq": total_dlq}

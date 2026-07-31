@@ -1,5 +1,7 @@
 import asyncio
+
 import typer
+
 from lakehouse.config import Settings
 from lakehouse.db.duckdb_conn import get_connection
 from lakehouse.log_config import get_logger
@@ -40,9 +42,7 @@ def parse(
     conn = get_connection(settings.ducklake_data_path)
     service = ParseService(settings=settings, duckdb_conn=conn)
     result = service.run(dry_run=dry_run, conference_date=conference_date)
-    typer.echo(
-        f"Parsing completado: {result['interventions']} intervenciones, {result['dlq']} DLQ"
-    )
+    typer.echo(f"Parsing completado: {result['interventions']} intervenciones, {result['dlq']} DLQ")
 
 
 @pipeline_app.command()
@@ -57,7 +57,9 @@ def enrich(
         f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
     )
     service = EnrichService(
-        settings=settings, duckdb_conn=conn, pg_conn_str=pg_conn_str,
+        settings=settings,
+        duckdb_conn=conn,
+        pg_conn_str=pg_conn_str,
     )
     result = service.run(dry_run=dry_run, conference_date=conference_date)
     typer.echo(

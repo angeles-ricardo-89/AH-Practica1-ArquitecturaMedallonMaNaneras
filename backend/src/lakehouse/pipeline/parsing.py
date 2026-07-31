@@ -22,13 +22,6 @@ _MESES = {
     "diciembre": 12,
 }
 
-# PARTICIPANT_RE = re.compile(
-#     r"<strong>\s*([A-Za-zÀ-ÿ&;0-9#,]+(?:\s+[A-Za-zÀ-ÿ&;0-9#,]+)*?)\s*:</strong>\s*(.*?)</p>",
-#     re.DOTALL | re.IGNORECASE,
-# )
-
-
-
 PARTICIPANT_RE = re.compile(
     r"<strong>\s*([A-Za-zÀ-ÿ&;0-9#,]+(?:\s+[A-Za-zÀ-ÿ&;0-9#,]+)*?)\s*:</strong>\s*(.+?)</p>",
     re.DOTALL | re.IGNORECASE,

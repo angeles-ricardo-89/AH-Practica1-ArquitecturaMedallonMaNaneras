@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import duckdb
 
 
@@ -39,7 +40,7 @@ def insert_bronze_record(
         """,
         (ingestion_run_id, source_url, raw_html, content_hash),
     )
-    
+
     res_after = conn.execute("SELECT COUNT(*) FROM bronze.raw_html").fetchone()
     after = res_after[0] if res_after else 0
     return after > before

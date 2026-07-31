@@ -89,7 +89,6 @@ def search_gold_corpus(
         logger.exception("No se pudo generar embedding para la consulta")
         raise RuntimeError("Search unavailable: embedding generation failed") from e
 
-
     embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
     try:
@@ -109,8 +108,6 @@ def search_gold_corpus(
     except Exception as e:
         logger.exception("Error al consultar pgvector")
         raise RuntimeError("Search unavailable: database query failed") from e
-
-
 
     results = []
     for row in rows:
