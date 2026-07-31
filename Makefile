@@ -1,4 +1,4 @@
-.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full test lint typecheck install
+.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full test lint typecheck install evaluacion
 
 # ─── Docker ───────────────────────────────────────────────
 up:
@@ -80,3 +80,8 @@ dev-full:
 
 build-frontend:
 	cd frontend && pnpm build
+
+# ─── Evaluacion ────────────────────────────────────────────
+.PHONY: evaluacion
+evaluacion:
+	@cd backend && PYTHONPATH=src:../evaluacion/src uv run python -m evaluador.main
