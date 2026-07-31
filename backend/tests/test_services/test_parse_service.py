@@ -144,3 +144,24 @@ class TestParseService:
         assert result["interventions"] == 0
         assert result["dlq"] == 1
         mock_dlq.assert_called_once()
+
+
+class TestParseServiceClean:
+    def test_run_clean_drops_silver_tables(self):
+        settings = Settings()
+        conn = MagicMock()
+        conn.execute.return_value.fetchall.return_value = []
+        service = ParseService(settings=settings, duckdb_conn=conn)
+        with patch("lakehouse.services.parse_service.drop_silver_tables") as mock_drop:
+            result = service.run(clean=True)
+        assert result == {"interventions": 0, "dlq": 0}
+        mock_drop.assert_called_once()
+
+    def test_run_clean_ignored_in_dry_run(self):
+        settings = Settings()
+        conn = MagicMock()
+        conn.execute.return_value.fetchall.return_value = []
+        service = ParseService(settings=settings, duckdb_conn=conn)
+        with patch("lakehouse.services.parse_service.drop_silver_tables") as mock_drop:
+            service.run(clean=True, dry_run=True)
+        mock_drop.assert_not_called()

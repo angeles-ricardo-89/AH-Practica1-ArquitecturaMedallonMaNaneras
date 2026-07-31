@@ -90,6 +90,13 @@ def embed_text(
     raise ConnectionError(f"Ollama embedding failed after {max_retries} retries") from last_error
 
 
+def drop_gold_tables(conn_str: str) -> None:
+    with psycopg.connect(conn_str) as conn:
+        cur = conn.cursor()
+        cur.execute("DROP TABLE IF EXISTS gold.rag_corpus")
+        conn.commit()
+
+
 def ensure_gold_tables(conn_str: str) -> None:
     with psycopg.connect(conn_str) as conn:
         cur = conn.cursor()

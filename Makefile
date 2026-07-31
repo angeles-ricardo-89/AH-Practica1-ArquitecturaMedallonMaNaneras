@@ -14,20 +14,26 @@ logs:
 	docker compose logs -f
 
 # ─── Pipeline ─────────────────────────────────────────────
+# Las opciones se pasan con ARGS, por ejemplo:
+#   make pipeline-ingest ARGS="--clean"
+#   make pipeline-parse  ARGS="--clean --date 2024-10-01"
+#   make pipeline-enrich ARGS="--clean"
+ARGS ?=
+
 pipeline-ingest:
-	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest $(ARGS)
 
 pipeline-ingest-dry:
-	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest --dry-run
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest --dry-run $(ARGS)
 
 pipeline-parse:
-	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline parse
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline parse $(ARGS)
 
 pipeline-enrich:
-	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline enrich
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline enrich $(ARGS)
 
 pipeline-full:
-	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest && PYTHONPATH=src uv run python -m lakehouse pipeline parse && PYTHONPATH=src uv run python -m lakehouse pipeline enrich
+	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest $(ARGS) && PYTHONPATH=src uv run python -m lakehouse pipeline parse $(ARGS) && PYTHONPATH=src uv run python -m lakehouse pipeline enrich $(ARGS)
 
 evaluate-rag:
 	cd backend && PYTHONPATH=src uv run python -m lakehouse evaluate-rag

@@ -37,6 +37,12 @@ def ensure_silver_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """)
 
 
+def drop_silver_tables(conn: duckdb.DuckDBPyConnection) -> None:
+    conn.execute("DROP TABLE IF EXISTS silver.interventions")
+    conn.execute("DROP TABLE IF EXISTS silver.conferences")
+    conn.execute("DROP TABLE IF EXISTS silver.dlq")
+
+
 def merge_intervention(conn: duckdb.DuckDBPyConnection, record: InterventionRecord) -> None:
     conn.execute(
         """

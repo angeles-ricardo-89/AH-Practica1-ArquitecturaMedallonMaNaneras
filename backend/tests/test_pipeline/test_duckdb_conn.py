@@ -1,6 +1,11 @@
 import pytest
 
-from lakehouse.db.duckdb_conn import ensure_bronze_table, get_connection, insert_bronze_record
+from lakehouse.db.duckdb_conn import (
+    drop_bronze_tables,
+    ensure_bronze_table,
+    get_connection,
+    insert_bronze_record,
+)
 
 
 @pytest.fixture
@@ -51,4 +56,24 @@ class TestDuckdbConn:
             )
         count = conn.execute("SELECT COUNT(*) FROM bronze.raw_html").fetchone()[0]
         assert count == 1
+        conn.close()
+
+    def test_drop_bronze_tables_removes_table(self, tmp_db):
+        conn = get_connection(tmp_db)
+        ensure_bronze_table(conn)
+        insert_bronze_record(
+            conn,
+            ingestion_run_id="run_001",
+            source_url="https://example.com",
+            raw_html="<html>",
+            content_hash="a" * 64,
+        )
+        drop_bronze_tables(conn)
+        tables = [
+            r[0]
+            for r in conn.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'bronze'"
+            ).fetchall()
+        ]
+        assert tables == []
         conn.close()

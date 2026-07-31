@@ -15,7 +15,7 @@ class TestPipelineIngest:
         mock_svc.run = AsyncMock(return_value={"html_count": 5, "records_inserted": 0})
         result = runner.invoke(app, ["pipeline", "ingest", "--dry-run"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=True, max_articles=None)
+        mock_svc.run.assert_called_once_with(dry_run=True, max_articles=None, clean=False)
 
     @patch("lakehouse.cli.IngestService")
     @patch("lakehouse.cli.get_connection")
@@ -24,7 +24,16 @@ class TestPipelineIngest:
         mock_svc.run = AsyncMock(return_value={"html_count": 5, "records_inserted": 5})
         result = runner.invoke(app, ["pipeline", "ingest"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=False, max_articles=None)
+        mock_svc.run.assert_called_once_with(dry_run=False, max_articles=None, clean=False)
+
+    @patch("lakehouse.cli.IngestService")
+    @patch("lakehouse.cli.get_connection")
+    def test_ingest_clean(self, mock_conn, mock_svc_cls):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run = AsyncMock(return_value={"html_count": 5, "records_inserted": 5})
+        result = runner.invoke(app, ["pipeline", "ingest", "--clean"])
+        assert result.exit_code == 0
+        mock_svc.run.assert_called_once_with(dry_run=False, max_articles=None, clean=True)
 
 
 class TestPipelineParse:
@@ -35,7 +44,7 @@ class TestPipelineParse:
         mock_svc.run.return_value = {"interventions": 0, "dlq": 0}
         result = runner.invoke(app, ["pipeline", "parse", "--dry-run"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=True, conference_date=None)
+        mock_svc.run.assert_called_once_with(dry_run=True, conference_date=None, clean=False)
 
     @patch("lakehouse.cli.ParseService")
     @patch("lakehouse.cli.get_connection")
@@ -44,7 +53,7 @@ class TestPipelineParse:
         mock_svc.run.return_value = {"interventions": 0, "dlq": 0}
         result = runner.invoke(app, ["pipeline", "parse"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None)
+        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None, clean=False)
 
     @patch("lakehouse.cli.ParseService")
     @patch("lakehouse.cli.get_connection")
@@ -53,7 +62,18 @@ class TestPipelineParse:
         mock_svc.run.return_value = {"interventions": 0, "dlq": 0}
         result = runner.invoke(app, ["pipeline", "parse", "--date", "2024-10-01"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=False, conference_date="2024-10-01")
+        mock_svc.run.assert_called_once_with(
+            dry_run=False, conference_date="2024-10-01", clean=False
+        )
+
+    @patch("lakehouse.cli.ParseService")
+    @patch("lakehouse.cli.get_connection")
+    def test_parse_clean(self, mock_conn, mock_svc_cls):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = {"interventions": 0, "dlq": 0}
+        result = runner.invoke(app, ["pipeline", "parse", "--clean"])
+        assert result.exit_code == 0
+        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None, clean=True)
 
 
 class TestPipelineEnrich:
@@ -64,7 +84,7 @@ class TestPipelineEnrich:
         mock_svc.run.return_value = {"embedded": 0, "failed": 0, "total": 0}
         result = runner.invoke(app, ["pipeline", "enrich", "--dry-run"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=True, conference_date=None)
+        mock_svc.run.assert_called_once_with(dry_run=True, conference_date=None, clean=False)
 
     @patch("lakehouse.cli.EnrichService")
     @patch("lakehouse.cli.get_connection")
@@ -73,7 +93,16 @@ class TestPipelineEnrich:
         mock_svc.run.return_value = {"embedded": 1, "failed": 0, "total": 1}
         result = runner.invoke(app, ["pipeline", "enrich"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None)
+        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None, clean=False)
+
+    @patch("lakehouse.cli.EnrichService")
+    @patch("lakehouse.cli.get_connection")
+    def test_enrich_clean(self, mock_conn, mock_svc_cls):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = {"embedded": 1, "failed": 0, "total": 1}
+        result = runner.invoke(app, ["pipeline", "enrich", "--clean"])
+        assert result.exit_code == 0
+        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None, clean=True)
 
 
 class TestEvaluateRagCommand:

@@ -1,6 +1,10 @@
 from lakehouse.config import Settings
 from lakehouse.log_config import get_logger
-from lakehouse.pipeline.enrichment import enrich_interventions, ensure_gold_tables
+from lakehouse.pipeline.enrichment import (
+    drop_gold_tables,
+    enrich_interventions,
+    ensure_gold_tables,
+)
 from lakehouse.schemas.silver import InterventionRecord
 
 
@@ -11,7 +15,12 @@ class EnrichService:
         self._pg_conn_str = pg_conn_str
         self._logger = get_logger(__name__, layer="service")
 
-    def run(self, dry_run: bool = False, conference_date: str | None = None) -> dict:
+    def run(
+        self,
+        dry_run: bool = False,
+        conference_date: str | None = None,
+        clean: bool = False,
+    ) -> dict:
         rows = self._conn.execute(
             """
             SELECT i.intervention_key, i.conference_id, i.participant, i.text,
@@ -39,6 +48,12 @@ class EnrichService:
         if not interventions:
             self._logger.warning("No hay intervenciones en Silver para enriquecer")
             return {"embedded": 0, "failed": 0, "total": 0}
+
+        if clean:
+            if dry_run:
+                self._logger.warning("--clean es ignorado en dry-run")
+            else:
+                drop_gold_tables(self._pg_conn_str)
 
         if dry_run:
             self._logger.info(

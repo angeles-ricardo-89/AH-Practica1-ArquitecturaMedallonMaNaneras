@@ -7,9 +7,15 @@ import duckdb
 import pytest
 
 from lakehouse.db.duckdb_conn import ensure_bronze_table, insert_bronze_record
-from lakehouse.db.merge import ensure_silver_tables, merge_conference, merge_intervention
+from lakehouse.db.merge import (
+    drop_silver_tables,
+    ensure_silver_tables,
+    insert_dlq_record,
+    merge_conference,
+    merge_intervention,
+)
 from lakehouse.pipeline.enrichment import enrich_interventions
-from lakehouse.schemas.silver import ConferenceRecord, InterventionRecord
+from lakehouse.schemas.silver import ConferenceRecord, DLQRejectRecord, InterventionRecord
 
 
 @pytest.fixture
@@ -121,6 +127,34 @@ class TestBronzeIdempotency:
 
 
 class TestSilverIdempotency:
+    def test_drop_silver_tables_removes_tables(
+        self,
+        duck_conn: duckdb.DuckDBPyConnection,
+    ) -> None:
+        ensure_silver_tables(duck_conn)
+        drop_silver_tables(duck_conn)
+        tables = [
+            r[0]
+            for r in duck_conn.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'silver'"
+            ).fetchall()
+        ]
+        assert tables == []
+
+    def test_insert_dlq_record_persists_row(
+        self,
+        duck_conn: duckdb.DuckDBPyConnection,
+    ) -> None:
+        ensure_silver_tables(duck_conn)
+        record = DLQRejectRecord(
+            source_record_id="x",
+            rejection_reason="bad_format",
+            raw_data="y",
+        )
+        insert_dlq_record(duck_conn, record)
+        count = duck_conn.execute("SELECT COUNT(*) FROM silver.dlq").fetchone()[0]
+        assert count == 1
+
     def test_insert_or_ignore_prevents_duplicate_intervention_key(
         self,
         duck_conn: duckdb.DuckDBPyConnection,

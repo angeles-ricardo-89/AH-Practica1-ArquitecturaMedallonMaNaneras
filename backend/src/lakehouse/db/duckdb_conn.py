@@ -22,6 +22,10 @@ def ensure_bronze_table(conn: duckdb.DuckDBPyConnection) -> None:
     """)
 
 
+def drop_bronze_tables(conn: duckdb.DuckDBPyConnection) -> None:
+    conn.execute("DROP TABLE IF EXISTS bronze.raw_html")
+
+
 def insert_bronze_record(
     conn: duckdb.DuckDBPyConnection,
     ingestion_run_id: str,

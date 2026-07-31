@@ -9,6 +9,7 @@ import pytest
 
 from lakehouse.pipeline.enrichment import (
     build_embedding_payload,
+    drop_gold_tables,
     embed_text,
     enrich_interventions,
     ensure_gold_tables,
@@ -268,6 +269,20 @@ class TestEnsureGoldTables:
         assert "idx_rag_corpus_embedding_hnsw" in executed_sql
         assert "hnsw" in executed_sql
         assert "vector_cosine_ops" in executed_sql
+
+
+class TestDropGoldTables:
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_drops_rag_corpus(self, mock_connect: MagicMock) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        drop_gold_tables("postgresql://u:p@h:5433/d")
+
+        calls = [c[0][0] for c in mock_cursor.execute.call_args_list]
+        assert "DROP TABLE IF EXISTS gold.rag_corpus" in calls
 
 
 class TestEnrichInterventions:

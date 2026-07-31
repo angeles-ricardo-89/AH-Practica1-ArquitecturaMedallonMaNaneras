@@ -20,11 +20,12 @@ app.add_typer(pipeline_app, name="pipeline", help="Pipeline commands")
 def ingest(
     dry_run: bool = typer.Option(default=False, help="Simulate without writing"),
     max_articles: int | None = typer.Option(default=None, help="Limit articles to fetch"),
+    clean: bool = typer.Option(default=False, help="Drop bronze tables before ingesting"),
 ) -> None:
     settings = Settings()
     conn = get_connection(settings.ducklake_data_path)
     service = IngestService(settings=settings, duckdb_conn=conn)
-    result = asyncio.run(service.run(dry_run=dry_run, max_articles=max_articles))
+    result = asyncio.run(service.run(dry_run=dry_run, max_articles=max_articles, clean=clean))
     if dry_run:
         typer.echo(f"Simulacion: {result['html_count']} articulos encontrados")
     else:
@@ -37,11 +38,12 @@ def parse(
     conference_date: str | None = typer.Option(
         None, "--date", help="Conference date (default: from data)"
     ),
+    clean: bool = typer.Option(default=False, help="Drop silver tables before parsing"),
 ) -> None:
     settings = Settings()
     conn = get_connection(settings.ducklake_data_path)
     service = ParseService(settings=settings, duckdb_conn=conn)
-    result = service.run(dry_run=dry_run, conference_date=conference_date)
+    result = service.run(dry_run=dry_run, conference_date=conference_date, clean=clean)
     typer.echo(f"Parsing completado: {result['interventions']} intervenciones, {result['dlq']} DLQ")
 
 
@@ -49,6 +51,7 @@ def parse(
 def enrich(
     dry_run: bool = typer.Option(default=False, help="Simulate without writing"),
     conference_date: str | None = typer.Option(None, "--date", help="Conference date"),
+    clean: bool = typer.Option(default=False, help="Drop gold tables before enriching"),
 ) -> None:
     settings = Settings()
     conn = get_connection(settings.ducklake_data_path)
@@ -61,7 +64,7 @@ def enrich(
         duckdb_conn=conn,
         pg_conn_str=pg_conn_str,
     )
-    result = service.run(dry_run=dry_run, conference_date=conference_date)
+    result = service.run(dry_run=dry_run, conference_date=conference_date, clean=clean)
     typer.echo(
         f"Enriquecimiento completado: {result['embedded']} incrustados, "
         f"{result['failed']} fallidos de {result['total']} totales"
