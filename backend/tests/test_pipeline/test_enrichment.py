@@ -28,20 +28,6 @@ from lakehouse.services.token_estimator import estimate_tokens
 
 
 @pytest.fixture
-def sample_intervention() -> InterventionRecord:
-    return InterventionRecord(
-        intervention_key="abc123_000_abc123",
-        conference_id="conf123",
-        participant="PRESIDENTA CLAUDIA SHEINBAUM PARDO",
-        text="Buenos días. Hoy vamos a informar sobre los avances del país.",
-        pregunta_activa="¿Cómo va la reforma energética?",
-        chunk_index=0,
-        url="https://example.com/conf-2024-10-01",
-        ingested_at=datetime.now(UTC),
-    )
-
-
-@pytest.fixture
 def sample_intervention_no_question() -> InterventionRecord:
     return InterventionRecord(
         intervention_key="def456_001_def456",
@@ -318,6 +304,17 @@ class TestDropGoldTables:
 
 
 class TestEnrichInterventions:
+    def _window(self, i: int, text: str = "Texto de la ventana.") -> WindowRecord:
+        return WindowRecord(
+            chunk_key=f"conf1_w{i:03d}_abc123",
+            conference_id="conf1",
+            conference_date="2025-03-01",
+            participant="PRESIDENTA",
+            text=text,
+            url="https://example.com",
+            window_index=i,
+        )
+
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
     def test_uses_record_conference_date_when_param_none(
@@ -331,19 +328,8 @@ class TestEnrichInterventions:
         mock_conn.cursor.return_value = mock_cursor
         mock_embed.return_value = [0.5] * 768
 
-        record = InterventionRecord(
-            intervention_key="k1",
-            conference_id="c1",
-            participant="PRESIDENTA",
-            text="Texto de prueba.",
-            pregunta_activa="",
-            chunk_index=0,
-            url="https://example.com",
-            conference_date="2025-03-01",
-        )
-
         result = enrich_interventions(
-            interventions=[record],
+            windows=[self._window(0)],
             conference_date=None,
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -374,19 +360,8 @@ class TestEnrichInterventions:
         mock_conn.cursor.return_value = mock_cursor
         mock_embed.return_value = [0.5] * 768
 
-        record = InterventionRecord(
-            intervention_key="k2",
-            conference_id="c2",
-            participant="PRESIDENTA",
-            text="Texto de prueba.",
-            pregunta_activa="",
-            chunk_index=0,
-            url="https://example.com",
-            conference_date="2025-03-01",
-        )
-
         result = enrich_interventions(
-            interventions=[record],
+            windows=[self._window(0)],
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -417,18 +392,11 @@ class TestEnrichInterventions:
         mock_conn.cursor.return_value = mock_cursor
         mock_embed.return_value = [0.5] * 768
 
-        record = InterventionRecord(
-            intervention_key="k3",
-            conference_id="c3",
-            participant="PRESIDENTA",
-            text="Texto de prueba.",
-            pregunta_activa="",
-            chunk_index=0,
-            url="https://example.com",
-        )
+        record = self._window(0)
+        record.conference_date = ""
 
         result = enrich_interventions(
-            interventions=[record],
+            windows=[record],
             conference_date=None,
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -459,19 +427,8 @@ class TestEnrichInterventions:
 
         mock_cursor.execute = MockExecute()
 
-        record = InterventionRecord(
-            intervention_key="k4",
-            conference_id="c4",
-            participant="PRESIDENTA",
-            text="Texto de prueba.",
-            pregunta_activa="",
-            chunk_index=0,
-            url="https://example.com",
-            conference_date="2025-03-01",
-        )
-
         result = enrich_interventions(
-            interventions=[record],
+            windows=[self._window(0)],
             conference_date=None,
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -488,7 +445,6 @@ class TestEnrichInterventions:
         self,
         mock_connect: MagicMock,
         mock_embed: MagicMock,
-        sample_intervention: InterventionRecord,
     ) -> None:
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -497,7 +453,7 @@ class TestEnrichInterventions:
         mock_embed.return_value = [0.5] * 768
 
         enrich_interventions(
-            interventions=[sample_intervention],
+            windows=[self._window(0)],
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -522,7 +478,6 @@ class TestEnrichInterventions:
         self,
         mock_connect: MagicMock,
         mock_embed: MagicMock,
-        sample_intervention: InterventionRecord,
     ):
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -530,8 +485,10 @@ class TestEnrichInterventions:
         mock_conn.cursor.return_value = mock_cursor
         mock_embed.return_value = [0.5] * 768
 
+        record = self._window(0, text="P: Q?\nPRESIDENTA: R.")
+
         result = enrich_interventions(
-            interventions=[sample_intervention],
+            windows=[record],
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -552,22 +509,19 @@ class TestEnrichInterventions:
 
         assert insert_call is not None
         params = insert_call[0][1]
-        assert params[0] == sample_intervention.intervention_key
-        assert params[1] == sample_intervention.conference_id
+        assert params[0] == record.chunk_key
+        assert params[1] == record.conference_id
         assert params[2] == "2024-10-01"
-        assert params[3] == sample_intervention.participant
-        assert params[4] == sample_intervention.text
+        assert params[3] == record.participant
+        assert params[4] == record.text
         assert "Contexto: Conferencia del 2024-10-01" in params[5]
-        assert params[6] == sample_intervention.url
-        assert params[7] == sample_intervention.pregunta_activa
+        assert params[6] == record.url
+        assert params[7] == ""
         assert params[8] == [0.5] * 768
 
-        expected_embed_text = build_embedding_text(sample_intervention)
         mock_embed.assert_called_once_with(
-            expected_embed_text, "http://localhost:11434", "nomic-embed-text"
+            "P: Q?\nPRESIDENTA: R.", "http://localhost:11434", "nomic-embed-text"
         )
-        assert "Contexto" not in expected_embed_text
-        assert "Participante" not in expected_embed_text
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
@@ -577,7 +531,7 @@ class TestEnrichInterventions:
         mock_embed: MagicMock,
     ):
         result = enrich_interventions(
-            interventions=[],
+            windows=[],
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -607,21 +561,10 @@ class TestEnrichInterventions:
             [0.2] * 768,
         ]
 
-        records = [
-            InterventionRecord(
-                intervention_key=f"rec_{i:03d}_hash",
-                conference_id="conf",
-                participant=f"PARTICIPANTE {i}",
-                text=f"Texto {i}",
-                pregunta_activa="",
-                chunk_index=i,
-                url="https://example.com",
-            )
-            for i in range(3)
-        ]
+        records = [self._window(i, f"Texto {i}") for i in range(3)]
 
         result = enrich_interventions(
-            interventions=records,
+            windows=records,
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -638,7 +581,6 @@ class TestEnrichInterventions:
         self,
         mock_connect: MagicMock,
         mock_embed: MagicMock,
-        sample_intervention: InterventionRecord,
     ):
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -661,7 +603,7 @@ class TestEnrichInterventions:
         mock_cursor.execute = MockExecute()
 
         result = enrich_interventions(
-            interventions=[sample_intervention],
+            windows=[self._window(0)],
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -804,6 +746,17 @@ class TestStoreGold:
 
 
 class TestEnrichInterventionsParallel:
+    def _window(self, i: int, text: str) -> WindowRecord:
+        return WindowRecord(
+            chunk_key=f"conf1_w{i:03d}_abc123",
+            conference_id="conf1",
+            conference_date="2025-03-01",
+            participant=f"P {i}",
+            text=text,
+            url="",
+            window_index=i,
+        )
+
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
     def test_workers_runs_embeddings_in_parallel_threads(
@@ -833,23 +786,12 @@ class TestEnrichInterventionsParallel:
 
         mock_embed.side_effect = side_effect
 
-        records = [
-            InterventionRecord(
-                intervention_key=f"rec_{i:03d}_hash",
-                conference_id="conf",
-                participant=f"P {i}",
-                text=f"Texto {i}",
-                pregunta_activa="",
-                chunk_index=i,
-                url="https://example.com",
-            )
-            for i in range(3)
-        ]
+        records = [self._window(i, f"Texto {i}") for i in range(3)]
 
         main_thread_id = threading.current_thread().ident or 0
 
         result = enrich_interventions(
-            interventions=records,
+            windows=records,
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -876,21 +818,10 @@ class TestEnrichInterventionsParallel:
         mock_conn.cursor.return_value = mock_cursor
         mock_embed.return_value = [0.5] * 768
 
-        records = [
-            InterventionRecord(
-                intervention_key=f"rec_{i:03d}_hash",
-                conference_id="conf",
-                participant=f"PARTICIPANTE {i}",
-                text=f"Texto {i}",
-                pregunta_activa="",
-                chunk_index=i,
-                url="https://example.com",
-            )
-            for i in range(5)
-        ]
+        records = [self._window(i, f"Texto {i}") for i in range(5)]
 
         result = enrich_interventions(
-            interventions=records,
+            windows=records,
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -928,21 +859,10 @@ class TestEnrichInterventionsParallel:
 
         mock_embed.side_effect = side_effect
 
-        records = [
-            InterventionRecord(
-                intervention_key=f"rec_{i:03d}_hash",
-                conference_id="conf",
-                participant=f"PARTICIPANTE {i}",
-                text=f"Texto {i}",
-                pregunta_activa="",
-                chunk_index=i,
-                url="https://example.com",
-            )
-            for i in range(3)
-        ]
+        records = [self._window(i, f"Texto {i}") for i in range(3)]
 
         result = enrich_interventions(
-            interventions=records,
+            windows=records,
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
@@ -967,20 +887,10 @@ class TestEnrichInterventionsParallel:
         mock_conn.cursor.return_value = mock_cursor
         mock_embed.return_value = [0.5] * 768
 
-        records = [
-            InterventionRecord(
-                intervention_key="rec_000_hash",
-                conference_id="conf",
-                participant="P",
-                text="Texto",
-                pregunta_activa="",
-                chunk_index=0,
-                url="https://example.com",
-            )
-        ]
+        records = [self._window(0, "Texto")]
 
         result = enrich_interventions(
-            interventions=records,
+            windows=records,
             conference_date="2024-10-01",
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",

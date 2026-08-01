@@ -268,18 +268,18 @@ def ensure_gold_tables(conn_str: str) -> None:
 
 
 def enrich_interventions(
-    interventions: list[InterventionRecord],
+    windows: list[WindowRecord],
     conference_date: str | None,
     pg_conn_str: str,
     ollama_base_url: str,
     ollama_model: str,
     workers: int = 1,
 ) -> dict:
-    total = len(interventions)
+    total = len(windows)
     embedded = 0
     failed = 0
 
-    if not interventions:
+    if not windows:
         logger.info("No hay intervenciones para enriquecer")
         return {"total": 0, "embedded": 0, "failed": 0}
 
@@ -292,85 +292,82 @@ def enrich_interventions(
         reporter = ProgressReporter(total=total, label="gold")
         if workers > 1:
             with ThreadPoolExecutor(max_workers=workers) as pool:
-                futures: dict[Future, tuple[InterventionRecord, str]] = {}
-                for intervention in interventions:
-                    effective_date = conference_date or intervention.conference_date
+                futures: dict[Future, tuple[WindowRecord, str]] = {}
+                for record in windows:
+                    effective_date = conference_date or record.conference_date
                     if not effective_date:
                         logger.error(
                             "Intervención sin fecha de conferencia, omitida",
-                            intervention_key=intervention.intervention_key,
+                            chunk_key=record.chunk_key,
                         )
                         failed += 1
                         reporter.tick()
                         continue
                     future = pool.submit(
                         _embed_one,
-                        intervention,
-                        effective_date,
+                        record,
                         ollama_base_url,
                         ollama_model,
                     )
-                    futures[future] = (intervention, effective_date)
+                    futures[future] = (record, effective_date)
 
                 for future in as_completed(futures):
-                    intervention, effective_date = futures[future]
-                    payload, embedding = future.result()
+                    record, effective_date = futures[future]
+                    embedding = future.result()
                     if embedding is None:
                         logger.error(
                             "Error al generar embedding",
-                            intervention_key=intervention.intervention_key,
+                            chunk_key=record.chunk_key,
                         )
                         failed += 1
                     else:
                         logger.info(
-                            "Embedding generado para intervención",
-                            intervention_key=intervention.intervention_key,
-                            participant=intervention.participant,
+                            "Embedding generado para chunk",
+                            chunk_key=record.chunk_key,
+                            participant=record.participant,
                             dim=len(embedding),
                         )
                         try:
-                            _store_gold(cur, intervention, effective_date, payload, embedding)
+                            _store_gold(cur, record, effective_date, embedding)
                         except psycopg.errors.UniqueViolation:
                             logger.warning(
                                 "Chunk duplicado en Gold, omitido",
-                                chunk_key=intervention.intervention_key,
+                                chunk_key=record.chunk_key,
                             )
                         embedded += 1
                     reporter.tick()
         else:
-            for intervention in interventions:
-                effective_date = conference_date or intervention.conference_date
+            for record in windows:
+                effective_date = conference_date or record.conference_date
                 if not effective_date:
                     logger.error(
                         "Intervención sin fecha de conferencia, omitida",
-                        intervention_key=intervention.intervention_key,
+                        chunk_key=record.chunk_key,
                     )
                     failed += 1
                     reporter.tick()
                     continue
-                payload, embedding = _embed_one(
-                    intervention, effective_date, ollama_base_url, ollama_model
-                )
+                embedding = _embed_one(record, ollama_base_url, ollama_model)
                 if embedding is None:
                     logger.error(
                         "Error al generar embedding",
-                        intervention_key=intervention.intervention_key,
+                        chunk_key=record.chunk_key,
                     )
                     failed += 1
                     reporter.tick()
                     continue
                 logger.info(
-                    "Embedding generado para intervención",
-                    intervention_key=intervention.intervention_key,
-                    participant=intervention.participant,
+                    "Embedding generado para chunk",
+                    chunk_key=record.chunk_key,
+                    participant=record.participant,
                     dim=len(embedding),
                 )
                 try:
-                    _store_gold(cur, intervention, effective_date, payload, embedding)
+                    _store_gold(cur, record, effective_date, embedding)
                 except psycopg.errors.UniqueViolation:
                     logger.warning(
                         "Chunk duplicado en Gold, omitido",
-                        chunk_key=intervention.intervention_key,
+                        chunk_key=record.chunk_key,
                     )
                 embedded += 1
                 reporter.tick()
