@@ -225,7 +225,7 @@ def enrich_interventions(
         reporter = ProgressReporter(total=total, label="gold")
         if workers > 1:
             with ThreadPoolExecutor(max_workers=workers) as pool:
-                futures: dict[Future, InterventionRecord] = {}
+                futures: dict[Future, tuple[InterventionRecord, str]] = {}
                 for intervention in interventions:
                     effective_date = conference_date or intervention.conference_date
                     if not effective_date:
@@ -243,10 +243,10 @@ def enrich_interventions(
                         ollama_base_url,
                         ollama_model,
                     )
-                    futures[future] = intervention
+                    futures[future] = (intervention, effective_date)
 
                 for future in as_completed(futures):
-                    intervention = futures[future]
+                    intervention, effective_date = futures[future]
                     payload, embedding = future.result()
                     if embedding is None:
                         failed += 1
@@ -258,8 +258,6 @@ def enrich_interventions(
                             dim=len(embedding),
                         )
                         try:
-                            effective_date = conference_date or intervention.conference_date
-                            assert effective_date is not None
                             _store_gold(cur, intervention, effective_date, payload, embedding)
                         except psycopg.errors.UniqueViolation:
                             logger.warning(
