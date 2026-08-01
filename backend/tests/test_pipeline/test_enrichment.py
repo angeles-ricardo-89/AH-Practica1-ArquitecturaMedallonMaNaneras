@@ -9,6 +9,7 @@ import pytest
 
 from lakehouse.pipeline.enrichment import (
     build_embedding_payload,
+    build_embedding_text,
     drop_gold_tables,
     embed_text,
     enrich_interventions,
@@ -633,3 +634,55 @@ class TestEnrichInterventions:
         assert result["total"] == 1
         assert result["embedded"] == 1
         assert result["failed"] == 0
+
+
+class TestBuildEmbeddingText:
+    def test_build_embedding_text_with_pregunta(self) -> None:
+        intervention = InterventionRecord(
+            intervention_key="k1",
+            conference_id="c1",
+            participant="PRESIDENTA",
+            text="Avanzamos en paneles solares en Sonora.",
+            pregunta_activa="Como va la reforma energetica?",
+            chunk_index=0,
+            url="https://example.com",
+        )
+        result = build_embedding_text(intervention)
+        assert (
+            result
+            == "P: Como va la reforma energetica?\nR: Avanzamos en paneles solares en Sonora."
+        )
+        assert "Conferencia" not in result
+        assert "Participante" not in result
+        assert "Contexto" not in result
+        assert intervention.participant not in result
+
+    def test_build_embedding_text_without_pregunta(self) -> None:
+        intervention = InterventionRecord(
+            intervention_key="k2",
+            conference_id="c2",
+            participant="SECRETARIO",
+            text="Se implemento la estrategia nacional de seguridad.",
+            pregunta_activa="",
+            chunk_index=0,
+            url="https://example.com",
+        )
+        result = build_embedding_text(intervention)
+        assert result == "R: Se implemento la estrategia nacional de seguridad."
+        assert "P:" not in result
+        assert "Conferencia" not in result
+
+    def test_build_embedding_text_no_ids_no_hashes(self) -> None:
+        intervention = InterventionRecord(
+            intervention_key="k3_abc123",
+            conference_id="conf_xyz",
+            participant="PRESIDENTA",
+            text="Contenido de prueba.",
+            pregunta_activa="Pregunta?",
+            chunk_index=0,
+            url="https://example.com",
+        )
+        result = build_embedding_text(intervention)
+        assert intervention.intervention_key not in result
+        assert intervention.conference_id not in result
+        assert str(intervention.chunk_index) not in result

@@ -30,6 +30,13 @@ def build_embedding_payload(
     )
 
 
+def build_embedding_text(intervention: InterventionRecord) -> str:
+    pregunta = intervention.pregunta_activa
+    if pregunta:
+        return f"P: {pregunta}\nR: {intervention.text}"
+    return f"R: {intervention.text}"
+
+
 def get_pgvector_connection_string(
     host: str,
     port: int,
