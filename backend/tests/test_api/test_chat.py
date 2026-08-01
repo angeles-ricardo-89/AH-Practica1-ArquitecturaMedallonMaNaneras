@@ -182,3 +182,56 @@ class TestContextBuilder:
         assert "PRESIDENTA" in context
         assert "Contenido de la fuente." in context
         assert "2024-10-01" in context
+
+    def test_nota_fallback_included_in_context(self) -> None:
+        builder = ContextBuilder(max_context_tokens=8192)
+        sources = [
+            SourceChunk(
+                conference_date="2024-10-01",
+                conference_id="abc123",
+                participant="PRESIDENTA",
+                chunk_text="Contenido de la fuente.",
+                similarity=0.95,
+                conference_url="https://example.com",
+            ),
+        ]
+        context, _usage = builder.build(
+            query="test",
+            system_prompt="sys",
+            sources=sources,
+            nota_fallback=True,
+        )
+        assert "No se pudo determinar" in context
+        assert "filtro temporal" in context
+        assert "PRESIDENTA" in context
+        assert context.index("No se pudo determinar") < context.index("Fuentes:")
+
+    def test_no_fallback_nota_when_not_requested(self) -> None:
+        builder = ContextBuilder(max_context_tokens=8192)
+        sources = [
+            SourceChunk(
+                conference_date="2024-10-01",
+                conference_id="abc123",
+                participant="PRESIDENTA",
+                chunk_text="Contenido de la fuente.",
+                similarity=0.95,
+                conference_url="https://example.com",
+            ),
+        ]
+        context, _usage = builder.build(
+            query="test",
+            system_prompt="sys",
+            sources=sources,
+            nota_fallback=False,
+        )
+        assert "No se pudo determinar" not in context
+
+    def test_empty_sources_handled_gracefully(self) -> None:
+        builder = ContextBuilder(max_context_tokens=8192)
+        context, _usage = builder.build(
+            query="test query",
+            system_prompt="sys",
+            sources=[],
+        )
+        assert "test query" in context
+        assert "sys" in context

@@ -18,6 +18,7 @@ class ContextBuilder:
         system_prompt: str,
         sources: list | None = None,
         history: list[dict[str, str]] | None = None,
+        nota_fallback: bool = False,
     ) -> tuple[str, TokenUsage]:
         sources = sources or []
         history = history or []
@@ -39,6 +40,11 @@ class ContextBuilder:
         max_history_tokens = max(max_history_tokens, 0)
 
         context = f"{system_prompt}\n\n"
+        if nota_fallback:
+            context += (
+                "NOTA: No se pudo determinar automaticamente el filtro temporal de la consulta. "
+                "Los resultados pueden pertenecer a cualquier fecha.\n---\n\n"
+            )
         if sources_text.strip():
             context += f"Fuentes:\n{sources_text}\n\n"
         context += self._truncate_history_to_tokens(history, max_history_tokens)
