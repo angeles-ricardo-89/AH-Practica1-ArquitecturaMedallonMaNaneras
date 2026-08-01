@@ -9,6 +9,7 @@ import pytest
 
 from lakehouse.pipeline.enrichment import (
     _embed_one,
+    _store_gold,
     build_embedding_payload,
     build_embedding_text,
     drop_gold_tables,
@@ -745,8 +746,6 @@ class TestEmbedOne:
 
 class TestStoreGold:
     def test_executes_insert_with_correct_params(self, sample_intervention: InterventionRecord) -> None:
-        from lakehouse.pipeline.enrichment import _store_gold
-
         cur = MagicMock()
         _store_gold(
             cur,
