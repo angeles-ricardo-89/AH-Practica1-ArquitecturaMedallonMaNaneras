@@ -198,12 +198,13 @@ def ensure_gold_tables(conn_str: str) -> None:
         conn.commit()
 
 
-def enrich_interventions(
+def enrich_interventions(  # noqa: PLR0917
     interventions: list[InterventionRecord],
     conference_date: str | None,
     pg_conn_str: str,
     ollama_base_url: str,
     ollama_model: str,
+    workers: int = 1,
 ) -> dict:
     total = len(interventions)
     embedded = 0
@@ -215,11 +216,12 @@ def enrich_interventions(
 
     logger.info("Iniciando enriquecimiento Gold", total_intervenciones=total, modelo=ollama_model)
 
+    workers = max(1, workers)
+
     with psycopg.connect(pg_conn_str) as conn:
         cur = conn.cursor()
         reporter = ProgressReporter(total=total, label="gold")
-        for idx, intervention in enumerate(interventions):
-            reporter.update(idx + 1)
+        for intervention in interventions:
             effective_date = conference_date or intervention.conference_date
             if not effective_date:
                 logger.error(
@@ -227,58 +229,34 @@ def enrich_interventions(
                     intervention_key=intervention.intervention_key,
                 )
                 failed += 1
+                reporter.tick()
                 continue
-            payload = build_embedding_payload(intervention, effective_date)
-            embedding_text = build_embedding_text(intervention)
-            try:
-                embedding = embed_text(embedding_text, ollama_base_url, ollama_model)
-                logger.info(
-                    "Embedding generado para intervención %d/%d",
-                    idx + 1,
-                    total,
-                    intervention_key=intervention.intervention_key,
-                    participant=intervention.participant,
-                    dim=len(embedding),
-                )
-            except (ConnectionError, ValueError):
-                logger.exception(
+            payload, embedding = _embed_one(
+                intervention, effective_date, ollama_base_url, ollama_model
+            )
+            if embedding is None:
+                logger.error(
                     "Error al generar embedding",
                     intervention_key=intervention.intervention_key,
                 )
                 failed += 1
+                reporter.tick()
                 continue
-
+            logger.info(
+                "Embedding generado para intervención",
+                intervention_key=intervention.intervention_key,
+                participant=intervention.participant,
+                dim=len(embedding),
+            )
             try:
-                cur.execute(
-                    """
-                        INSERT INTO gold.rag_corpus
-                            (chunk_key, conference_id, conference_date, participant, chunk_text, payload, url, pregunta_activa, embedding)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (chunk_key) DO UPDATE SET
-                            conference_id = EXCLUDED.conference_id,
-                            conference_date = EXCLUDED.conference_date,
-                            payload = EXCLUDED.payload,
-                            url = EXCLUDED.url,
-                            pregunta_activa = EXCLUDED.pregunta_activa
-                        """,
-                    (
-                        intervention.intervention_key,
-                        intervention.conference_id,
-                        effective_date,
-                        intervention.participant,
-                        intervention.text,
-                        payload,
-                        intervention.url,
-                        intervention.pregunta_activa,
-                        embedding,
-                    ),
-                )
+                _store_gold(cur, intervention, effective_date, payload, embedding)
             except psycopg.errors.UniqueViolation:
                 logger.warning(
                     "Chunk duplicado en Gold, omitido",
                     chunk_key=intervention.intervention_key,
                 )
             embedded += 1
+            reporter.tick()
         reporter.finish()
         conn.commit()
         logger.info(
