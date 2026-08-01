@@ -16,7 +16,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 if TYPE_CHECKING:
-    from lakehouse.schemas.gold import WindowRecord  # noqa: F401
+    from lakehouse.schemas.gold import WindowRecord
     from lakehouse.schemas.silver import InterventionRecord
 
 logger = get_logger(__name__, layer="gold")
@@ -106,30 +106,25 @@ def build_windows(
 
 
 def _embed_one(
-    intervention: InterventionRecord,
-    effective_date: str,
+    record: WindowRecord,
     ollama_base_url: str,
     ollama_model: str,
-) -> tuple[str, list[float] | None]:
-    payload = build_embedding_payload(intervention, effective_date)
-    embedding_text = build_embedding_text(intervention)
+) -> list[float] | None:
     try:
-        embedding = embed_text(embedding_text, ollama_base_url, ollama_model)
+        return embed_text(record.text, ollama_base_url, ollama_model)
     except (ConnectionError, ValueError) as e:
         logger.warning(
             "embed_text falló",
             error=str(e),
-            intervention_key=intervention.intervention_key,
+            chunk_key=record.chunk_key,
         )
-        return payload, None
-    return payload, embedding
+        return None
 
 
 def _store_gold(
     cur: Any,
-    intervention: InterventionRecord,
+    record: WindowRecord,
     effective_date: str,
-    payload: str,
     embedding: list[float],
 ) -> None:
     cur.execute(
@@ -145,14 +140,14 @@ def _store_gold(
                 pregunta_activa = EXCLUDED.pregunta_activa
             """,
         (
-            intervention.intervention_key,
-            intervention.conference_id,
+            record.chunk_key,
+            record.conference_id,
             effective_date,
-            intervention.participant,
-            intervention.text,
-            payload,
-            intervention.url,
-            intervention.pregunta_activa,
+            record.participant,
+            record.text,
+            record.text,
+            record.url,
+            record.pregunta_activa,
             embedding,
         ),
     )

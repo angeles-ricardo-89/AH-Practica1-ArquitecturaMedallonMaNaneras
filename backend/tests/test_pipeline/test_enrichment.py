@@ -22,6 +22,7 @@ from lakehouse.pipeline.enrichment import (
     ensure_gold_tables,
     get_pgvector_connection_string,
 )
+from lakehouse.schemas.gold import WindowRecord
 from lakehouse.schemas.silver import InterventionRecord
 from lakehouse.services.token_estimator import estimate_tokens
 
@@ -703,69 +704,77 @@ class TestBuildEmbeddingText:
 
 
 class TestEmbedOne:
-    def test_returns_payload_and_embedding_on_success(
-        self, sample_intervention: InterventionRecord
-    ) -> None:
+    def test_returns_embedding_on_success(self) -> None:
+        record = WindowRecord(
+            chunk_key="conf1_w000_abc123",
+            conference_id="conf1",
+            conference_date="2025-03-01",
+            participant="PRESIDENTA",
+            text="P: Como va la reforma?\nPRESIDENTA: Avanzamos en paneles.",
+            url="https://example.com",
+            window_index=0,
+        )
         with patch("lakehouse.pipeline.enrichment.embed_text") as mock_embed:
             mock_embed.return_value = [0.1] * 768
-            payload, embedding = _embed_one(
-                sample_intervention,
-                "2024-10-01",
-                "http://localhost:11434",
-                "nomic-embed-text",
-            )
-        assert "Contexto: Conferencia del 2024-10-01" in payload
-        assert "Participante:" in payload
+            embedding = _embed_one(record, "http://localhost:11434", "nomic-embed-text")
         assert embedding == [0.1] * 768
         mock_embed.assert_called_once_with(
-            build_embedding_text(sample_intervention),
+            "P: Como va la reforma?\nPRESIDENTA: Avanzamos en paneles.",
             "http://localhost:11434",
             "nomic-embed-text",
         )
 
-    def test_returns_none_on_connection_error(
-        self, sample_intervention: InterventionRecord
-    ) -> None:
+    def test_returns_none_on_connection_error(self) -> None:
+        record = WindowRecord(
+            chunk_key="conf1_w000_abc123",
+            conference_id="conf1",
+            conference_date="2025-03-01",
+            participant="P",
+            text="texto",
+            url="",
+            window_index=0,
+        )
         with patch("lakehouse.pipeline.enrichment.embed_text") as mock_embed:
             mock_embed.side_effect = ConnectionError("Ollama embedding failed after 3 retries")
-            payload, embedding = _embed_one(
-                sample_intervention,
-                "2024-10-01",
-                "http://localhost:11434",
-                "nomic-embed-text",
-            )
+            embedding = _embed_one(record, "http://localhost:11434", "nomic-embed-text")
         assert embedding is None
-        assert "Contexto: Conferencia del 2024-10-01" in payload
 
-    def test_returns_none_on_value_error(self, sample_intervention: InterventionRecord) -> None:
+    def test_returns_none_on_value_error(self) -> None:
+        record = WindowRecord(
+            chunk_key="conf1_w000_abc123",
+            conference_id="conf1",
+            conference_date="2025-03-01",
+            participant="P",
+            text="texto",
+            url="",
+            window_index=0,
+        )
         with patch("lakehouse.pipeline.enrichment.embed_text") as mock_embed:
             mock_embed.side_effect = ValueError("Ollama returned empty embeddings")
-            _payload, embedding = _embed_one(
-                sample_intervention,
-                "2024-10-01",
-                "http://localhost:11434",
-                "nomic-embed-text",
-            )
+            embedding = _embed_one(record, "http://localhost:11434", "nomic-embed-text")
         assert embedding is None
 
 
 class TestStoreGold:
-    def test_executes_insert_with_correct_params(
-        self, sample_intervention: InterventionRecord
-    ) -> None:
+    def test_executes_insert_with_window_params(self) -> None:
         cur = MagicMock()
-        _store_gold(
-            cur,
-            sample_intervention,
-            "2024-10-01",
-            "payload metadata",
-            [0.1] * 768,
+        record = WindowRecord(
+            chunk_key="conf1_w000_abc123",
+            conference_id="conf1",
+            conference_date="2025-03-01",
+            participant="PRESIDENTA",
+            text="P: Q?\nPRESIDENTA: R.",
+            url="https://example.com",
+            window_index=0,
         )
+        _store_gold(cur, record, "2025-03-01", [0.1] * 768)
         sql, params = cur.execute.call_args.args
         assert "INSERT INTO gold.rag_corpus" in sql
-        assert params[0] == sample_intervention.intervention_key
-        assert params[2] == "2024-10-01"
-        assert params[5] == "payload metadata"
+        assert params[0] == "conf1_w000_abc123"
+        assert params[2] == "2025-03-01"
+        assert params[4] == "P: Q?\nPRESIDENTA: R."
+        assert params[5] == "P: Q?\nPRESIDENTA: R."
+        assert params[7] == ""
         assert params[8] == [0.1] * 768
 
 
