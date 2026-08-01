@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from typing import Any, LiteralString, cast
 
 import httpx
 import psycopg
 
 from lakehouse.config import Settings
 from lakehouse.log_config import get_logger
+from lakehouse.pipeline.enrichment import MIN_CHUNK_LENGTH
 from lakehouse.schemas.chat import SourceChunk
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -94,14 +95,19 @@ def search_gold_corpus(
     try:
         with psycopg.connect(conn_str) as conn:
             cur = conn.cursor()
-            cur.execute(
-                """
+            query_sql: LiteralString = cast(
+                "LiteralString",
+                f"""
                 SELECT conference_date, conference_id, participant, chunk_text, url, pregunta_activa,
                    1 - (embedding <=> %s::vector) AS similarity
                 FROM gold.rag_corpus
+                WHERE LENGTH(chunk_text) >= {MIN_CHUNK_LENGTH}
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
                 """,
+            )
+            cur.execute(
+                query_sql,
                 (embedding_str, embedding_str, top_k),
             )
             rows = cur.fetchall()

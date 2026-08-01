@@ -187,6 +187,27 @@ class TestSearchGoldCorpus:
         with pytest.raises(RuntimeError, match="database query failed"):
             search_gold_corpus("reforma", top_k=5, settings=Settings())
 
+    @patch("lakehouse.services.rag_search.logger")
+    @patch("lakehouse.services.rag_search.psycopg.connect")
+    @patch("lakehouse.services.rag_search._embed_query")
+    def test_query_filters_short_chunks(
+        self,
+        mock_embed: MagicMock,
+        mock_connect: MagicMock,
+        mock_logger: MagicMock,
+    ) -> None:
+        mock_embed.return_value = [0.1] * 768
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = []
+
+        search_gold_corpus("reforma", top_k=5, settings=Settings())
+
+        sql, _params = mock_cursor.execute.call_args.args
+        assert "LENGTH(chunk_text) >= 50" in sql
+
 
 class TestSearchSources:
     @patch("lakehouse.services.rag_search.search_gold_corpus")
