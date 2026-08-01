@@ -39,11 +39,14 @@ def parse(
         None, "--date", help="Conference date (default: from data)"
     ),
     clean: bool = typer.Option(default=False, help="Drop silver tables before parsing"),
+    workers: int = typer.Option(default=1, help="Parallel parse workers (ProcessPoolExecutor)"),
 ) -> None:
     settings = Settings()
     conn = get_connection(settings.ducklake_data_path)
     service = ParseService(settings=settings, duckdb_conn=conn)
-    result = service.run(dry_run=dry_run, conference_date=conference_date, clean=clean)
+    result = service.run(
+        dry_run=dry_run, conference_date=conference_date, clean=clean, workers=workers
+    )
     typer.echo(f"Parsing completado: {result['interventions']} intervenciones, {result['dlq']} DLQ")
 
 
