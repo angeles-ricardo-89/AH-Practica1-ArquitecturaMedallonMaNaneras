@@ -7,6 +7,8 @@ import httpx
 
 from lakehouse.config import Settings
 from lakehouse.log_config import ProgressReporter, get_logger
+from lakehouse.services.context_builder import ContextBuilder
+from lakehouse.services.rag_search import search_sources
 
 logger = get_logger(__name__, layer="qa")
 
@@ -35,6 +37,13 @@ RELEVANCE_JUDGE_PROMPT = (
     "represente el porcentaje de relevancia."
 )
 
+RAG_SYSTEM_PROMPT = (
+    "Eres un asistente especializado en las conferencias matutinas "
+    "(Mañaneras) del Gobierno de México. Responde preguntas basándote "
+    "en las fuentes proporcionadas. Si no encuentras información en las "
+    "fuentes, indica que no tienes información al respecto."
+)
+
 
 def _call_llamacpp(prompt: str, system_prompt: str, settings: Settings) -> str:
     with httpx.Client(timeout=120.0) as client:
@@ -56,11 +65,21 @@ def _call_llamacpp(prompt: str, system_prompt: str, settings: Settings) -> str:
         return data["choices"][0]["message"]["content"]
 
 
-def _call_chat(query: str, settings: Settings) -> str:
+def _call_chat_rag(query: str, settings: Settings, top_k: int = 8) -> str:
+    sources = search_sources(query, top_k)
+    builder = ContextBuilder(max_context_tokens=settings.max_context_tokens)
+    context, _ = builder.build(
+        query=query,
+        system_prompt=RAG_SYSTEM_PROMPT,
+        sources=sources,
+    )
     with httpx.Client(timeout=120.0) as client:
         payload = {
             "model": settings.llamacpp_model,
-            "messages": [{"role": "user", "content": query}],
+            "messages": [
+                {"role": "system", "content": RAG_SYSTEM_PROMPT},
+                {"role": "user", "content": context},
+            ],
             "max_tokens": 1024,
             "temperature": 0.1,
         }
@@ -110,7 +129,7 @@ def evaluate_rag() -> dict:
         logger.info("Evaluating question %d: %s", qid, question[:60])
 
         try:
-            answer = _call_chat(question, settings)
+            answer = _call_chat_rag(question, settings)
         except Exception:
             logger.exception("Chat failed for question %d", qid)
             answer = ""

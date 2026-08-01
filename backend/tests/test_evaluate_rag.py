@@ -8,7 +8,7 @@ import pytest
 
 from lakehouse.config import Settings
 from lakehouse.pipeline.evaluate_rag import (
-    _call_chat,
+    _call_chat_rag,
     _call_llamacpp,
     _parse_score,
     evaluate_rag,
@@ -93,7 +93,7 @@ class TestGoldenDataset:
 
 
 class TestEvaluateRag:
-    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat_rag")
     @patch("lakehouse.pipeline.evaluate_rag._call_llamacpp")
     def test_evaluate_rag_completes(
         self,
@@ -112,7 +112,7 @@ class TestEvaluateRag:
         assert result["avg_fidelity"] >= 90.0
         assert result["avg_relevance"] >= 80.0
 
-    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat_rag")
     @patch("lakehouse.pipeline.evaluate_rag._call_llamacpp")
     def test_evaluate_rag_saves_results_file(
         self,
@@ -130,7 +130,7 @@ class TestEvaluateRag:
         assert saved["status"] == "completed"
         assert len(saved["results"]) == 50
 
-    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat_rag")
     @patch("lakehouse.pipeline.evaluate_rag._call_llamacpp")
     def test_evaluate_rag_uses_settings(
         self,
@@ -144,7 +144,7 @@ class TestEvaluateRag:
 
         assert result["total"] == 50
 
-    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat_rag")
     @patch("lakehouse.pipeline.evaluate_rag.logger")
     def test_evaluate_rag_handles_chat_failure(
         self,
@@ -159,7 +159,7 @@ class TestEvaluateRag:
         assert result["total"] == 50
         assert result["failed"] == 50
 
-    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat_rag")
     @patch("lakehouse.pipeline.evaluate_rag._call_llamacpp")
     def test_evaluate_rag_includes_all_ids(
         self,
@@ -174,7 +174,7 @@ class TestEvaluateRag:
         ids = {r["id"] for r in result["results"]}
         assert ids == set(range(1, 51))
 
-    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat_rag")
     @patch("lakehouse.pipeline.evaluate_rag._call_llamacpp")
     def test_evaluate_rag_fidelity_and_relevance_scores(
         self,
@@ -252,16 +252,28 @@ class TestCallFunctions:
         assert mock_client.post.call_args.kwargs["json"]["model"] == "gemma4"
 
     @patch("lakehouse.pipeline.evaluate_rag.httpx.Client")
-    def test_call_chat_returns_content(self, mock_client_class: MagicMock) -> None:
+    @patch("lakehouse.pipeline.evaluate_rag.ContextBuilder")
+    @patch("lakehouse.pipeline.evaluate_rag.search_sources")
+    def test_call_chat_rag_returns_content(
+        self,
+        mock_search: MagicMock,
+        mock_builder_cls: MagicMock,
+        mock_client_class: MagicMock,
+    ) -> None:
+        mock_search.return_value = []
+        mock_builder = MagicMock()
+        mock_builder.build.return_value = ("contexto\n\nPregunta: ¿Hola?", MagicMock())
+        mock_builder_cls.return_value = mock_builder
         mock_client = MagicMock()
         mock_client_class.return_value.__enter__.return_value = mock_client
         mock_response = MagicMock()
         mock_response.json.return_value = {"choices": [{"message": {"content": "Respuesta."}}]}
         mock_client.post.return_value = mock_response
 
-        result = _call_chat(query="¿Hola?", settings=Settings())
+        result = _call_chat_rag(query="¿Hola?", settings=Settings())
 
         assert result == "Respuesta."
+        mock_search.assert_called_once_with("¿Hola?", 8)
 
     def test_evaluate_rag_returns_error_when_golden_missing(self) -> None:
         mock_path = MagicMock()
@@ -275,7 +287,7 @@ class TestCallFunctions:
 
 class TestEvaluateRagFailures:
     @patch("lakehouse.pipeline.evaluate_rag.logger")
-    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat_rag")
     def test_chat_failure_appends_error_results(
         self,
         mock_chat: MagicMock,
@@ -291,7 +303,7 @@ class TestEvaluateRagFailures:
 
     @patch("lakehouse.pipeline.evaluate_rag.logger")
     @patch("lakehouse.pipeline.evaluate_rag._call_llamacpp")
-    @patch("lakehouse.pipeline.evaluate_rag._call_chat")
+    @patch("lakehouse.pipeline.evaluate_rag._call_chat_rag")
     def test_judge_failure_uses_zero_scores(
         self,
         mock_chat: MagicMock,
