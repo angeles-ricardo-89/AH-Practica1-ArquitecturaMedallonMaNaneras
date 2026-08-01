@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import duckdb
@@ -15,6 +14,7 @@ from lakehouse.db.merge import (
     merge_intervention,
 )
 from lakehouse.pipeline.enrichment import enrich_interventions
+from lakehouse.schemas.gold import WindowRecord
 from lakehouse.schemas.silver import ConferenceRecord, DLQRejectRecord, InterventionRecord
 
 
@@ -23,30 +23,6 @@ def duck_conn() -> duckdb.DuckDBPyConnection:
     conn = duckdb.connect(":memory:")
     yield conn
     conn.close()
-
-
-@pytest.fixture
-def sample_interventions() -> list[InterventionRecord]:
-    return [
-        InterventionRecord(
-            intervention_key="idem_001_key_abc",
-            conference_id="conf_idem_001",
-            participant="PRESIDENTA",
-            text="Buenos días a todos.",
-            pregunta_activa="¿Cómo va la reforma?",
-            chunk_index=0,
-            ingested_at=datetime.now(UTC),
-        ),
-        InterventionRecord(
-            intervention_key="idem_002_key_def",
-            conference_id="conf_idem_001",
-            participant="SECRETARIO DE SALUD",
-            text="Informamos sobre los avances.",
-            pregunta_activa="",
-            chunk_index=1,
-            ingested_at=datetime.now(UTC),
-        ),
-    ]
 
 
 class TestBronzeIdempotency:
@@ -271,13 +247,23 @@ class TestSilverIdempotency:
 
 
 class TestGoldIdempotency:
+    def _window(self, i: int, text: str) -> WindowRecord:
+        return WindowRecord(
+            chunk_key=f"conf1_w{i:03d}_abc123",
+            conference_id="conf1",
+            conference_date="2025-03-01",
+            participant="PRESIDENTA",
+            text=text,
+            url="",
+            window_index=i,
+        )
+
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
     @patch("lakehouse.pipeline.enrichment.embed_text")
     def test_on_conflict_do_nothing_in_sql(
         self,
         mock_embed: MagicMock,
         mock_connect: MagicMock,
-        sample_interventions: list[InterventionRecord],
     ) -> None:
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -285,9 +271,11 @@ class TestGoldIdempotency:
         mock_conn.cursor.return_value = mock_cursor
         mock_embed.return_value = [0.5] * 768
 
+        records = [self._window(0, "Texto uno."), self._window(1, "Texto dos.")]
+
         first = enrich_interventions(
-            interventions=sample_interventions,
-            conference_date="2024-10-01",
+            windows=records,
+            conference_date=None,
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
             ollama_model="nomic-embed-text",
@@ -313,18 +301,11 @@ class TestGoldIdempotency:
         mock_conn.cursor.return_value = mock_cursor
         mock_embed.return_value = [0.5] * 768
 
-        dup_record = InterventionRecord(
-            intervention_key="dup_key_001",
-            conference_id="conf_dup",
-            participant="PRESIDENTA",
-            text="Texto duplicado.",
-            pregunta_activa="",
-            chunk_index=0,
-        )
+        dup_record = self._window(0, "Texto duplicado.")
 
         first = enrich_interventions(
-            interventions=[dup_record],
-            conference_date="2024-10-01",
+            windows=[dup_record],
+            conference_date=None,
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
             ollama_model="nomic-embed-text",
@@ -334,8 +315,8 @@ class TestGoldIdempotency:
         assert first["embedded"] == 1
 
         second = enrich_interventions(
-            interventions=[dup_record],
-            conference_date="2024-10-01",
+            windows=[dup_record],
+            conference_date=None,
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
             ollama_model="nomic-embed-text",
@@ -357,21 +338,11 @@ class TestGoldIdempotency:
         mock_conn.cursor.return_value = mock_cursor
         mock_embed.return_value = [0.5] * 768
 
-        records = [
-            InterventionRecord(
-                intervention_key=f"gold_key_{i}",
-                conference_id="conf_gold",
-                participant=f"PARTICIPANTE {i}",
-                text=f"Texto Gold {i}",
-                pregunta_activa="",
-                chunk_index=i,
-            )
-            for i in range(3)
-        ]
+        records = [self._window(i, f"Texto Gold {i}") for i in range(3)]
 
         first = enrich_interventions(
-            interventions=records,
-            conference_date="2024-10-01",
+            windows=records,
+            conference_date=None,
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
             ollama_model="nomic-embed-text",
@@ -383,8 +354,8 @@ class TestGoldIdempotency:
         mock_cursor.reset_mock()
 
         second = enrich_interventions(
-            interventions=records,
-            conference_date="2024-10-01",
+            windows=records,
+            conference_date=None,
             pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
             ollama_base_url="http://localhost:11434",
             ollama_model="nomic-embed-text",
