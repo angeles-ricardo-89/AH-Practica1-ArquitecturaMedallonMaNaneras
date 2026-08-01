@@ -39,7 +39,7 @@ def build_embedding_text(intervention: InterventionRecord) -> str:
 | `pregunta_activa` | Texto generado |
 |---|---|
 | `"Como va la reforma energetica?"` | `P: Como va la reforma energetica?\nR: Avanzamos en paneles solares...` |
-| `""` (vacio) | `R: Intervencion sin pregunta activa registrada` |
+| `""` (vacio) | `R: {intervention.text}` (solo la respuesta) |
 
 **No incluye:** fecha, participante, `Contexto:`, `Conferencia del`, IDs tecnicos, hashes. Solo contenido semantico con dos etiquetas minimales que ayudan al modelo de embedding a distinguir pregunta de respuesta.
 
