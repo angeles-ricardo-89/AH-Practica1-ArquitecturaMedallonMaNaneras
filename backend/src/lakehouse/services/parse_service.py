@@ -187,16 +187,19 @@ class ParseService:
         dry_run: bool,
     ) -> tuple[int, int]:
         write_conn = None
-        if not dry_run:
-            write_conn = get_connection(self._settings.ducklake_data_path)
-            write_conn.execute("BEGIN TRANSACTION")
         try:
+            if not dry_run:
+                write_conn = get_connection(self._settings.ducklake_data_path)
+                write_conn.execute("BEGIN TRANSACTION")
             result = dispatch(write_conn)
             if write_conn is not None:
                 write_conn.execute("COMMIT")
         except Exception:
             if write_conn is not None:
-                write_conn.execute("ROLLBACK")
+                try:
+                    write_conn.execute("ROLLBACK")
+                except Exception:
+                    self._logger.warning("ROLLBACK fallo al abortar transaccion", exc_info=True)
             raise
         else:
             return result

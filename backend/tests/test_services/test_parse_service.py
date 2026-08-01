@@ -1,5 +1,7 @@
 from concurrent.futures import Future
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
+
+import pytest
 
 from lakehouse.config import Settings
 from lakehouse.services.parse_service import ParseService, _parse_one_row
@@ -147,6 +149,7 @@ class TestRunWithTransaction:
         mock_get_conn.assert_called_once()
         mock_write_conn.execute.assert_any_call("BEGIN TRANSACTION")
         mock_write_conn.execute.assert_any_call("COMMIT")
+        assert call("ROLLBACK") not in mock_write_conn.execute.call_args_list
         mock_write_conn.close.assert_called_once()
 
     def test_rolls_back_on_exception_and_reraises(self):
@@ -162,15 +165,32 @@ class TestRunWithTransaction:
                 return_value=mock_write_conn,
             ),
             patch.object(service, "_logger"),
+            pytest.raises(RuntimeError, match="boom"),
         ):
-            try:
-                service._run_with_transaction(dispatch, dry_run=False)
-                raise AssertionError("should have raised")
-            except RuntimeError as exc:
-                assert str(exc) == "boom"
+            service._run_with_transaction(dispatch, dry_run=False)
 
         mock_write_conn.execute.assert_any_call("BEGIN TRANSACTION")
         mock_write_conn.execute.assert_any_call("ROLLBACK")
+        assert call("COMMIT") not in mock_write_conn.execute.call_args_list
+        mock_write_conn.close.assert_called_once()
+
+    def test_closes_connection_if_begin_fails(self):
+        service = self._service()
+        mock_write_conn = MagicMock()
+        mock_write_conn.execute.side_effect = RuntimeError("begin failed")
+
+        def dispatch(write_conn) -> tuple[int, int]:
+            raise AssertionError("dispatch should not run")
+
+        with (
+            patch(
+                "lakehouse.services.parse_service.get_connection",
+                return_value=mock_write_conn,
+            ),
+            pytest.raises(RuntimeError, match="begin failed"),
+        ):
+            service._run_with_transaction(dispatch, dry_run=False)
+
         mock_write_conn.close.assert_called_once()
 
     def test_dry_run_no_connection_no_transaction(self):
