@@ -1,4 +1,5 @@
 import hashlib
+from collections.abc import Callable
 from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 
 import duckdb
@@ -83,34 +84,26 @@ class ParseService:
         if rows:
             if workers > 1:
                 with ProcessPoolExecutor(max_workers=workers) as pool:
-                    write_conn = None
-                    if not dry_run:
-                        write_conn = get_connection(self._settings.ducklake_data_path)
-                    try:
-                        total_interventions, total_dlq = self._run_parallel(
+                    total_interventions, total_dlq = self._run_with_transaction(
+                        lambda wc: self._run_parallel(
                             rows=rows,
-                            write_conn=write_conn,
+                            write_conn=wc,
                             conference_date=conference_date,
                             reporter=reporter,
                             pool=pool,
-                        )
-                    finally:
-                        if write_conn is not None:
-                            write_conn.close()
+                        ),
+                        dry_run=dry_run,
+                    )
             else:
-                write_conn = None
-                if not dry_run:
-                    write_conn = get_connection(self._settings.ducklake_data_path)
-                try:
-                    total_interventions, total_dlq = self._run_sequential(
+                total_interventions, total_dlq = self._run_with_transaction(
+                    lambda wc: self._run_sequential(
                         rows=rows,
-                        write_conn=write_conn,
+                        write_conn=wc,
                         conference_date=conference_date,
                         reporter=reporter,
-                    )
-                finally:
-                    if write_conn is not None:
-                        write_conn.close()
+                    ),
+                    dry_run=dry_run,
+                )
 
         reporter.finish()
         self._logger.info(
@@ -187,3 +180,26 @@ class ParseService:
             reporter.tick()
 
         return total_interventions, total_dlq
+
+    def _run_with_transaction(
+        self,
+        dispatch: Callable[[duckdb.DuckDBPyConnection | None], tuple[int, int]],
+        dry_run: bool,
+    ) -> tuple[int, int]:
+        write_conn = None
+        if not dry_run:
+            write_conn = get_connection(self._settings.ducklake_data_path)
+            write_conn.execute("BEGIN TRANSACTION")
+        try:
+            result = dispatch(write_conn)
+            if write_conn is not None:
+                write_conn.execute("COMMIT")
+        except Exception:
+            if write_conn is not None:
+                write_conn.execute("ROLLBACK")
+            raise
+        else:
+            return result
+        finally:
+            if write_conn is not None:
+                write_conn.close()

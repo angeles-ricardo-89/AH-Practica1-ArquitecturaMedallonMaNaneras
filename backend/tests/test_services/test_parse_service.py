@@ -124,6 +124,80 @@ class TestParseServiceWorkers:
         mock_get_conn.assert_not_called()
 
 
+class TestRunWithTransaction:
+    @staticmethod
+    def _service() -> ParseService:
+        return ParseService(settings=Settings(), duckdb_conn=MagicMock())
+
+    def test_opens_connection_and_commits(self):
+        service = self._service()
+        mock_write_conn = MagicMock()
+
+        def dispatch(write_conn) -> tuple[int, int]:
+            assert write_conn is mock_write_conn
+            return (3, 1)
+
+        with patch(
+            "lakehouse.services.parse_service.get_connection",
+            return_value=mock_write_conn,
+        ) as mock_get_conn:
+            total_int, total_dlq = service._run_with_transaction(dispatch, dry_run=False)
+
+        assert (total_int, total_dlq) == (3, 1)
+        mock_get_conn.assert_called_once()
+        mock_write_conn.execute.assert_any_call("BEGIN TRANSACTION")
+        mock_write_conn.execute.assert_any_call("COMMIT")
+        mock_write_conn.close.assert_called_once()
+
+    def test_rolls_back_on_exception_and_reraises(self):
+        service = self._service()
+        mock_write_conn = MagicMock()
+
+        def dispatch(write_conn) -> tuple[int, int]:
+            raise RuntimeError("boom")
+
+        with (
+            patch(
+                "lakehouse.services.parse_service.get_connection",
+                return_value=mock_write_conn,
+            ),
+            patch.object(service, "_logger"),
+        ):
+            try:
+                service._run_with_transaction(dispatch, dry_run=False)
+                raise AssertionError("should have raised")
+            except RuntimeError as exc:
+                assert str(exc) == "boom"
+
+        mock_write_conn.execute.assert_any_call("BEGIN TRANSACTION")
+        mock_write_conn.execute.assert_any_call("ROLLBACK")
+        mock_write_conn.close.assert_called_once()
+
+    def test_dry_run_no_connection_no_transaction(self):
+        service = self._service()
+
+        def dispatch(write_conn) -> tuple[int, int]:
+            assert write_conn is None
+            return (0, 0)
+
+        with patch("lakehouse.services.parse_service.get_connection") as mock_get_conn:
+            total_int, total_dlq = service._run_with_transaction(dispatch, dry_run=True)
+
+        assert (total_int, total_dlq) == (0, 0)
+        mock_get_conn.assert_not_called()
+
+    def test_no_dispatch_on_empty_rows_no_transaction(self):
+        settings = Settings()
+        conn = MagicMock()
+        conn.execute.return_value.fetchall.return_value = []
+        service = ParseService(settings=settings, duckdb_conn=conn)
+
+        with patch("lakehouse.services.parse_service.get_connection") as mock_get_conn:
+            result = service.run(dry_run=False)
+        assert result == {"interventions": 0, "dlq": 0}
+        mock_get_conn.assert_not_called()
+
+
 class _FakePool:
     def __init__(self, futures: list[Future]) -> None:
         self._futures = list(futures)
