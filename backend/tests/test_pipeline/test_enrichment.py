@@ -23,6 +23,7 @@ from lakehouse.pipeline.enrichment import (
     get_pgvector_connection_string,
 )
 from lakehouse.schemas.silver import InterventionRecord
+from lakehouse.services.token_estimator import estimate_tokens
 
 
 @pytest.fixture
@@ -993,6 +994,40 @@ class TestBuildWindows:
         windows = build_windows(ivs)
         assert len(windows) == 1
         assert len(windows[0]) == 1
+
+    def test_single_oversized_intervention_gets_own_window(self) -> None:
+        big_text = "palabra " * 1000  # ~2000 tokens > max_tokens=500
+        ivs = [self._iv(0, big_text), self._iv(1, "Hola.")]
+        windows = build_windows(ivs, max_tokens=500, overlap_tokens=50)
+        # la intervencion grande va sola en su ventana, la chica en otra
+        assert len(windows) == 2
+        assert len(windows[0]) == 1
+        assert len(windows[1]) == 1
+
+    def test_windows_bounded_by_max_tokens_plus_one_intervention(self) -> None:
+        long_text = "palabra " * 200  # 400 tokens
+        ivs = [self._iv(i, long_text) for i in range(6)]
+        max_tokens = 500
+        overlap_tokens = 50
+        windows = build_windows(ivs, max_tokens=max_tokens, overlap_tokens=overlap_tokens)
+        max_single = estimate_tokens(long_text)
+        for w in windows:
+            total = sum(estimate_tokens(iv.text) for iv in w)
+            assert total <= max_tokens + max_single + overlap_tokens
+
+    def test_mid_sequence_oversized_intervention_gets_own_window(self) -> None:
+        big_text = "palabra " * 1000  # ~2000 tokens > max_tokens=500
+        ivs = [self._iv(0, "Hola."), self._iv(1, big_text), self._iv(2, "Mundo.")]
+        windows = build_windows(ivs, max_tokens=500, overlap_tokens=50)
+        assert len(windows) == 3
+        for w in windows:
+            assert len(w) == 1
+        assert windows[1][0].intervention_key == "k001"
+
+    def test_overlap_tokens_must_be_less_than_max_tokens(self) -> None:
+        ivs = [self._iv(0, "Hola.")]
+        with pytest.raises(ValueError, match="overlap_tokens"):
+            build_windows(ivs, max_tokens=100, overlap_tokens=100)
 
 
 class TestBuildWindowText:

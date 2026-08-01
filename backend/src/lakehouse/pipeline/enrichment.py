@@ -65,6 +65,17 @@ def build_windows(
     max_tokens: int = WINDOW_MAX_TOKENS,
     overlap_tokens: int = WINDOW_OVERLAP_TOKENS,
 ) -> list[list[InterventionRecord]]:
+    if overlap_tokens >= max_tokens:
+        raise ValueError("overlap_tokens must be < max_tokens")
+
+    max_single = max((estimate_tokens(iv.text) for iv in interventions), default=0)
+    if max_single > max_tokens:
+        logger.warning(
+            "Intervención supera max_tokens, se alojará en ventana propia",
+            tokens=max_single,
+            max_tokens=max_tokens,
+        )
+
     windows: list[list[InterventionRecord]] = []
     current: list[InterventionRecord] = []
     current_tokens = 0
@@ -72,11 +83,17 @@ def build_windows(
 
     for iv in interventions:
         t = estimate_tokens(iv.text)
-        if current and current_tokens + t > max_tokens:
+        if t > max_tokens and current:
+            windows.append(current)
+            current, current_tokens = [], 0
+        elif current and current_tokens + t > max_tokens:
             windows.append(current)
             overlap_buf, acc = [], 0
             for it in reversed(current):
-                acc += estimate_tokens(it.text)
+                it_tokens = estimate_tokens(it.text)
+                if it_tokens > max_tokens:
+                    continue
+                acc += it_tokens
                 overlap_buf.insert(0, it)
                 if acc >= overlap_tokens:
                     break
