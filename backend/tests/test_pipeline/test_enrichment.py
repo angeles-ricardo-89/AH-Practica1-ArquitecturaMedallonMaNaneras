@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import threading
-from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -25,20 +24,6 @@ from lakehouse.pipeline.enrichment import (
 from lakehouse.schemas.gold import WindowRecord
 from lakehouse.schemas.silver import InterventionRecord
 from lakehouse.services.token_estimator import estimate_tokens
-
-
-@pytest.fixture
-def sample_intervention_no_question() -> InterventionRecord:
-    return InterventionRecord(
-        intervention_key="def456_001_def456",
-        conference_id="conf456",
-        participant="SECRETARIO DE GOBERNACIÓN",
-        text="Informamos que los programas sociales continúan.",
-        pregunta_activa="",
-        chunk_index=1,
-        url="https://example.com/conf-2024-10-01",
-        ingested_at=datetime.now(UTC),
-    )
 
 
 @pytest.fixture
@@ -899,6 +884,69 @@ class TestEnrichInterventionsParallel:
         )
 
         assert result["embedded"] == 1
+        assert result["failed"] == 0
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_parallel_window_without_date_is_failed(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        record = self._window(0, "Texto")
+        record.conference_date = (
+            ""  # fecha invalida (el schema exige patron, se asigna post-construccion)
+        )
+
+        result = enrich_interventions(
+            windows=[record],
+            conference_date=None,
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+            workers=2,
+        )
+
+        assert result["embedded"] == 0
+        assert result["failed"] == 1
+        assert mock_embed.call_count == 0
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_parallel_unique_violation_counts_embedded(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        def raise_unique(sql: str, params=None) -> MagicMock:
+            if "INSERT INTO gold.rag_corpus" in sql:
+                raise psycopg.errors.UniqueViolation("duplicate key")
+            return MagicMock()
+
+        mock_cursor.execute.side_effect = raise_unique
+
+        result = enrich_interventions(
+            windows=[self._window(0, "Texto"), self._window(1, "Texto 2")],
+            conference_date="2025-03-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+            workers=2,
+        )
+
+        assert result["embedded"] == 2
         assert result["failed"] == 0
 
 
