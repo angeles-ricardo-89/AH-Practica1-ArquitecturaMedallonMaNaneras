@@ -208,6 +208,66 @@ class TestEnrichService:
         _, kwargs = mock_enrich.call_args
         assert kwargs["workers"] == 1
 
+    def test_run_grupos_por_conferencia_con_dos_conferencias(self):
+        settings = Settings()
+        conn = MagicMock()
+        conn.execute.return_value.fetchall.return_value = [
+            ("cA", "P1", "Texto largo de la conferencia A " * 3, "", 0, "https://a", "2025-03-01"),
+            (
+                "cA",
+                "P2",
+                "Otro texto largo de la conferencia A " * 3,
+                "",
+                1,
+                "https://a",
+                "2025-03-01",
+            ),
+            ("cB", "P3", "Texto largo de la conferencia B " * 3, "", 0, "https://b", "2025-06-10"),
+        ]
+        service = EnrichService(
+            settings=settings,
+            duckdb_conn=conn,
+            pg_conn_str="postgresql://u:p@h:5433/d",
+        )
+        with (
+            patch("lakehouse.services.enrich_service.ensure_gold_tables"),
+            patch("lakehouse.services.enrich_service.enrich_interventions") as mock_enrich,
+        ):
+            mock_enrich.return_value = {"embedded": 2, "failed": 0, "total": 2}
+            service.run(dry_run=False)
+
+        windows = mock_enrich.call_args.kwargs["windows"]
+        assert len(windows) == 2
+        confs = {w.conference_id for w in windows}
+        assert confs == {"cA", "cB"}
+        dates = {w.conference_date for w in windows}
+        assert dates == {"2025-03-01", "2025-06-10"}
+        assert mock_enrich.call_args.kwargs["conference_date"] is None
+
+    def test_run_conferencia_sin_fecha_otras_si_se_procesan(self):
+        settings = Settings()
+        conn = MagicMock()
+        conn.execute.return_value.fetchall.return_value = [
+            ("cA", "P1", "Texto largo de la conferencia A " * 3, "", 0, "https://a", None),
+            ("cB", "P2", "Texto largo de la conferencia B " * 3, "", 0, "https://b", "2025-06-10"),
+        ]
+        service = EnrichService(
+            settings=settings,
+            duckdb_conn=conn,
+            pg_conn_str="postgresql://u:p@h:5433/d",
+        )
+        with (
+            patch("lakehouse.services.enrich_service.ensure_gold_tables"),
+            patch("lakehouse.services.enrich_service.enrich_interventions") as mock_enrich,
+        ):
+            mock_enrich.return_value = {"embedded": 1, "failed": 0, "total": 1}
+            service.run(dry_run=False)
+
+        windows = mock_enrich.call_args.kwargs["windows"]
+        assert len(windows) == 1
+        assert windows[0].conference_id == "cB"
+        assert windows[0].conference_date == "2025-06-10"
+
 
 class TestBuildWindowsFromConference:
     def test_filters_short_sorts_and_builds_windows(self) -> None:

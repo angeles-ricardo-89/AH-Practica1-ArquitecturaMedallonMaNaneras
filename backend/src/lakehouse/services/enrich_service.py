@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from lakehouse.config import Settings
 from lakehouse.log_config import get_logger
 from lakehouse.pipeline.enrichment import (
@@ -85,9 +87,12 @@ class EnrichService:
             self._logger.warning("No hay intervenciones en Silver para enriquecer")
             return {"embedded": 0, "failed": 0, "total": 0}
 
+        by_conference: dict[str, list[InterventionRecord]] = defaultdict(list)
+        for i in interventions:
+            by_conference[i.conference_id].append(i)
+
         windows: list[WindowRecord] = []
-        for conf_id in {i.conference_id for i in interventions}:
-            group = [i for i in interventions if i.conference_id == conf_id]
+        for conf_id, group in by_conference.items():
             date = group[0].conference_date
             if not date:
                 self._logger.warning(
