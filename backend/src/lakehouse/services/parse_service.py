@@ -27,6 +27,12 @@ def _parse_one_row(
     raw_html: str,
     conference_date: str | None,
 ) -> tuple[ConferenceRecord | None, list[InterventionRecord], list[DLQRejectRecord]]:
+    """Parses one Bronze row in a worker process.
+
+    Invariante de fork-safety: esta funcion es pura y NUNCA toca conexiones de DuckDB. En Linux
+    fork, los workers del ProcessPoolExecutor heredan el file descriptor de `write_conn` del proceso
+    principal; la seguridad depende de que los workers jamás usen esa conexion.
+    """
     date = conference_date or parse_conference_date(raw_html, source_url)
     if date is None:
         conference_id = hashlib.sha256(source_url.encode()).hexdigest()[:20]
@@ -164,6 +170,15 @@ class ParseService:
                 self._logger.warning(
                     "Error en worker de parseo", source_url=source_url, exc_info=True
                 )
+                failed_dlq = DLQRejectRecord(
+                    source_record_id=hashlib.sha256(source_url.encode()).hexdigest()[:20],
+                    rejection_reason="worker_error",
+                    raw_data=source_url,
+                )
+                if write_conn is not None:
+                    self._logger.warning("Registro rechazado, insertando en DLQ", record=failed_dlq)
+                    insert_dlq_record(write_conn, failed_dlq)
+                total_dlq += 1
                 reporter.tick()
                 continue
             if write_conn is not None:

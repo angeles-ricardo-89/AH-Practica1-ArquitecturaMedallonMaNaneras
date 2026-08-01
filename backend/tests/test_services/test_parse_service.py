@@ -347,7 +347,7 @@ class TestRunParallel:
         mock_logger.warning.assert_called_once()
         assert pool.submit_calls[0][1] == ("https://example.com/a", "<html></html>", None)
 
-    def test_worker_exception_logs_and_continues(self):
+    def test_worker_exception_logs_and_routes_to_dlq(self):
         service = self._service()
         future_ok = Future()
         future_ok.set_result((MagicMock(), [], []))
@@ -358,6 +358,7 @@ class TestRunParallel:
         with (
             patch.object(service, "_logger") as mock_logger,
             patch("lakehouse.services.parse_service.merge_conference") as mock_mc,
+            patch("lakehouse.services.parse_service.insert_dlq_record") as mock_dlq,
         ):
             total_int, total_dlq = service._run_parallel(
                 rows=[("https://example.com/ok", "x"), ("https://example.com/broken", "y")],
@@ -367,11 +368,18 @@ class TestRunParallel:
                 pool=pool,
             )
         assert total_int == 0
-        assert total_dlq == 0
+        assert total_dlq == 1
         assert reporter.tick.call_count == 2
-        mock_logger.warning.assert_called_once()
-        assert mock_logger.warning.call_args.kwargs["source_url"] == "https://example.com/broken"
+        assert mock_logger.warning.call_count == 2
+        assert (
+            mock_logger.warning.call_args_list[0].kwargs["source_url"]
+            == "https://example.com/broken"
+        )
         mock_mc.assert_called_once()
+        mock_dlq.assert_called_once()
+        dlq_record = mock_dlq.call_args.args[1]
+        assert dlq_record.rejection_reason == "worker_error"
+        assert dlq_record.raw_data == "https://example.com/broken"
 
     def test_dry_run_skips_writes(self):
         service = self._service()

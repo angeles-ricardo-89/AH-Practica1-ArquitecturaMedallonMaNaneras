@@ -127,6 +127,11 @@ with ProcessPoolExecutor(max_workers=workers) as pool:
   no-dry-run pero sin modificar la base de datos.
 - `clean` aplica `drop_silver_tables()` y `ensure_silver_tables()` en el proceso principal antes de
   despachar workers (sin cambios respecto a hoy).
+- **Fork-safety:** en Linux fork, `ProcessPoolExecutor` fork-ea los workers de forma lazy en el
+  primer `submit()`, que ocurre despues de que `write_conn` se abrio. Los workers heredan el file
+  descriptor de DuckDB, pero NUNCA lo usan: `_parse_one_row` es una funcion pura sin acceso a
+  conexiones. La seguridad no depende de que el pool se cree antes de la conexion, sino de la
+  invariante "los workers nunca tocan DuckDB". Documentar esta invariante como requisito permanente.
 
 **Imports nuevos:** `from concurrent.futures import Future, ProcessPoolExecutor, as_completed`.
 

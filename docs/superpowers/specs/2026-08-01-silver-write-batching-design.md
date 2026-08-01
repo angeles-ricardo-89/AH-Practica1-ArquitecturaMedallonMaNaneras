@@ -56,8 +56,7 @@ def _run_with_transaction(
             write_conn.close()
 ```
 
-Y `run()` usa el helper en cada branch, manteniendo el pool ANTES de abrir `write_conn`
-(requisito de fork-safety ya implementado):
+Y `run()` usa el helper en cada branch:
 
 ```python
 if rows:
@@ -86,9 +85,12 @@ if rows:
 ```
 
 **Notas:**
-- **Fork-safety preservado:** el pool de `ProcessPoolExecutor` se crea (workers se fork-ean) ANTES
-  de que `_run_with_transaction` abra `write_conn`. Ningun worker hereda el handle de escritura.
-  Esto mantiene el fix de fork-safety aplicado en el commit anterior.
+- **Fork-safety:** en Linux fork, `ProcessPoolExecutor` fork-ea los workers de forma lazy en el
+  primer `submit()`, que ocurre despues de que `_run_with_transaction` abrio `write_conn`. Los
+  workers heredan el file descriptor de DuckDB, pero NUNCA lo usan: `_parse_one_row` es una funcion
+  pura sin acceso a conexiones. La seguridad no depende de que el pool se cree antes de la conexion,
+  sino de la invariante "los workers nunca tocan DuckDB". Documentar esta invariante como requisito
+  permanente.
 - `dry_run` → `_run_with_transaction` recibe `dry_run=True`, no abre conexion, no inicia
   transaccion, y `dispatch` recibe `write_conn=None` (los paths ya saben no escribir).
 - El `except Exception` hace `ROLLBACK` y re-lanza, preservando atomicidad todo-o-nada.
