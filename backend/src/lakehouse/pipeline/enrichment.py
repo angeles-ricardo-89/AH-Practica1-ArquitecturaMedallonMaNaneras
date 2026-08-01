@@ -181,8 +181,9 @@ def enrich_interventions(
                 failed += 1
                 continue
             payload = build_embedding_payload(intervention, effective_date)
+            embedding_text = build_embedding_text(intervention)
             try:
-                embedding = embed_text(payload, ollama_base_url, ollama_model)
+                embedding = embed_text(embedding_text, ollama_base_url, ollama_model)
                 logger.info(
                     "Embedding generado para intervención %d/%d",
                     idx + 1,
