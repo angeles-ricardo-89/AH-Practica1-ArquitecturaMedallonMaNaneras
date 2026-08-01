@@ -53,7 +53,7 @@ def _call_llamacpp(prompt: str, system_prompt: str, settings: Settings) -> str:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
-            "max_tokens": 1024,
+            "max_tokens": 2048,
             "temperature": 0.1,
         }
         resp = client.post(
@@ -80,7 +80,7 @@ def _call_chat_rag(query: str, settings: Settings, top_k: int = 8) -> str:
                 {"role": "system", "content": RAG_SYSTEM_PROMPT},
                 {"role": "user", "content": context},
             ],
-            "max_tokens": 1024,
+            "max_tokens": 2048,
             "temperature": 0.1,
         }
         resp = client.post(
