@@ -779,11 +779,18 @@ class TestEnrichInterventionsParallel:
         mock_conn.cursor.return_value = mock_cursor
 
         seen_threads: set[int] = set()
-        gate = threading.Event()
+        arrivals = 0
+        arrivals_lock = threading.Lock()
+        release = threading.Event()
 
         def side_effect(text: str, base_url: str, model: str) -> list[float]:
-            seen_threads.add(threading.current_thread().ident or 0)
-            gate.wait(timeout=5)
+            nonlocal arrivals
+            with arrivals_lock:
+                seen_threads.add(threading.current_thread().ident or 0)
+                arrivals += 1
+                if arrivals >= 2:
+                    release.set()
+            release.wait(timeout=5)
             return [0.5] * 768
 
         mock_embed.side_effect = side_effect
@@ -803,17 +810,14 @@ class TestEnrichInterventionsParallel:
 
         main_thread_id = threading.current_thread().ident or 0
 
-        try:
-            result = enrich_interventions(
-                interventions=records,
-                conference_date="2024-10-01",
-                pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
-                ollama_base_url="http://localhost:11434",
-                ollama_model="nomic-embed-text",
-                workers=2,
-            )
-        finally:
-            gate.set()
+        result = enrich_interventions(
+            interventions=records,
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+            workers=2,
+        )
 
         assert result["total"] == 3
         assert result["embedded"] == 3

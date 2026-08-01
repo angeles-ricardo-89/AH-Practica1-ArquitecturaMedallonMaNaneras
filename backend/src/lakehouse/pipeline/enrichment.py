@@ -49,7 +49,11 @@ def _embed_one(
     try:
         embedding = embed_text(embedding_text, ollama_base_url, ollama_model)
     except (ConnectionError, ValueError) as e:
-        logger.warning("embed_text falló", error=str(e))
+        logger.warning(
+            "embed_text falló",
+            error=str(e),
+            intervention_key=intervention.intervention_key,
+        )
         return payload, None
     return payload, embedding
 
@@ -249,6 +253,10 @@ def enrich_interventions(
                     intervention, effective_date = futures[future]
                     payload, embedding = future.result()
                     if embedding is None:
+                        logger.error(
+                            "Error al generar embedding",
+                            intervention_key=intervention.intervention_key,
+                        )
                         failed += 1
                     else:
                         logger.info(
