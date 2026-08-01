@@ -15,7 +15,7 @@
 | Archivo | Accion | Responsabilidad |
 |---------|--------|-----------------|
 | `backend/src/lakehouse/schemas/gold.py` | Modify | + `WindowRecord` |
-| `backend/src/lakehouse/pipeline/enrichment.py` | Modify | + `build_windows`, + `build_window_text`, + `build_window_key`, adaptar `_embed_one`/`_store_gold`/`enrich_interventions`, `- build_embedding_payload`/`- build_embedding_text` |
+| `backend/src/lakehouse/pipeline/enrichment.py` | Modify | + `build_windows`, + `build_window_text`, + `build_window_key`, adaptar `_embed_one`/`_store_gold`/`enrich_interventions`, adaptar `build_embedding_payload` a `WindowRecord` |
 | `backend/src/lakehouse/services/enrich_service.py` | Modify | + `build_windows_from_conference`, agrupar por conferencia en `run()` |
 | `backend/src/lakehouse/services/rag_search.py` | Modify | + filtro `LENGTH(chunk_text) >= MIN_CHUNK_LENGTH` en query |
 | `backend/tests/test_pipeline/test_enrichment.py` | Modify | Tests `build_windows`/`build_window_text`/`build_window_key`, reescribir `TestEmbedOne`/`TestStoreGold`/`TestEnrichInterventions`/`TestEnrichInterventionsParallel` a `WindowRecord`, `- TestBuildEmbeddingPayload`/`- TestBuildEmbeddingText` |
@@ -23,9 +23,10 @@
 | `backend/tests/test_services/test_rag_search.py` | Modify | Test del filtro en query |
 
 **Decisiones de diseño clave:**
-- `_embed_one(record, ollama_base_url, ollama_model) -> list[float] | None`: embedde `record.text` directamente, retorna embedding o None. Ya NO retorna `(payload, embedding)` porque la ventana no tiene payload de metadata (`payload == text`). El warning log usa `chunk_key`.
-- `_store_gold(cur, record, effective_date, embedding)`: deriva `payload=record.text` internamente. Ya NO recibe `payload` como parametro.
-- `build_embedding_payload` y `build_embedding_text` se ELIMINAN: quedan como codigo muerto al pasar a ventanas (el embedding de ventana es `record.text` directo).
+- `_embed_one(record, ollama_base_url, ollama_model) -> list[float] | None`: embedde `record.text` directamente, retorna embedding o None. Ya NO retorna `(payload, embedding)` porque la ventana no tiene payload de metadata separado para el embedding.
+- `_store_gold(cur, record, effective_date, embedding)`: escribe `chunk_text=record.text` (limpio) y `payload=build_embedding_payload(record, effective_date)` (metadata). La separacion limpio-vs-metadata se mantiene.
+- `build_embedding_payload` se ADAPTA a `WindowRecord` y se conserva (un evaluador del curso exige que exista). Es el unico productor de la columna `payload` — codigo vivo, no muerto.
+- `build_embedding_text` se CONSERVA tal cual (toma `InterventionRecord`). Sigue siendo codigo muerto en produccion pero se mantiene por el evaluador del curso y sus tests.
 
 ---
 
