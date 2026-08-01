@@ -23,24 +23,38 @@ def mock_llamacpp():
 
     with (
         patch("lakehouse.api.routers.chat.httpx.Client") as mock_cls,
-        patch("lakehouse.services.rag_search.search_gold_corpus") as mock_search,
+        patch("lakehouse.api.routers.chat.TemporalParser") as mock_parser_cls,
+        patch("lakehouse.api.routers.chat._embed_query") as mock_embed,
+        patch("lakehouse.api.routers.chat.search_gold_corpus_from_vector") as mock_search,
     ):
         mock_instance = MagicMock()
         mock_cls.return_value.__enter__.return_value = mock_instance
         mock_instance.post.return_value = mock_resp
+        mock_parser = MagicMock()
+        mock_parser_cls.return_value = mock_parser
+        mock_parser.extraer.return_value = MagicMock(
+            filter_out=MagicMock(
+                requiere_filtro_tiempo=False,
+                fecha_inicio=None,
+                fecha_fin=None,
+                texto_busqueda_semantica="test query",
+            ),
+            fallback_ocurrido=False,
+        )
+        mock_embed.return_value = [0.1, 0.2, 0.3]
         mock_search.return_value = []
-        yield
+        yield mock_cls, mock_search, mock_embed, mock_parser_cls
 
 
 class TestChatEndpoint:
-    def test_chat_returns_200(self, mock_llamacpp: None) -> None:
+    def test_chat_returns_200(self, mock_llamacpp) -> None:
         resp = client.post("/chat/", json={"query": "¿Cómo va la reforma?"})
         assert resp.status_code == 200
         data = resp.json()
         assert "answer" in data
         assert data["answer"] == "Respuesta basada en fuentes."
 
-    def test_chat_returns_sources(self, mock_llamacpp: None) -> None:
+    def test_chat_returns_sources(self, mock_llamacpp) -> None:
         resp = client.post(
             "/chat/",
             json={"query": "reforma energética", "top_k": 3},
@@ -50,7 +64,7 @@ class TestChatEndpoint:
         assert "sources" in data
         assert isinstance(data["sources"], list)
 
-    def test_chat_returns_token_usage(self, mock_llamacpp: None) -> None:
+    def test_chat_returns_token_usage(self, mock_llamacpp) -> None:
         resp = client.post(
             "/chat/",
             json={"query": "¿Qué pasó con la salud?"},
@@ -67,16 +81,34 @@ class TestChatEndpoint:
     def test_chat_handles_llamacpp_unavailable(self) -> None:
         with (
             patch("lakehouse.api.routers.chat.httpx.Client") as mock_cls,
-            patch("lakehouse.services.rag_search.search_gold_corpus") as mock_search,
+            patch("lakehouse.api.routers.chat.TemporalParser") as mock_parser_cls,
+            patch("lakehouse.api.routers.chat._embed_query") as mock_embed,
+            patch("lakehouse.api.routers.chat.search_gold_corpus_from_vector") as mock_search,
         ):
             mock_instance = MagicMock()
             mock_cls.return_value.__enter__.return_value = mock_instance
             mock_instance.post.side_effect = Exception("Connection refused")
+            mock_parser = MagicMock()
+            mock_parser_cls.return_value = mock_parser
+            mock_parser.extraer.return_value = MagicMock(
+                filter_out=MagicMock(
+                    requiere_filtro_tiempo=False,
+                    texto_busqueda_semantica="test query",
+                ),
+                fallback_ocurrido=False,
+            )
+            mock_embed.return_value = [0.1, 0.2, 0.3]
             mock_search.return_value = []
             resp = client.post("/chat/", json={"query": "test query"})
             assert resp.status_code == 503
 
-    def test_chat_with_conversation_id(self, mock_llamacpp: None) -> None:
+    def test_chat_handles_embedding_failure(self, mock_llamacpp) -> None:
+        _, _, mock_embed, _ = mock_llamacpp
+        mock_embed.side_effect = ConnectionError("embedding failed")
+        resp = client.post("/chat/", json={"query": "test query"})
+        assert resp.status_code == 503
+
+    def test_chat_with_conversation_id(self, mock_llamacpp) -> None:
         resp = client.post(
             "/chat/",
             json={
@@ -85,6 +117,71 @@ class TestChatEndpoint:
             },
         )
         assert resp.status_code == 200
+
+    def test_chat_with_temporal_filter(self, mock_llamacpp):
+        _, mock_search, _, mock_parser_cls = mock_llamacpp
+        mock_parser_cls.return_value.extraer.return_value = MagicMock(
+            filter_out=MagicMock(
+                requiere_filtro_tiempo=True,
+                fecha_inicio="2025-07-15",
+                fecha_fin="2025-07-15",
+                texto_busqueda_semantica="Que dijo Sheinbaum sobre el T-MEC",
+            ),
+            fallback_ocurrido=False,
+        )
+        with patch("lakehouse.api.routers.chat.search_with_date_filter") as mock_date_search:
+            mock_date_search.return_value = []
+            resp = client.post("/chat/", json={"query": "Que dijo Sheinbaum ayer sobre el T-MEC"})
+            assert resp.status_code == 200
+            mock_date_search.assert_called_once()
+            mock_search.assert_not_called()
+
+    def test_chat_without_temporal_intent(self, mock_llamacpp):
+        _, mock_search, _, _ = mock_llamacpp
+        with patch("lakehouse.api.routers.chat.search_with_date_filter") as mock_date_search:
+            resp = client.post("/chat/", json={"query": "postura sobre energia nuclear"})
+            assert resp.status_code == 200
+            mock_search.assert_called_once()
+            mock_date_search.assert_not_called()
+
+    def test_chat_parser_fallback_injects_nota(self, mock_llamacpp):
+        mock_cls, _, _, mock_parser_cls = mock_llamacpp
+        mock_parser_cls.return_value.extraer.return_value = MagicMock(
+            filter_out=MagicMock(
+                requiere_filtro_tiempo=False,
+                texto_busqueda_semantica="query ambigua",
+            ),
+            fallback_ocurrido=True,
+        )
+        resp = client.post("/chat/", json={"query": "query ambigua con fecha confusa"})
+        assert resp.status_code == 200
+        mock_instance = mock_cls.return_value.__enter__.return_value
+        payload = mock_instance.post.call_args[1]["json"]
+        context = payload["messages"][1]["content"]
+        assert "No se pudo determinar" in context
+
+    def test_chat_with_empty_date_range_responds_no_info(self, mock_llamacpp):
+        mock_cls, mock_search, _, mock_parser_cls = mock_llamacpp
+        mock_parser_cls.return_value.extraer.return_value = MagicMock(
+            filter_out=MagicMock(
+                requiere_filtro_tiempo=True,
+                fecha_inicio="2099-01-01",
+                fecha_fin="2099-12-31",
+                texto_busqueda_semantica="reforma energetica",
+            ),
+            fallback_ocurrido=False,
+        )
+        with patch("lakehouse.api.routers.chat.search_with_date_filter") as mock_date_search:
+            mock_date_search.return_value = []
+            resp = client.post("/chat/", json={"query": "reforma energetica de 2099"})
+            assert resp.status_code == 200
+            assert resp.json()["sources"] == []
+            mock_date_search.assert_called_once()
+            mock_search.assert_not_called()
+            mock_instance = mock_cls.return_value.__enter__.return_value
+            payload = mock_instance.post.call_args[1]["json"]
+            context = payload["messages"][1]["content"]
+            assert "No se encontraron resultados para el rango de fechas solicitado" in context
 
 
 class TestChatSourceDetails:
@@ -235,3 +332,22 @@ class TestContextBuilder:
         )
         assert "test query" in context
         assert "sys" in context
+
+    def test_sin_resultados_rango_injected(self) -> None:
+        builder = ContextBuilder(max_context_tokens=8192)
+        context, _usage = builder.build(
+            query="test",
+            system_prompt="sys",
+            sources=[],
+            sin_resultados_rango=True,
+        )
+        assert "No se encontraron resultados para el rango de fechas solicitado" in context
+
+    def test_no_sin_resultados_rango_by_default(self) -> None:
+        builder = ContextBuilder(max_context_tokens=8192)
+        context, _usage = builder.build(
+            query="test",
+            system_prompt="sys",
+            sources=[],
+        )
+        assert "No se encontraron resultados" not in context

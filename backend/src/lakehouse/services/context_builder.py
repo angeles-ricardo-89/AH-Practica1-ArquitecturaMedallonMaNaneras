@@ -19,6 +19,7 @@ class ContextBuilder:
         sources: list | None = None,
         history: list[dict[str, str]] | None = None,
         nota_fallback: bool = False,
+        sin_resultados_rango: bool = False,
     ) -> tuple[str, TokenUsage]:
         sources = sources or []
         history = history or []
@@ -45,6 +46,8 @@ class ContextBuilder:
                 "NOTA: No se pudo determinar automaticamente el filtro temporal de la consulta. "
                 "Los resultados pueden pertenecer a cualquier fecha.\n---\n\n"
             )
+        if sin_resultados_rango:
+            context += "No se encontraron resultados para el rango de fechas solicitado.\n---\n\n"
         if sources_text.strip():
             context += f"Fuentes:\n{sources_text}\n\n"
         context += self._truncate_history_to_tokens(history, max_history_tokens)
