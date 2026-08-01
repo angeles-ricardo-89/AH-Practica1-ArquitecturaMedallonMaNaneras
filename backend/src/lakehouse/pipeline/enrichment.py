@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
@@ -9,7 +10,7 @@ import httpx
 import psycopg
 
 from lakehouse.log_config import ProgressReporter, get_logger
-from lakehouse.services.token_estimator import estimate_tokens  # noqa: F401
+from lakehouse.services.token_estimator import estimate_tokens
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -42,6 +43,49 @@ def build_embedding_text(intervention: InterventionRecord) -> str:
     if pregunta:
         return f"P: {pregunta}\nR: {intervention.text}"
     return f"R: {intervention.text}"
+
+
+def build_window_text(interventions: list[InterventionRecord]) -> str:
+    blocks = []
+    for iv in interventions:
+        if iv.pregunta_activa:
+            blocks.append(f"P: {iv.pregunta_activa}\n{iv.participant}: {iv.text}")
+        else:
+            blocks.append(f"{iv.participant}: {iv.text}")
+    return "\n\n".join(blocks)
+
+
+def build_window_key(conference_id: str, window_index: int, window_text: str) -> str:
+    h = hashlib.sha256(window_text.encode()).hexdigest()[:6]
+    return f"{conference_id}_w{window_index:03d}_{h}"
+
+
+def build_windows(
+    interventions: list[InterventionRecord],
+    max_tokens: int = WINDOW_MAX_TOKENS,
+    overlap_tokens: int = WINDOW_OVERLAP_TOKENS,
+) -> list[list[InterventionRecord]]:
+    windows: list[list[InterventionRecord]] = []
+    current: list[InterventionRecord] = []
+    current_tokens = 0
+    overlap_buf: list[InterventionRecord] = []
+
+    for iv in interventions:
+        t = estimate_tokens(iv.text)
+        if current and current_tokens + t > max_tokens:
+            windows.append(current)
+            overlap_buf, acc = [], 0
+            for it in reversed(current):
+                acc += estimate_tokens(it.text)
+                overlap_buf.insert(0, it)
+                if acc >= overlap_tokens:
+                    break
+            current, current_tokens = list(overlap_buf), acc
+        current.append(iv)
+        current_tokens += t
+    if current:
+        windows.append(current)
+    return windows
 
 
 def _embed_one(

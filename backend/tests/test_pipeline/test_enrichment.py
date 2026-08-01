@@ -13,6 +13,9 @@ from lakehouse.pipeline.enrichment import (
     _store_gold,
     build_embedding_payload,
     build_embedding_text,
+    build_window_key,
+    build_window_text,
+    build_windows,
     drop_gold_tables,
     embed_text,
     enrich_interventions,
@@ -952,3 +955,112 @@ class TestEnrichInterventionsParallel:
 
         assert result["embedded"] == 1
         assert result["failed"] == 0
+
+
+class TestBuildWindows:
+    def _iv(self, i: int, text: str, conference_id: str = "conf1") -> InterventionRecord:
+        return InterventionRecord(
+            intervention_key=f"k{i:03d}",
+            conference_id=conference_id,
+            participant="PRESIDENTA",
+            text=text,
+            pregunta_activa=f"Pregunta {i}",
+            chunk_index=i,
+            url="https://example.com",
+            conference_date="2025-03-01",
+        )
+
+    def test_single_window_under_max_tokens(self) -> None:
+        ivs = [self._iv(0, "Hola."), self._iv(1, "Mundo."), self._iv(2, "Test.")]
+        windows = build_windows(ivs, max_tokens=1600)
+        assert len(windows) == 1
+        assert len(windows[0]) == 3
+
+    def test_splits_into_multiple_windows_with_overlap(self) -> None:
+        long_text = "palabra " * 200  # ~200 tokens
+        ivs = [self._iv(i, long_text) for i in range(6)]
+        windows = build_windows(ivs, max_tokens=500, overlap_tokens=50)
+        assert len(windows) > 1
+        last_of_first = windows[0][-1].intervention_key
+        first_keys_second = {iv.intervention_key for iv in windows[1]}
+        assert last_of_first in first_keys_second
+
+    def test_empty_list_returns_empty(self) -> None:
+        assert build_windows([]) == []
+
+    def test_single_intervention_returns_one_window(self) -> None:
+        ivs = [self._iv(0, "Hola.")]
+        windows = build_windows(ivs)
+        assert len(windows) == 1
+        assert len(windows[0]) == 1
+
+
+class TestBuildWindowText:
+    def test_includes_pregunta_and_participant(self) -> None:
+        iv = InterventionRecord(
+            intervention_key="k000",
+            conference_id="conf1",
+            participant="PRESIDENTA",
+            text="Avanzamos en paneles.",
+            pregunta_activa="Como va la reforma?",
+            chunk_index=0,
+            url="https://example.com",
+        )
+        text = build_window_text([iv])
+        assert "P: Como va la reforma?" in text
+        assert "PRESIDENTA: Avanzamos en paneles." in text
+
+    def test_without_pregunta_omits_p_label(self) -> None:
+        iv = InterventionRecord(
+            intervention_key="k000",
+            conference_id="conf1",
+            participant="SECRETARIO",
+            text="Se implemento la estrategia.",
+            pregunta_activa="",
+            chunk_index=0,
+            url="https://example.com",
+        )
+        text = build_window_text([iv])
+        assert text == "SECRETARIO: Se implemento la estrategia."
+        assert "P:" not in text
+
+    def test_multiple_interventions_separated_by_blank_line(self) -> None:
+        ivs = [
+            InterventionRecord(
+                intervention_key="k000",
+                conference_id="c",
+                participant="P1",
+                text="Uno.",
+                pregunta_activa="",
+                chunk_index=0,
+                url="",
+            ),
+            InterventionRecord(
+                intervention_key="k001",
+                conference_id="c",
+                participant="P2",
+                text="Dos.",
+                pregunta_activa="Q?",
+                chunk_index=1,
+                url="",
+            ),
+        ]
+        text = build_window_text(ivs)
+        assert text.count("\n\n") == 1
+
+
+class TestBuildWindowKey:
+    def test_deterministic_for_same_text(self) -> None:
+        k1 = build_window_key("conf1", 0, "mismo texto")
+        k2 = build_window_key("conf1", 0, "mismo texto")
+        assert k1 == k2
+
+    def test_differs_for_index(self) -> None:
+        k1 = build_window_key("conf1", 0, "texto")
+        k2 = build_window_key("conf1", 1, "texto")
+        assert k1 != k2
+
+    def test_contains_conference_and_index(self) -> None:
+        key = build_window_key("conf1", 2, "texto")
+        assert key.startswith("conf1_w002_")
+        assert len(key) == len("conf1_w002_") + 6
