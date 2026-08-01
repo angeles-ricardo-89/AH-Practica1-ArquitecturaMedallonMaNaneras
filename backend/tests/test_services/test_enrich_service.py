@@ -123,3 +123,44 @@ class TestEnrichService:
             mock_enrich.return_value = {"embedded": 1, "failed": 0, "total": 1}
             service.run(clean=True, dry_run=True)
         mock_drop.assert_not_called()
+
+    def test_run_propaga_workers_a_enrich_interventions(self):
+        settings = Settings()
+        conn = MagicMock()
+        conn.execute.return_value.fetchall.return_value = [
+            ("k1", "c1", "P", "t", "", 0, "https://example.com", "2025-03-01"),
+        ]
+        service = EnrichService(
+            settings=settings,
+            duckdb_conn=conn,
+            pg_conn_str="postgresql://u:p@h:5433/d",
+        )
+        with (
+            patch("lakehouse.services.enrich_service.ensure_gold_tables"),
+            patch("lakehouse.services.enrich_service.enrich_interventions") as mock_enrich,
+        ):
+            mock_enrich.return_value = {"embedded": 1, "failed": 0, "total": 1}
+            result = service.run(workers=4)
+        assert result["embedded"] == 1
+        _, kwargs = mock_enrich.call_args
+        assert kwargs["workers"] == 4
+
+    def test_run_default_workers_is_one(self):
+        settings = Settings()
+        conn = MagicMock()
+        conn.execute.return_value.fetchall.return_value = [
+            ("k1", "c1", "P", "t", "", 0, "https://example.com", "2025-03-01"),
+        ]
+        service = EnrichService(
+            settings=settings,
+            duckdb_conn=conn,
+            pg_conn_str="postgresql://u:p@h:5433/d",
+        )
+        with (
+            patch("lakehouse.services.enrich_service.ensure_gold_tables"),
+            patch("lakehouse.services.enrich_service.enrich_interventions") as mock_enrich,
+        ):
+            mock_enrich.return_value = {"embedded": 1, "failed": 0, "total": 1}
+            service.run()
+        _, kwargs = mock_enrich.call_args
+        assert kwargs["workers"] == 1

@@ -20,6 +20,7 @@ class EnrichService:
         dry_run: bool = False,
         conference_date: str | None = None,
         clean: bool = False,
+        workers: int = 1,
     ) -> dict:
         rows = self._conn.execute(
             """
@@ -74,4 +75,5 @@ class EnrichService:
             pg_conn_str=self._pg_conn_str,
             ollama_base_url=self._settings.ollama_base_url,
             ollama_model=self._settings.ollama_embed_model,
+            workers=workers,
         )
