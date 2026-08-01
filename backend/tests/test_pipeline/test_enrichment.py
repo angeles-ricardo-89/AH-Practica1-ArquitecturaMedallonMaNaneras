@@ -762,3 +762,133 @@ class TestStoreGold:
         assert params[2] == "2024-10-01"
         assert params[5] == "payload metadata"
         assert params[8] == [0.1] * 768
+
+
+class TestEnrichInterventionsParallel:
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_workers_greater_than_one_embeds_all(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        records = [
+            InterventionRecord(
+                intervention_key=f"rec_{i:03d}_hash",
+                conference_id="conf",
+                participant=f"PARTICIPANTE {i}",
+                text=f"Texto {i}",
+                pregunta_activa="",
+                chunk_index=i,
+                url="https://example.com",
+            )
+            for i in range(5)
+        ]
+
+        result = enrich_interventions(
+            interventions=records,
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+            workers=3,
+        )
+
+        assert result["total"] == 5
+        assert result["embedded"] == 5
+        assert result["failed"] == 0
+        assert mock_embed.call_count == 5
+        insert_count = sum(
+            1
+            for c in mock_cursor.execute.call_args_list
+            if "INSERT INTO gold.rag_corpus" in c[0][0]
+        )
+        assert insert_count == 5
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_workers_parallel_counts_failures(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        def side_effect(text: str, base_url: str, model: str) -> list[float]:
+            if "Texto 1" in text:
+                raise ConnectionError("Ollama embedding failed after 3 retries")
+            return [0.5] * 768
+
+        mock_embed.side_effect = side_effect
+
+        records = [
+            InterventionRecord(
+                intervention_key=f"rec_{i:03d}_hash",
+                conference_id="conf",
+                participant=f"PARTICIPANTE {i}",
+                text=f"Texto {i}",
+                pregunta_activa="",
+                chunk_index=i,
+                url="https://example.com",
+            )
+            for i in range(3)
+        ]
+
+        result = enrich_interventions(
+            interventions=records,
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+            workers=2,
+        )
+
+        assert result["total"] == 3
+        assert result["embedded"] == 2
+        assert result["failed"] == 1
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_workers_zero_clamped_to_one(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        records = [
+            InterventionRecord(
+                intervention_key="rec_000_hash",
+                conference_id="conf",
+                participant="P",
+                text="Texto",
+                pregunta_activa="",
+                chunk_index=0,
+                url="https://example.com",
+            )
+        ]
+
+        result = enrich_interventions(
+            interventions=records,
+            conference_date="2024-10-01",
+            pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+            ollama_base_url="http://localhost:11434",
+            ollama_model="nomic-embed-text",
+            workers=0,
+        )
+
+        assert result["embedded"] == 1
+        assert result["failed"] == 0

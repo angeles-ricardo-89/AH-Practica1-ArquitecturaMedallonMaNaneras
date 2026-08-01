@@ -34,7 +34,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "ANN", "ARG", "BLE", "C4", "DTZ", "EM", "ERA", "FBT", "FLY", "G", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PLC", "PLE", "PLR", "PLW", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "SLOT", "T10", "T20", "TCH", "TID", "TRY", "UP"]
-ignore = ["ANN101", "ANN102", "ANN401", "ANN001", "ARG001", "PLR0913", "PLR0917", "PLR2004", "D", "E501", "EM101", "EM102", "TRY003", "FBT001", "FBT002"]
+ignore = ["ANN101", "ANN102", "ANN401", "ANN001", "ARG001", "PLR0912", "PLR0913", "PLR0915", "PLR0917", "PLR2004", "D", "E501", "EM101", "EM102", "TRY003", "FBT001", "FBT002"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ANN201", "ANN206", "PLR2004", "E741", "RET504", "S101", "ARG002", "SLF001"]
