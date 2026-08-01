@@ -198,7 +198,7 @@ def ensure_gold_tables(conn_str: str) -> None:
         conn.commit()
 
 
-def enrich_interventions(  # noqa: PLR0917
+def enrich_interventions(
     interventions: list[InterventionRecord],
     conference_date: str | None,
     pg_conn_str: str,
