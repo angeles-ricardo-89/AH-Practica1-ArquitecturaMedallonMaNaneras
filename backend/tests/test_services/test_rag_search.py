@@ -13,7 +13,9 @@ from lakehouse.services.rag_search import (
     _embed_query,
     _get_pgvector_connection_string,
     search_gold_corpus,
+    search_gold_corpus_from_vector,
     search_sources,
+    search_with_date_filter,
 )
 
 
@@ -231,3 +233,108 @@ class TestSearchSources:
         assert chunks[0].conference_url == "https://u"
         assert chunks[0].pregunta_activa == "q"
         mock_search.assert_called_once_with("reforma", 5)
+
+
+class TestSearchGoldCorpusFromVector:
+    @patch("lakehouse.services.rag_search.psycopg.connect")
+    def test_returns_mapped_rows(self, mock_connect: MagicMock) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = [
+            ("2024-10-01", "c1", "P", "texto", "https://u", "q", 0.95),
+        ]
+
+        results = search_gold_corpus_from_vector([0.1] * 768, top_k=5)
+
+        assert len(results) == 1
+        assert results[0]["conference_id"] == "c1"
+        assert results[0]["similarity"] == 0.95
+        sql, _params = mock_cursor.execute.call_args.args
+        assert "ORDER BY embedding <=> %s::vector" in sql
+        assert "LENGTH(chunk_text) >= 50" in sql
+
+
+class TestSearchWithDateFilter:
+    @patch("lakehouse.services.rag_search.psycopg.connect")
+    def test_returns_mapped_rows_within_date_range(self, mock_connect: MagicMock) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = [
+            ("2025-07-15", "c1", "P", "texto", "https://u", "q", 0.95),
+        ]
+
+        results = search_with_date_filter(
+            query_vector=[0.1] * 768,
+            top_k=5,
+            fecha_inicio="2025-07-15",
+            fecha_fin="2025-07-15",
+        )
+
+        assert len(results) == 1
+        assert results[0]["conference_id"] == "c1"
+        sql, _params = mock_cursor.execute.call_args.args
+        assert "conference_date BETWEEN" in sql
+        assert "embedding <=> %s::vector" in sql
+
+    @patch("lakehouse.services.rag_search.psycopg.connect")
+    def test_returns_empty_when_no_rows_in_range(self, mock_connect: MagicMock) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = []
+
+        results = search_with_date_filter(
+            query_vector=[0.1] * 768,
+            top_k=5,
+            fecha_inicio="2099-01-01",
+            fecha_fin="2099-12-31",
+        )
+
+        assert results == []
+
+    @patch("lakehouse.services.rag_search.logger")
+    @patch("lakehouse.services.rag_search.psycopg.connect")
+    def test_raises_when_db_query_fails(
+        self,
+        mock_connect: MagicMock,
+        mock_logger: MagicMock,
+    ) -> None:
+        mock_connect.side_effect = psycopg.OperationalError("db down")
+
+        with pytest.raises(RuntimeError, match="database query failed"):
+            search_with_date_filter(
+                query_vector=[0.1] * 768,
+                top_k=5,
+                fecha_inicio="2025-07-15",
+                fecha_fin="2025-07-15",
+            )
+
+    @patch("lakehouse.services.rag_search.psycopg.connect")
+    def test_ranking_within_range_with_top_k(self, mock_connect: MagicMock) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = [
+            ("2025-07-15", "c1", "P", "t1", "u1", "q", 0.99),
+            ("2025-07-15", "c2", "P", "t2", "u2", "q", 0.80),
+            ("2025-07-15", "c3", "P", "t3", "u3", "q", 0.70),
+        ]
+
+        results = search_with_date_filter(
+            query_vector=[0.1] * 768,
+            top_k=3,
+            fecha_inicio="2025-07-15",
+            fecha_fin="2025-07-15",
+        )
+
+        assert len(results) == 3
+        assert results[0]["similarity"] == 0.99
+        assert results[2]["similarity"] == 0.70
+        _sql, params = mock_cursor.execute.call_args.args
+        assert params[4] == 3  # top_k in LIMIT

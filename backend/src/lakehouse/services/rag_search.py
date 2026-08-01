@@ -74,48 +74,8 @@ def _embed_query(
     raise ConnectionError(f"Ollama embedding failed after {max_retries} retries") from last_error
 
 
-def search_gold_corpus(
-    query: str,
-    top_k: int,
-    settings: Settings | None = None,
-) -> list[dict[str, Any]]:
-    if settings is None:
-        settings = Settings()
-
-    conn_str = _get_pgvector_connection_string(settings)
-
-    try:
-        query_embedding = _embed_query(query, settings.ollama_base_url, settings.ollama_embed_model)
-    except (ConnectionError, ValueError) as e:
-        logger.exception("No se pudo generar embedding para la consulta")
-        raise RuntimeError("Search unavailable: embedding generation failed") from e
-
-    embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
-
-    try:
-        with psycopg.connect(conn_str) as conn:
-            cur = conn.cursor()
-            query_sql: LiteralString = cast(
-                "LiteralString",
-                f"""
-                SELECT conference_date, conference_id, participant, chunk_text, url, pregunta_activa,
-                   1 - (embedding <=> %s::vector) AS similarity
-                FROM gold.rag_corpus
-                WHERE LENGTH(chunk_text) >= {MIN_CHUNK_LENGTH}
-                ORDER BY embedding <=> %s::vector
-                LIMIT %s
-                """,
-            )
-            cur.execute(
-                query_sql,
-                (embedding_str, embedding_str, top_k),
-            )
-            rows = cur.fetchall()
-    except Exception as e:
-        logger.exception("Error al consultar pgvector")
-        raise RuntimeError("Search unavailable: database query failed") from e
-
-    results = []
+def _rows_to_results(rows: list) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
     for row in rows:
         results.append(
             {
@@ -128,8 +88,109 @@ def search_gold_corpus(
                 "similarity": float(row[6]),
             }
         )
+    return results
 
+
+def search_gold_corpus_from_vector(
+    query_vector: list[float],
+    top_k: int,
+    settings: Settings | None = None,
+) -> list[dict[str, Any]]:
+    if settings is None:
+        settings = Settings()
+
+    conn_str = _get_pgvector_connection_string(settings)
+    embedding_str = "[" + ",".join(str(v) for v in query_vector) + "]"
+
+    try:
+        with psycopg.connect(conn_str) as conn:
+            cur = conn.cursor()
+            query_sql: LiteralString = cast(
+                "LiteralString",
+                f"""
+                SELECT conference_date, conference_id, participant, chunk_text, url, pregunta_activa,
+                    1 - (embedding <=> %s::vector) AS similarity
+                FROM gold.rag_corpus
+                WHERE LENGTH(chunk_text) >= {MIN_CHUNK_LENGTH}
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s
+                """,
+            )
+            cur.execute(query_sql, (embedding_str, embedding_str, top_k))
+            rows = cur.fetchall()
+    except Exception as e:
+        logger.exception("Error al consultar pgvector")
+        raise RuntimeError("Search unavailable: database query failed") from e
+
+    results = _rows_to_results(rows)
+    logger.info("Busqueda completada por vector", resultados=len(results))
+    return results
+
+
+def search_gold_corpus(
+    query: str,
+    top_k: int,
+    settings: Settings | None = None,
+) -> list[dict[str, Any]]:
+    if settings is None:
+        settings = Settings()
+
+    try:
+        query_embedding = _embed_query(query, settings.ollama_base_url, settings.ollama_embed_model)
+    except (ConnectionError, ValueError) as e:
+        logger.exception("No se pudo generar embedding para la consulta")
+        raise RuntimeError("Search unavailable: embedding generation failed") from e
+
+    results = search_gold_corpus_from_vector(query_embedding, top_k, settings)
     logger.info("Busqueda completada", query=query[:100], resultados=len(results))
+    return results
+
+
+def search_with_date_filter(
+    query_vector: list[float],
+    top_k: int,
+    fecha_inicio: str,
+    fecha_fin: str,
+    settings: Settings | None = None,
+) -> list[dict[str, Any]]:
+    if settings is None:
+        settings = Settings()
+
+    conn_str = _get_pgvector_connection_string(settings)
+    embedding_str = "[" + ",".join(str(v) for v in query_vector) + "]"
+
+    try:
+        with psycopg.connect(conn_str) as conn:
+            cur = conn.cursor()
+            query_sql: LiteralString = cast(
+                "LiteralString",
+                f"""
+                SELECT conference_date, conference_id, participant, chunk_text, url, pregunta_activa,
+                    1 - (embedding <=> %s::vector) AS similarity
+                FROM gold.rag_corpus
+                WHERE conference_date BETWEEN %s::date AND %s::date
+                  AND LENGTH(chunk_text) >= {MIN_CHUNK_LENGTH}
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s
+                """,
+            )
+            cur.execute(
+                query_sql,
+                (embedding_str, fecha_inicio, fecha_fin, embedding_str, top_k),
+            )
+            rows = cur.fetchall()
+    except Exception as e:
+        logger.exception("Error al consultar pgvector con filtro de fechas")
+        raise RuntimeError("Search unavailable: database query failed") from e
+
+    results = _rows_to_results(rows)
+
+    logger.info(
+        "Busqueda con filtro de fechas completada",
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+        resultados=len(results),
+    )
     return results
 
 
