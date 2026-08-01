@@ -34,7 +34,7 @@ def _pipeline_file_processor(
     dt = datetime.fromisoformat(ts) if isinstance(ts, str) else ts
     file_dir = Path(base_dir) / dt.strftime("%Y-%m-%d")
     file_dir.mkdir(parents=True, exist_ok=True)
-    file_path = file_dir / f"{layer}_{dt.strftime('%Y%m%d%H')}_{os.getpid()}.log"
+    file_path = file_dir / f"{layer}_{dt.strftime('%Y%m%d')}_{os.getpid()}.log"
     rendered = _file_renderer(logger, method_name, event_dict)
     with Path.open(file_path, "a") as f:
         f.write(rendered + "\n")

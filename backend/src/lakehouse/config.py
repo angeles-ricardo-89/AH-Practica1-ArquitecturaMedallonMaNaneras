@@ -25,5 +25,5 @@ class Settings(BaseSettings):
     max_ingest_pool: int = 6
     temporal_parser_temperature: float = 0.1
     temporal_parser_max_retries: int = 3
-    temporal_parser_max_tokens: int = 200
+    temporal_parser_max_tokens: int = 1200
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

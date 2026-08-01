@@ -46,6 +46,9 @@ def chat(request: ChatRequest) -> ChatResponse:
         "Parseo temporal completado",
         requiere_filtro=parser_result.filter_out.requiere_filtro_tiempo,
         fallback=parser_result.fallback_ocurrido,
+        texto_semantico=texto_semantico[:100],
+        fecha_inicio=parser_result.filter_out.fecha_inicio,
+        fecha_fin=parser_result.filter_out.fecha_fin,
     )
 
     try:
@@ -86,7 +89,7 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     builder = ContextBuilder(max_context_tokens=settings.max_context_tokens)
     context, token_usage = builder.build(
-        query=request.query,
+        query=texto_semantico,
         system_prompt=SYSTEM_PROMPT,
         sources=sources,
         nota_fallback=parser_result.fallback_ocurrido,
