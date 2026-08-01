@@ -532,6 +532,13 @@ class TestEnrichInterventions:
         assert params[7] == sample_intervention.pregunta_activa
         assert params[8] == [0.5] * 768
 
+        expected_embed_text = build_embedding_text(sample_intervention)
+        mock_embed.assert_called_once_with(
+            expected_embed_text, "http://localhost:11434", "nomic-embed-text"
+        )
+        assert "Contexto" not in expected_embed_text
+        assert "Participante" not in expected_embed_text
+
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
     def test_empty_interventions_list(
