@@ -62,16 +62,18 @@ class ParseService:
     ) -> dict:
         workers = max(1, workers)
 
-        if clean:
-            if dry_run:
-                self._logger.warning("--clean es ignorado en dry-run")
-            else:
-                drop_silver_tables(self._conn)
-        if not dry_run:
-            ensure_silver_tables(self._conn)
+        try:
+            if clean:
+                if dry_run:
+                    self._logger.warning("--clean es ignorado en dry-run")
+                else:
+                    drop_silver_tables(self._conn)
+            if not dry_run:
+                ensure_silver_tables(self._conn)
 
-        rows = self._conn.execute("SELECT source_url, raw_html FROM bronze.raw_html").fetchall()
-        self._conn.close()
+            rows = self._conn.execute("SELECT source_url, raw_html FROM bronze.raw_html").fetchall()
+        finally:
+            self._conn.close()
 
         total_interventions = 0
         total_dlq = 0
@@ -79,28 +81,36 @@ class ParseService:
         reporter = ProgressReporter(total=len(rows), label="silver")
 
         if rows:
-            write_conn = None
-            if not dry_run:
-                write_conn = get_connection(self._settings.ducklake_data_path)
-            try:
-                if workers > 1:
-                    total_interventions, total_dlq = self._run_parallel(
-                        rows=rows,
-                        write_conn=write_conn,
-                        conference_date=conference_date,
-                        reporter=reporter,
-                        workers=workers,
-                    )
-                else:
+            if workers > 1:
+                with ProcessPoolExecutor(max_workers=workers) as pool:
+                    write_conn = None
+                    if not dry_run:
+                        write_conn = get_connection(self._settings.ducklake_data_path)
+                    try:
+                        total_interventions, total_dlq = self._run_parallel(
+                            rows=rows,
+                            write_conn=write_conn,
+                            conference_date=conference_date,
+                            reporter=reporter,
+                            pool=pool,
+                        )
+                    finally:
+                        if write_conn is not None:
+                            write_conn.close()
+            else:
+                write_conn = None
+                if not dry_run:
+                    write_conn = get_connection(self._settings.ducklake_data_path)
+                try:
                     total_interventions, total_dlq = self._run_sequential(
                         rows=rows,
                         write_conn=write_conn,
                         conference_date=conference_date,
                         reporter=reporter,
                     )
-            finally:
-                if write_conn is not None:
-                    write_conn.close()
+                finally:
+                    if write_conn is not None:
+                        write_conn.close()
 
         reporter.finish()
         self._logger.info(
@@ -130,6 +140,7 @@ class ParseService:
                     merge_intervention(write_conn, record)
             for dlq in dlq_records:
                 if write_conn is not None:
+                    self._logger.warning("Registro rechazado, insertando en DLQ", record=dlq)
                     insert_dlq_record(write_conn, dlq)
             total_interventions += len(interventions)
             total_dlq += len(dlq_records)
@@ -142,30 +153,37 @@ class ParseService:
         write_conn: duckdb.DuckDBPyConnection | None,
         conference_date: str | None,
         reporter: ProgressReporter,
-        workers: int,
+        pool: ProcessPoolExecutor,
     ) -> tuple[int, int]:
         total_interventions = 0
         total_dlq = 0
 
-        with ProcessPoolExecutor(max_workers=workers) as pool:
-            futures: dict[Future, tuple[str, str]] = {}
-            for source_url, raw_html in rows:
-                future = pool.submit(_parse_one_row, source_url, raw_html, conference_date)
-                futures[future] = (source_url, raw_html)
+        futures: dict[Future, tuple[str, str]] = {}
+        for source_url, raw_html in rows:
+            future = pool.submit(_parse_one_row, source_url, raw_html, conference_date)
+            futures[future] = (source_url, raw_html)
 
-            for future in as_completed(futures):
+        for future in as_completed(futures):
+            source_url, _ = futures[future]
+            try:
                 conference, interventions, dlq_records = future.result()
-                if write_conn is not None:
-                    if conference is not None:
-                        merge_conference(write_conn, conference)
-                    for record in interventions:
-                        merge_intervention(write_conn, record)
-                for dlq in dlq_records:
-                    if write_conn is not None:
-                        insert_dlq_record(write_conn, dlq)
-
-                total_interventions += len(interventions)
-                total_dlq += len(dlq_records)
+            except Exception:
+                self._logger.warning(
+                    "Error en worker de parseo", source_url=source_url, exc_info=True
+                )
                 reporter.tick()
+                continue
+            if write_conn is not None:
+                if conference is not None:
+                    merge_conference(write_conn, conference)
+                for record in interventions:
+                    merge_intervention(write_conn, record)
+            for dlq in dlq_records:
+                if write_conn is not None:
+                    self._logger.warning("Registro rechazado, insertando en DLQ", record=dlq)
+                    insert_dlq_record(write_conn, dlq)
+            total_interventions += len(interventions)
+            total_dlq += len(dlq_records)
+            reporter.tick()
 
         return total_interventions, total_dlq
