@@ -25,37 +25,28 @@ conferencias, intervenciones y DLQ de un run comparten un unico commit.
 
 ## Diseno
 
-### 1. Restructurar `run()` para abrir `write_conn` una sola vez y envolver el dispatch en transaccion
+### 1. Restructurar `run()` con helper `_run_with_transaction`
 
 En `backend/src/lakehouse/services/parse_service.py`, el bloque `if rows:` actual crea `write_conn`
-por separado en cada branch (paralelo y secuencial) con su propio `try/finally`. Se restructura para
-que `write_conn` se abra una sola vez ANTES del branch, y la transaccion envuelva ambos paths:
+por separado en cada branch (paralelo y secuencial) con su propio `try/finally`. Se extrae un helper
+`_run_with_transaction(dispatch, dry_run)` que abre `write_conn`, inicia la transaccion, despacha
+via callback, hace COMMIT/ROLLBACK y cierra la conexion:
 
 ```python
-if rows:
+def _run_with_transaction(
+    self,
+    dispatch: Callable[[duckdb.DuckDBPyConnection | None], tuple[int, int]],
+    dry_run: bool,
+) -> tuple[int, int]:
     write_conn = None
     if not dry_run:
         write_conn = get_connection(self._settings.ducklake_data_path)
         write_conn.execute("BEGIN TRANSACTION")
     try:
-        if workers > 1:
-            with ProcessPoolExecutor(max_workers=workers) as pool:
-                total_interventions, total_dlq = self._run_parallel(
-                    rows=rows,
-                    write_conn=write_conn,
-                    conference_date=conference_date,
-                    reporter=reporter,
-                    pool=pool,
-                )
-        else:
-            total_interventions, total_dlq = self._run_sequential(
-                rows=rows,
-                write_conn=write_conn,
-                conference_date=conference_date,
-                reporter=reporter,
-            )
+        result = dispatch(write_conn)
         if write_conn is not None:
             write_conn.execute("COMMIT")
+        return result
     except Exception:
         if write_conn is not None:
             write_conn.execute("ROLLBACK")
@@ -65,15 +56,44 @@ if rows:
             write_conn.close()
 ```
 
+Y `run()` usa el helper en cada branch, manteniendo el pool ANTES de abrir `write_conn`
+(requisito de fork-safety ya implementado):
+
+```python
+if rows:
+    if workers > 1:
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            total_interventions, total_dlq = self._run_with_transaction(
+                lambda wc: self._run_parallel(
+                    rows=rows,
+                    write_conn=wc,
+                    conference_date=conference_date,
+                    reporter=reporter,
+                    pool=pool,
+                ),
+                dry_run=dry_run,
+            )
+    else:
+        total_interventions, total_dlq = self._run_with_transaction(
+            lambda wc: self._run_sequential(
+                rows=rows,
+                write_conn=wc,
+                conference_date=conference_date,
+                reporter=reporter,
+            ),
+            dry_run=dry_run,
+        )
+```
+
 **Notas:**
-- `write_conn is None` (dry_run) → no se abre conexion ni se inicia transaccion. Todo el bloque de
-  transaccion se salta limpiamente.
-- `BEGIN TRANSACTION` solo se emite si `not dry_run` (write_conn existe).
+- **Fork-safety preservado:** el pool de `ProcessPoolExecutor` se crea (workers se fork-ean) ANTES
+  de que `_run_with_transaction` abra `write_conn`. Ningun worker hereda el handle de escritura.
+  Esto mantiene el fix de fork-safety aplicado en el commit anterior.
+- `dry_run` → `_run_with_transaction` recibe `dry_run=True`, no abre conexion, no inicia
+  transaccion, y `dispatch` recibe `write_conn=None` (los paths ya saben no escribir).
 - El `except Exception` hace `ROLLBACK` y re-lanza, preservando atomicidad todo-o-nada.
-- El pool de `ProcessPoolExecutor` se crea DESPUES de `BEGIN TRANSACTION` (dentro del try), y
-  `write_conn` fue abierto antes. En Linux fork, los workers heredan el handle de `write_conn`,
-  pero nunca lo usan (solo parsean) y DuckDB tolera conexiones heredadas no-utilizadas. No se
-  introduce riesgo adicional respecto al estado actual (que ya abria `write_conn` antes del pool).
+- `dispatch` es un `Callable` que se ejecuta solo en el proceso principal (no se picklea ni se
+  envia a workers). Los closures capturan `rows`, `conference_date`, `reporter`, `pool`.
 
 ### 2. Sin cambios en `merge.py`, schemas, CLI ni worker function
 
@@ -88,7 +108,7 @@ if rows:
 
 | Archivo | Cambio |
 |---------|--------|
-| `backend/src/lakehouse/services/parse_service.py` | Restructurar `if rows:`: abrir `write_conn` una vez, envolver dispatch en BEGIN/COMMIT/ROLLBACK |
+| `backend/src/lakehouse/services/parse_service.py` | + helper `_run_with_transaction(dispatch, dry_run)`, `run()` lo usa en ambos branches |
 | `backend/tests/test_services/test_parse_service.py` | Tests: transaccion se inicia, COMMIT en exito, ROLLBACK en excepcion, dry_run no abre transaccion |
 
 ## Verificacion
