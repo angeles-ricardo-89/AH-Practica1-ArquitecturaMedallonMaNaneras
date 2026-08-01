@@ -52,6 +52,7 @@ def enrich(
     dry_run: bool = typer.Option(default=False, help="Simulate without writing"),
     conference_date: str | None = typer.Option(None, "--date", help="Conference date"),
     clean: bool = typer.Option(default=False, help="Drop gold tables before enriching"),
+    workers: int = typer.Option(default=1, help="Parallel Ollama embedding workers"),
 ) -> None:
     settings = Settings()
     conn = get_connection(settings.ducklake_data_path)
@@ -64,7 +65,9 @@ def enrich(
         duckdb_conn=conn,
         pg_conn_str=pg_conn_str,
     )
-    result = service.run(dry_run=dry_run, conference_date=conference_date, clean=clean)
+    result = service.run(
+        dry_run=dry_run, conference_date=conference_date, clean=clean, workers=workers
+    )
     typer.echo(
         f"Enriquecimiento completado: {result['embedded']} incrustados, "
         f"{result['failed']} fallidos de {result['total']} totales"

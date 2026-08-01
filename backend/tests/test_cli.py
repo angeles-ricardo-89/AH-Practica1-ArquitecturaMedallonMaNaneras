@@ -84,7 +84,9 @@ class TestPipelineEnrich:
         mock_svc.run.return_value = {"embedded": 0, "failed": 0, "total": 0}
         result = runner.invoke(app, ["pipeline", "enrich", "--dry-run"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=True, conference_date=None, clean=False)
+        mock_svc.run.assert_called_once_with(
+            dry_run=True, conference_date=None, clean=False, workers=1
+        )
 
     @patch("lakehouse.cli.EnrichService")
     @patch("lakehouse.cli.get_connection")
@@ -93,7 +95,9 @@ class TestPipelineEnrich:
         mock_svc.run.return_value = {"embedded": 1, "failed": 0, "total": 1}
         result = runner.invoke(app, ["pipeline", "enrich"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None, clean=False)
+        mock_svc.run.assert_called_once_with(
+            dry_run=False, conference_date=None, clean=False, workers=1
+        )
 
     @patch("lakehouse.cli.EnrichService")
     @patch("lakehouse.cli.get_connection")
@@ -102,7 +106,20 @@ class TestPipelineEnrich:
         mock_svc.run.return_value = {"embedded": 1, "failed": 0, "total": 1}
         result = runner.invoke(app, ["pipeline", "enrich", "--clean"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None, clean=True)
+        mock_svc.run.assert_called_once_with(
+            dry_run=False, conference_date=None, clean=True, workers=1
+        )
+
+    @patch("lakehouse.cli.EnrichService")
+    @patch("lakehouse.cli.get_connection")
+    def test_enrich_with_workers(self, mock_conn, mock_svc_cls):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = {"embedded": 1, "failed": 0, "total": 1}
+        result = runner.invoke(app, ["pipeline", "enrich", "--workers", "4"])
+        assert result.exit_code == 0
+        mock_svc.run.assert_called_once_with(
+            dry_run=False, conference_date=None, clean=False, workers=4
+        )
 
 
 class TestEvaluateRagCommand:
