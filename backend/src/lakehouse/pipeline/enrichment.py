@@ -9,14 +9,20 @@ import httpx
 import psycopg
 
 from lakehouse.log_config import ProgressReporter, get_logger
+from lakehouse.services.token_estimator import estimate_tokens  # noqa: F401
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 if TYPE_CHECKING:
+    from lakehouse.schemas.gold import WindowRecord  # noqa: F401
     from lakehouse.schemas.silver import InterventionRecord
 
 logger = get_logger(__name__, layer="gold")
+
+WINDOW_MAX_TOKENS = 1600
+WINDOW_OVERLAP_TOKENS = 200
+MIN_CHUNK_LENGTH = 50
 
 
 def build_embedding_payload(
