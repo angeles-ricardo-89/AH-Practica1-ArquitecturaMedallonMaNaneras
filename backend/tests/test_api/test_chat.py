@@ -96,12 +96,14 @@ class TestChatSourceDetails:
             chunk_text="El día de hoy...",
             similarity=0.95,
             conference_url="https://example.com",
+            pregunta_activa="¿Cómo va la reforma?",
         )
         assert source.conference_date == "2024-10-01"
         assert source.participant == "PRESIDENTA"
         assert source.chunk_text == "El día de hoy..."
         assert source.similarity == 0.95
         assert source.conference_url == "https://example.com"
+        assert source.pregunta_activa == "¿Cómo va la reforma?"
 
 
 class TestTokenEstimator:

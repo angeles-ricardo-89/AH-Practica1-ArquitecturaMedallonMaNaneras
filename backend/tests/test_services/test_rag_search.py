@@ -146,7 +146,7 @@ class TestSearchGoldCorpus:
         mock_connect.return_value.__enter__.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
         mock_cursor.fetchall.return_value = [
-            ("2024-10-01", "c1", "PARTICIPANTE", "texto", "https://u", 0.95),
+            ("2024-10-01", "c1", "PARTICIPANTE", "texto", "https://u", "pregunta", 0.95),
         ]
 
         results = search_gold_corpus("reforma", top_k=5, settings=Settings())
@@ -154,6 +154,7 @@ class TestSearchGoldCorpus:
         assert len(results) == 1
         assert results[0]["conference_id"] == "c1"
         assert results[0]["participant"] == "PARTICIPANTE"
+        assert results[0]["pregunta_activa"] == "pregunta"
         assert results[0]["similarity"] == 0.95
         sql, params = mock_cursor.execute.call_args.args
         assert "ORDER BY embedding <=> %s::vector" in sql
@@ -197,6 +198,7 @@ class TestSearchSources:
                 "participant": "P",
                 "chunk_text": "texto",
                 "url": "https://u",
+                "pregunta_activa": "q",
                 "similarity": 0.9,
             }
         ]
@@ -206,4 +208,5 @@ class TestSearchSources:
         assert isinstance(chunks[0], SourceChunk)
         assert chunks[0].conference_id == "c1"
         assert chunks[0].conference_url == "https://u"
+        assert chunks[0].pregunta_activa == "q"
         mock_search.assert_called_once_with("reforma", 5)

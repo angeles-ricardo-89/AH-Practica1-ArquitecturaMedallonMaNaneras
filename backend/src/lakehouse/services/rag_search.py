@@ -96,7 +96,7 @@ def search_gold_corpus(
             cur = conn.cursor()
             cur.execute(
                 """
-                SELECT conference_date, conference_id, participant, chunk_text, url,
+                SELECT conference_date, conference_id, participant, chunk_text, url, pregunta_activa,
                    1 - (embedding <=> %s::vector) AS similarity
                 FROM gold.rag_corpus
                 ORDER BY embedding <=> %s::vector
@@ -118,7 +118,8 @@ def search_gold_corpus(
                 "participant": row[2],
                 "chunk_text": row[3],
                 "url": row[4],
-                "similarity": float(row[5]),
+                "pregunta_activa": row[5] or "",
+                "similarity": float(row[6]),
             }
         )
 
@@ -137,6 +138,7 @@ def search_sources(query: str, top_k: int) -> list[SourceChunk]:
             chunk_text=r["chunk_text"],
             similarity=r["similarity"],
             conference_url=r["url"],
+            pregunta_activa=r["pregunta_activa"],
         )
         for r in results
     ]

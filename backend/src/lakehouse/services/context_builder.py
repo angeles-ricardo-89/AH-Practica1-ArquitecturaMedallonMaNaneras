@@ -49,10 +49,21 @@ class ContextBuilder:
         return context, usage
 
     def _format_sources(self, sources: list) -> str:
-        lines = []
-        for i, src in enumerate(sources, 1):
-            lines.append(f"[{i}] {src.participant} ({src.conference_date}): {src.chunk_text}")
-        return "\n".join(lines)
+        if not sources:
+            return ""
+        groups: dict[str, list] = {}
+        for src in sources:
+            groups.setdefault(src.conference_id, []).append(src)
+        blocks: list[str] = []
+        for conf_id, group in groups.items():
+            date = group[0].conference_date
+            blocks.append(f"--- Conferencia {date} ---")
+            for src in group:
+                if src.pregunta_activa:
+                    blocks.append(f"  P: {src.pregunta_activa}")
+                blocks.append(f"  {src.participant}: {src.chunk_text}")
+                blocks.append("")
+        return "\n".join(blocks).rstrip()
 
     def _format_history(self, history: list[dict[str, str]]) -> str:
         lines = []

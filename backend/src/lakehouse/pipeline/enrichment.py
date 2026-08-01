@@ -123,6 +123,10 @@ def ensure_gold_tables(conn_str: str) -> None:
             ADD COLUMN IF NOT EXISTS url VARCHAR DEFAULT ''
         """)
         cur.execute("""
+            ALTER TABLE gold.rag_corpus
+            ADD COLUMN IF NOT EXISTS pregunta_activa VARCHAR DEFAULT ''
+        """)
+        cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_rag_corpus_conference_date
             ON gold.rag_corpus (conference_date)
         """)
@@ -192,13 +196,14 @@ def enrich_interventions(
                 cur.execute(
                     """
                         INSERT INTO gold.rag_corpus
-                            (chunk_key, conference_id, conference_date, participant, chunk_text, payload, url, embedding)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            (chunk_key, conference_id, conference_date, participant, chunk_text, payload, url, pregunta_activa, embedding)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (chunk_key) DO UPDATE SET
                             conference_id = EXCLUDED.conference_id,
                             conference_date = EXCLUDED.conference_date,
                             payload = EXCLUDED.payload,
-                            url = EXCLUDED.url
+                            url = EXCLUDED.url,
+                            pregunta_activa = EXCLUDED.pregunta_activa
                         """,
                     (
                         intervention.intervention_key,
@@ -208,6 +213,7 @@ def enrich_interventions(
                         intervention.text,
                         payload,
                         intervention.url,
+                        intervention.pregunta_activa,
                         embedding,
                     ),
                 )

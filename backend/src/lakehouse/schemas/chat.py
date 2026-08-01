@@ -14,6 +14,7 @@ class SourceChunk(BaseModel):
     chunk_text: str = Field(...)
     similarity: float = Field(..., ge=0.0, le=1.0)
     conference_url: str = Field(default="")
+    pregunta_activa: str = Field(default="")
 
 
 class ChatResponse(BaseModel):

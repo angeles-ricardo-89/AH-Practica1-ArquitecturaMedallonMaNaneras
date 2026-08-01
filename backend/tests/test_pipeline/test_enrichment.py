@@ -262,6 +262,7 @@ class TestEnsureGoldTables:
         assert "chunk_text" in executed_sql
         assert "payload" in executed_sql
         assert "url" in executed_sql
+        assert "pregunta_activa" in executed_sql
         assert "embedding" in executed_sql
         assert "ingested_at" in executed_sql
         assert "idx_rag_corpus_conference_date" in executed_sql
@@ -482,6 +483,7 @@ class TestEnrichInterventions:
         assert "conference_date" in sql
         assert "url" in sql
         assert "payload" in sql
+        assert "pregunta_activa" in sql
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
@@ -526,7 +528,8 @@ class TestEnrichInterventions:
         assert params[4] == sample_intervention.text
         assert "Contexto: Conferencia del 2024-10-01" in params[5]
         assert params[6] == sample_intervention.url
-        assert params[7] == [0.5] * 768
+        assert params[7] == sample_intervention.pregunta_activa
+        assert params[8] == [0.5] * 768
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
