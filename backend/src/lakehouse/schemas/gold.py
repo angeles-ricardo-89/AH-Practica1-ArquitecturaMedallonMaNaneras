@@ -19,7 +19,7 @@ class RagCorpusRecord(BaseModel):
 class WindowRecord(BaseModel):
     chunk_key: str = Field(..., min_length=1)
     conference_id: str = Field(..., min_length=1)
-    conference_date: str = Field(default="", pattern=r"^\d{4}-\d{2}-\d{2}$")
+    conference_date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
     participant: str = Field(default="DESCONOCIDO")
     pregunta_activa: str = Field(default="")
     text: str = Field(..., min_length=1)

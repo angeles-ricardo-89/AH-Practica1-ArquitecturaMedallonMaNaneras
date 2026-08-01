@@ -88,16 +88,17 @@ def build_window_key(conference_id: str, window_index: int, window_text: str) ->
 class WindowRecord(BaseModel):
     chunk_key: str = Field(..., min_length=1)
     conference_id: str = Field(..., min_length=1)
-    conference_date: str = Field(...)
+    conference_date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
     participant: str = Field(default="DESCONOCIDO")
     pregunta_activa: str = Field(default="")
-    text: str = Field(...)     # narrativa completa (build_window_text)
+    text: str = Field(..., min_length=1)  # narrativa completa (build_window_text)
     url: str = Field(default="")
     window_index: int = Field(..., ge=0)
-    conference: ConferenceRecord  # para fecha y url
 ```
 
 **Nota:** `pregunta_activa` de la ventana es `""` (vacio). La narrativa con todas las `P:` vive dentro de `text`.
+
+**Nota:** `text` es requerido (`min_length=1`): la ventana siempre tiene contenido narrativo porque se construye solo con intervenciones filtradas (>= 50 chars). `conference_date` es requerido: `build_windows_from_conference` siempre lo pasa, igual que `RagCorpusRecord`. No se referencia `ConferenceRecord`; la ventana ya lleva fecha y url en campos propios.
 
 ### 4. `build_windows_from_conference` (orquestador)
 
