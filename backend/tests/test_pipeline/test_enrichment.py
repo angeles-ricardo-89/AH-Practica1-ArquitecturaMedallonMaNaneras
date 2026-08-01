@@ -55,12 +55,37 @@ def sample_intervention_no_question() -> InterventionRecord:
     )
 
 
+@pytest.fixture
+def sample_window() -> WindowRecord:
+    return WindowRecord(
+        chunk_key="conf123_w000_abc123",
+        conference_id="conf123",
+        conference_date="2024-10-01",
+        participant="PRESIDENTA CLAUDIA SHEINBAUM PARDO",
+        text="Buenos días. Hoy vamos a informar sobre los avances del país.",
+        pregunta_activa="¿Cómo va la reforma energética?",
+        url="https://example.com/conf-2024-10-01",
+        window_index=0,
+    )
+
+
+@pytest.fixture
+def sample_window_no_question() -> WindowRecord:
+    return WindowRecord(
+        chunk_key="conf456_w001_def456",
+        conference_id="conf456",
+        conference_date="2025-01-15",
+        participant="SECRETARIO DE GOBERNACIÓN",
+        text="Informamos que los programas sociales continúan.",
+        pregunta_activa="",
+        url="https://example.com/conf-2024-10-01",
+        window_index=1,
+    )
+
+
 class TestBuildEmbeddingPayload:
-    def test_format_matches_prd(self, sample_intervention: InterventionRecord):
-        payload = build_embedding_payload(
-            intervention=sample_intervention,
-            conference_date="2024-10-01",
-        )
+    def test_format_matches_prd(self, sample_window: WindowRecord):
+        payload = build_embedding_payload(record=sample_window, conference_date="2024-10-01")
         expected = (
             "Contexto: Conferencia del 2024-10-01\n"
             "Participante: PRESIDENTA CLAUDIA SHEINBAUM PARDO\n"
@@ -69,9 +94,9 @@ class TestBuildEmbeddingPayload:
         )
         assert payload == expected
 
-    def test_no_pregunta_activa(self, sample_intervention_no_question: InterventionRecord):
+    def test_no_pregunta_activa(self, sample_window_no_question: WindowRecord):
         payload = build_embedding_payload(
-            intervention=sample_intervention_no_question,
+            record=sample_window_no_question,
             conference_date="2025-01-15",
         )
         expected = (
@@ -82,30 +107,27 @@ class TestBuildEmbeddingPayload:
         )
         assert payload == expected
 
-    def test_no_technical_ids_or_hashes(self, sample_intervention: InterventionRecord):
-        payload = build_embedding_payload(
-            intervention=sample_intervention,
-            conference_date="2024-10-01",
-        )
+    def test_no_technical_ids_or_hashes(self, sample_window: WindowRecord):
+        payload = build_embedding_payload(record=sample_window, conference_date="2024-10-01")
         assert "abc123" not in payload
         assert "conf123" not in payload
         assert "intervention_key" not in payload.lower()
         assert "chunk_index" not in payload.lower()
+        assert "chunk_key" not in payload.lower()
+        assert "window_index" not in payload.lower()
 
     def test_special_characters(self):
-        record = InterventionRecord(
-            intervention_key="spec_000_chars",
+        record = WindowRecord(
+            chunk_key="spec_w000_chars",
             conference_id="spec",
+            conference_date="2025-03-01",
             participant="LIC. MARÍA JOSÉ PÉREZ",
             text="Costo: $1,234.56 — 100% real. ¡Vamos! ¿De acuerdo?",
             pregunta_activa="¿Costo total? $500 pesos",
-            chunk_index=0,
             url="https://example.com",
+            window_index=0,
         )
-        payload = build_embedding_payload(
-            intervention=record,
-            conference_date="2025-03-01",
-        )
+        payload = build_embedding_payload(record=record, conference_date="2025-03-01")
         assert "$1,234.56" in payload
         assert "100%" in payload
         assert "¿Costo total?" in payload
@@ -772,9 +794,12 @@ class TestStoreGold:
         assert "INSERT INTO gold.rag_corpus" in sql
         assert params[0] == "conf1_w000_abc123"
         assert params[2] == "2025-03-01"
-        assert params[4] == "P: Q?\nPRESIDENTA: R."
-        assert params[5] == "P: Q?\nPRESIDENTA: R."
-        assert params[7] == ""
+        assert params[4] == "P: Q?\nPRESIDENTA: R."  # chunk_text
+        assert (
+            params[5]
+            == "Contexto: Conferencia del 2025-03-01\nParticipante: PRESIDENTA\nPregunta activa: \nRespuesta: P: Q?\nPRESIDENTA: R."
+        )  # payload con metadata
+        assert params[7] == ""  # pregunta_activa vacia
         assert params[8] == [0.1] * 768
 
 

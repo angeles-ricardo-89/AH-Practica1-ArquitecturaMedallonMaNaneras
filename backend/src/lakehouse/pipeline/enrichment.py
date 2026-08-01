@@ -27,14 +27,14 @@ MIN_CHUNK_LENGTH = 50
 
 
 def build_embedding_payload(
-    intervention: InterventionRecord,
+    record: WindowRecord,
     conference_date: str,
 ) -> str:
     return (
         f"Contexto: Conferencia del {conference_date}\n"
-        f"Participante: {intervention.participant}\n"
-        f"Pregunta activa: {intervention.pregunta_activa}\n"
-        f"Respuesta: {intervention.text}"
+        f"Participante: {record.participant}\n"
+        f"Pregunta activa: {record.pregunta_activa}\n"
+        f"Respuesta: {record.text}"
     )
 
 
@@ -127,6 +127,7 @@ def _store_gold(
     effective_date: str,
     embedding: list[float],
 ) -> None:
+    payload = build_embedding_payload(record, effective_date)
     cur.execute(
         """
             INSERT INTO gold.rag_corpus
@@ -145,7 +146,7 @@ def _store_gold(
             effective_date,
             record.participant,
             record.text,
-            record.text,
+            payload,
             record.url,
             record.pregunta_activa,
             embedding,
