@@ -8,6 +8,7 @@ import psycopg
 import pytest
 
 from lakehouse.pipeline.enrichment import (
+    _embed_one,
     build_embedding_payload,
     build_embedding_text,
     drop_gold_tables,
@@ -693,3 +694,50 @@ class TestBuildEmbeddingText:
         assert intervention.intervention_key not in result
         assert intervention.conference_id not in result
         assert str(intervention.chunk_index) not in result
+
+
+class TestEmbedOne:
+    def test_returns_payload_and_embedding_on_success(
+        self, sample_intervention: InterventionRecord
+    ) -> None:
+        with patch("lakehouse.pipeline.enrichment.embed_text") as mock_embed:
+            mock_embed.return_value = [0.1] * 768
+            payload, embedding = _embed_one(
+                sample_intervention,
+                "2024-10-01",
+                "http://localhost:11434",
+                "nomic-embed-text",
+            )
+        assert "Contexto: Conferencia del 2024-10-01" in payload
+        assert "Participante:" in payload
+        assert embedding == [0.1] * 768
+        mock_embed.assert_called_once_with(
+            build_embedding_text(sample_intervention),
+            "http://localhost:11434",
+            "nomic-embed-text",
+        )
+
+    def test_returns_none_on_connection_error(
+        self, sample_intervention: InterventionRecord
+    ) -> None:
+        with patch("lakehouse.pipeline.enrichment.embed_text") as mock_embed:
+            mock_embed.side_effect = ConnectionError("Ollama embedding failed after 3 retries")
+            payload, embedding = _embed_one(
+                sample_intervention,
+                "2024-10-01",
+                "http://localhost:11434",
+                "nomic-embed-text",
+            )
+        assert embedding is None
+        assert "Contexto: Conferencia del 2024-10-01" in payload
+
+    def test_returns_none_on_value_error(self, sample_intervention: InterventionRecord) -> None:
+        with patch("lakehouse.pipeline.enrichment.embed_text") as mock_embed:
+            mock_embed.side_effect = ValueError("Ollama returned empty embeddings")
+            _payload, embedding = _embed_one(
+                sample_intervention,
+                "2024-10-01",
+                "http://localhost:11434",
+                "nomic-embed-text",
+            )
+        assert embedding is None

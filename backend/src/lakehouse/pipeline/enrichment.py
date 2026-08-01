@@ -37,6 +37,21 @@ def build_embedding_text(intervention: InterventionRecord) -> str:
     return f"R: {intervention.text}"
 
 
+def _embed_one(
+    intervention: InterventionRecord,
+    effective_date: str,
+    ollama_base_url: str,
+    ollama_model: str,
+) -> tuple[str, list[float] | None]:
+    payload = build_embedding_payload(intervention, effective_date)
+    embedding_text = build_embedding_text(intervention)
+    try:
+        embedding = embed_text(embedding_text, ollama_base_url, ollama_model)
+    except (ConnectionError, ValueError):
+        return payload, None
+    return payload, embedding
+
+
 def get_pgvector_connection_string(
     host: str,
     port: int,
