@@ -90,11 +90,13 @@ def evaluate_rag() -> None:
         total=result["total"],
         fidelidad=result["avg_fidelity"],
         relevancia=result["avg_relevance"],
+        cobertura=result.get("avg_coverage", 0),
     )
     typer.echo(
         f"RAG Evaluation: {result['total']} preguntas, "
         f"fidelidad={result['avg_fidelity']}%, "
-        f"relevancia={result['avg_relevance']}%"
+        f"relevancia={result['avg_relevance']}%, "
+        f"cobertura={result.get('avg_coverage', 0)}%"
     )
 
 

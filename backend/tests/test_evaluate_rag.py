@@ -100,7 +100,7 @@ class TestEvaluateRag:
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
     ) -> None:
-        mock_chat.return_value = "La reforma energética fortalece a Pemex."
+        mock_chat.return_value = ("La reforma energética fortalece a Pemex.", "contexto", "fuentes")
         mock_llamacpp.return_value = "95"
 
         result = evaluate_rag()
@@ -119,7 +119,7 @@ class TestEvaluateRag:
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
     ) -> None:
-        mock_chat.return_value = "Respuesta de prueba."
+        mock_chat.return_value = ("Respuesta de prueba.", "contexto", "fuentes")
         mock_llamacpp.return_value = "90"
 
         result = evaluate_rag()
@@ -137,7 +137,7 @@ class TestEvaluateRag:
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
     ) -> None:
-        mock_chat.return_value = "Respuesta."
+        mock_chat.return_value = ("Respuesta.", "contexto", "fuentes")
         mock_llamacpp.return_value = "85"
 
         result = evaluate_rag()
@@ -166,7 +166,7 @@ class TestEvaluateRag:
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
     ) -> None:
-        mock_chat.return_value = "Respuesta."
+        mock_chat.return_value = ("Respuesta.", "contexto", "fuentes")
         mock_llamacpp.return_value = "90"
 
         result = evaluate_rag()
@@ -181,7 +181,7 @@ class TestEvaluateRag:
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
     ) -> None:
-        mock_chat.return_value = "Respuesta."
+        mock_chat.return_value = ("Respuesta.", "contexto", "fuentes")
         mock_llamacpp.return_value = "95"
 
         result = evaluate_rag()
@@ -190,6 +190,7 @@ class TestEvaluateRag:
             if "error" not in r:
                 assert r["fidelity"] == 95.0
                 assert r["relevance"] == 95.0
+                assert r["coverage"] == 95.0
 
 
 class TestParseScore:
@@ -262,7 +263,7 @@ class TestCallFunctions:
     ) -> None:
         mock_search.return_value = []
         mock_builder = MagicMock()
-        mock_builder.build.return_value = ("contexto\n\nPregunta: ¿Hola?", MagicMock())
+        mock_builder.build.return_value = ("contexto\n\nFuentes:\nfuente1\n\nPregunta: ¿Hola?", MagicMock())
         mock_builder_cls.return_value = mock_builder
         mock_client = MagicMock()
         mock_client_class.return_value.__enter__.return_value = mock_client
@@ -270,9 +271,11 @@ class TestCallFunctions:
         mock_response.json.return_value = {"choices": [{"message": {"content": "Respuesta."}}]}
         mock_client.post.return_value = mock_response
 
-        result = _call_chat_rag(query="¿Hola?", settings=Settings())
+        answer, context, sources = _call_chat_rag(query="¿Hola?", settings=Settings())
 
-        assert result == "Respuesta."
+        assert answer == "Respuesta."
+        assert "contexto" in context
+        assert sources == "fuente1"
         mock_search.assert_called_once_with("¿Hola?", 8)
 
     def test_evaluate_rag_returns_error_when_golden_missing(self) -> None:
@@ -310,7 +313,7 @@ class TestEvaluateRagFailures:
         mock_llamacpp: MagicMock,
         mock_logger: MagicMock,
     ) -> None:
-        mock_chat.return_value = "Respuesta."
+        mock_chat.return_value = ("Respuesta.", "contexto", "fuentes")
         mock_llamacpp.side_effect = RuntimeError("Judge unavailable")
 
         result = evaluate_rag()
@@ -320,3 +323,4 @@ class TestEvaluateRagFailures:
         for r in result["results"]:
             assert r["fidelity"] == 0.0
             assert r["relevance"] == 0.0
+            assert r["coverage"] == 0.0
