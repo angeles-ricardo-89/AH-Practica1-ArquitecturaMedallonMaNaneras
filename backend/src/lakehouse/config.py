@@ -22,5 +22,5 @@ class Settings(BaseSettings):
 
     rag_top_k: int = 8
     max_context_tokens: int = 8192
-    max_ingest_pool: int = 4
+    max_ingest_pool: int = 6
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
