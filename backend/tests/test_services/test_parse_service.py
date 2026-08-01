@@ -77,7 +77,7 @@ class TestParseServiceWorkers:
         ]
         service = ParseService(settings=settings, duckdb_conn=conn)
         with (
-            patch("lakehouse.services.parse_service.ProcessPoolExecutor"),
+            patch("lakehouse.services.parse_service.ProcessPoolExecutor") as mock_pool_cls,
             patch("lakehouse.services.parse_service.get_connection"),
             patch("lakehouse.services.parse_service.ensure_silver_tables"),
             patch.object(service, "_run_sequential") as mock_seq,
@@ -85,6 +85,8 @@ class TestParseServiceWorkers:
         ):
             result = service.run(dry_run=False, workers=4)
         assert result == {"interventions": 0, "dlq": 0}
+        mock_pool_cls.assert_called_once_with(max_workers=4)
+        assert mock_par.call_args.kwargs["pool"] is not None
         mock_par.assert_called_once()
         mock_seq.assert_not_called()
 
@@ -264,7 +266,7 @@ class TestRunParallel:
             patch("lakehouse.services.parse_service.merge_conference") as mock_mc,
         ):
             total_int, total_dlq = service._run_parallel(
-                rows=[("a", "x"), ("b", "y")],
+                rows=[("https://example.com/ok", "x"), ("https://example.com/broken", "y")],
                 write_conn=MagicMock(),
                 conference_date=None,
                 reporter=reporter,
@@ -274,6 +276,7 @@ class TestRunParallel:
         assert total_dlq == 0
         assert reporter.tick.call_count == 2
         mock_logger.warning.assert_called_once()
+        assert mock_logger.warning.call_args.kwargs["source_url"] == "https://example.com/broken"
         mock_mc.assert_called_once()
 
     def test_dry_run_skips_writes(self):
