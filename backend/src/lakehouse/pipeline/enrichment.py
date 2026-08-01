@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import psycopg
@@ -50,6 +50,39 @@ def _embed_one(
     except (ConnectionError, ValueError):
         return payload, None
     return payload, embedding
+
+
+def _store_gold(
+    cur: Any,
+    intervention: InterventionRecord,
+    effective_date: str,
+    payload: str,
+    embedding: list[float],
+) -> None:
+    cur.execute(
+        """
+            INSERT INTO gold.rag_corpus
+                (chunk_key, conference_id, conference_date, participant, chunk_text, payload, url, pregunta_activa, embedding)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (chunk_key) DO UPDATE SET
+                conference_id = EXCLUDED.conference_id,
+                conference_date = EXCLUDED.conference_date,
+                payload = EXCLUDED.payload,
+                url = EXCLUDED.url,
+                pregunta_activa = EXCLUDED.pregunta_activa
+            """,
+        (
+            intervention.intervention_key,
+            intervention.conference_id,
+            effective_date,
+            intervention.participant,
+            intervention.text,
+            payload,
+            intervention.url,
+            intervention.pregunta_activa,
+            embedding,
+        ),
+    )
 
 
 def get_pgvector_connection_string(

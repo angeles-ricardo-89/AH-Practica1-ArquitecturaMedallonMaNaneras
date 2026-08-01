@@ -741,3 +741,23 @@ class TestEmbedOne:
                 "nomic-embed-text",
             )
         assert embedding is None
+
+
+class TestStoreGold:
+    def test_executes_insert_with_correct_params(self, sample_intervention: InterventionRecord) -> None:
+        from lakehouse.pipeline.enrichment import _store_gold
+
+        cur = MagicMock()
+        _store_gold(
+            cur,
+            sample_intervention,
+            "2024-10-01",
+            "payload metadata",
+            [0.1] * 768,
+        )
+        sql, params = cur.execute.call_args.args
+        assert "INSERT INTO gold.rag_corpus" in sql
+        assert params[0] == sample_intervention.intervention_key
+        assert params[2] == "2024-10-01"
+        assert params[5] == "payload metadata"
+        assert params[8] == [0.1] * 768
