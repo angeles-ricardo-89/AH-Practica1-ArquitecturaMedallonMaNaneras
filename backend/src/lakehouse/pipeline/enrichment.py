@@ -118,7 +118,7 @@ def _call_ollama_embed(url: str, model: str, text: str) -> list[float]:
     embeddings = data.get("embeddings", [])
     if not embeddings:
         raise ValueError("Ollama returned empty embeddings")
-    return embeddings[0]
+    return [float(x) for x in embeddings[0]]
 
 
 def embed_text(
