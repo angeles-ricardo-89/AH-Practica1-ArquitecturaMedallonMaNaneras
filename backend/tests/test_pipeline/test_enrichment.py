@@ -745,7 +745,9 @@ class TestEmbedOne:
 
 
 class TestStoreGold:
-    def test_executes_insert_with_correct_params(self, sample_intervention: InterventionRecord) -> None:
+    def test_executes_insert_with_correct_params(
+        self, sample_intervention: InterventionRecord
+    ) -> None:
         cur = MagicMock()
         _store_gold(
             cur,
