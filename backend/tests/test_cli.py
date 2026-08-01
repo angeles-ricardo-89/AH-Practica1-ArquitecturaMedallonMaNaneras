@@ -44,7 +44,9 @@ class TestPipelineParse:
         mock_svc.run.return_value = {"interventions": 0, "dlq": 0}
         result = runner.invoke(app, ["pipeline", "parse", "--dry-run"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=True, conference_date=None, clean=False)
+        mock_svc.run.assert_called_once_with(
+            dry_run=True, conference_date=None, clean=False, workers=1
+        )
 
     @patch("lakehouse.cli.ParseService")
     @patch("lakehouse.cli.get_connection")
@@ -53,7 +55,9 @@ class TestPipelineParse:
         mock_svc.run.return_value = {"interventions": 0, "dlq": 0}
         result = runner.invoke(app, ["pipeline", "parse"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None, clean=False)
+        mock_svc.run.assert_called_once_with(
+            dry_run=False, conference_date=None, clean=False, workers=1
+        )
 
     @patch("lakehouse.cli.ParseService")
     @patch("lakehouse.cli.get_connection")
@@ -63,7 +67,7 @@ class TestPipelineParse:
         result = runner.invoke(app, ["pipeline", "parse", "--date", "2024-10-01"])
         assert result.exit_code == 0
         mock_svc.run.assert_called_once_with(
-            dry_run=False, conference_date="2024-10-01", clean=False
+            dry_run=False, conference_date="2024-10-01", clean=False, workers=1
         )
 
     @patch("lakehouse.cli.ParseService")
@@ -73,7 +77,20 @@ class TestPipelineParse:
         mock_svc.run.return_value = {"interventions": 0, "dlq": 0}
         result = runner.invoke(app, ["pipeline", "parse", "--clean"])
         assert result.exit_code == 0
-        mock_svc.run.assert_called_once_with(dry_run=False, conference_date=None, clean=True)
+        mock_svc.run.assert_called_once_with(
+            dry_run=False, conference_date=None, clean=True, workers=1
+        )
+
+    @patch("lakehouse.cli.ParseService")
+    @patch("lakehouse.cli.get_connection")
+    def test_parse_with_workers(self, mock_conn, mock_svc_cls):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = {"interventions": 5, "dlq": 1}
+        result = runner.invoke(app, ["pipeline", "parse", "--workers", "4"])
+        assert result.exit_code == 0
+        mock_svc.run.assert_called_once_with(
+            dry_run=False, conference_date=None, clean=False, workers=4
+        )
 
 
 class TestPipelineEnrich:
