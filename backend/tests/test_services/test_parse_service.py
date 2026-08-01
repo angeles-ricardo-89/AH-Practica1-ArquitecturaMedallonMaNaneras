@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from lakehouse.config import Settings
 from lakehouse.schemas.silver import DLQRejectRecord, InterventionRecord
-from lakehouse.services.parse_service import ParseService
+from lakehouse.services.parse_service import ParseService, _parse_one_row
 
 
 class TestParseService:
@@ -165,3 +165,40 @@ class TestParseServiceClean:
         with patch("lakehouse.services.parse_service.drop_silver_tables") as mock_drop:
             service.run(clean=True, dry_run=True)
         mock_drop.assert_not_called()
+
+
+class TestParseOneRow:
+    def test_returns_conference_and_interventions(self):
+        conference, interventions, dlq = _parse_one_row(
+            source_url="https://example.com/27-de-julio-de-2026",
+            raw_html=(
+                "<html><title>Titulo</title><main>"
+                "<strong>PERIODISTA:</strong> Buenos dias.</p>"
+                "</main></html>"
+            ),
+            conference_date=None,
+        )
+        assert conference is not None
+        assert conference.date == "2026-07-27"
+        assert len(interventions) >= 1
+        assert dlq == []
+
+    def test_unknown_date_returns_dlq(self):
+        conference, interventions, dlq = _parse_one_row(
+            source_url="https://example.com/no-date",
+            raw_html="<html></html>",
+            conference_date=None,
+        )
+        assert conference is None
+        assert interventions == []
+        assert len(dlq) == 1
+        assert dlq[0].rejection_reason == "unknown_date"
+
+    def test_respects_conference_date_override(self):
+        conference, _interventions, _dlq = _parse_one_row(
+            source_url="https://example.com/articulo",
+            raw_html="<html><title>T</title><main></main></html>",
+            conference_date="2026-01-15",
+        )
+        assert conference is not None
+        assert conference.date == "2026-01-15"
