@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     ducklake_data_path: str = "data/lakehouse/ducklake_files.duckdb"
 
     ollama_base_url: str = "http://localhost:11434"
-    ollama_embed_model: str = "nomic-embed-text"
+    ollama_embed_model: str = "embeddinggemma"
 
     llamacpp_base_url: str = "http://localhost:9200/v1"
     llamacpp_model: str = "gemma4"
