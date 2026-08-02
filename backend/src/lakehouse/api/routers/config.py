@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -18,7 +17,7 @@ router = APIRouter(tags=["config"])
 def get_config() -> ConfigResponse:
     settings = Settings()
     return ConfigResponse(
-        ambiente=os.getenv("APP_ENV", "desconocido"),
+        ambiente=settings.app_env,
         docker=Path("/.dockerenv").exists(),
         version="0.1.0",
         modelos=ModelosConfig(

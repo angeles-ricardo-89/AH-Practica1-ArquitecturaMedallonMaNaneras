@@ -19,12 +19,12 @@ class TestConfigEndpoint:
         assert "llm" in data["modelos"]
         assert "embedding" in data["modelos"]
 
-    def test_desconocido_when_no_env(self, monkeypatch):
+    def test_default_ambiente_when_no_env(self, monkeypatch):
         monkeypatch.delenv("APP_ENV", raising=False)
         resp = client.get("/config")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["ambiente"] == "desconocido"
+        assert data["ambiente"] == "local"
 
     def test_docker_detection(self, monkeypatch, tmp_path):
         fake_dockerenv = tmp_path / ".dockerenv"
@@ -32,5 +32,4 @@ class TestConfigEndpoint:
         monkeypatch.setattr(Path, "exists", lambda self: self == Path("/.dockerenv"))
         resp = client.get("/config")
         data = resp.json()
-        # En CI/local puede no haber /.dockerenv, simplemente verificamos que el campo exista
-        assert "docker" in data
+        assert data["docker"] is True
