@@ -190,7 +190,7 @@ class TestWritePipelineRun:
             conn.execute("DELETE FROM observability.pipeline_runs WHERE capa = 'bronze'")
             conn.commit()
 
-    def test_inserts_row_and_conflict_does_not_duplicate(self, conn_str: str) -> None:
+    def test_running_to_ok_updates_same_row(self, conn_str: str) -> None:
         ensure_observability_tables(conn_str)
         self._clean_bronze_runs(conn_str)
         try:
@@ -207,15 +207,47 @@ class TestWritePipelineRun:
             )
             with psycopg.connect(conn_str) as conn:
                 rows = conn.execute(
-                    """SELECT status, records_in, records_out, error_message
+                    """SELECT status, records_in, records_out, error_message, finished_at
                     FROM observability.pipeline_runs WHERE run_id = %s""",
                     (expected_run_id,),
                 ).fetchall()
             assert len(rows) == 1
-            assert rows[0][0] == "running"
-            assert rows[0][1] == 0
-            assert rows[0][2] == 0
+            assert rows[0][0] == "ok"
+            assert rows[0][1] == 150
+            assert rows[0][2] == 150
             assert rows[0][3] is None
+            assert rows[0][4] is not None
+        finally:
+            self._clean_bronze_runs(conn_str)
+
+    def test_repeated_upsert_does_not_duplicate(self, conn_str: str) -> None:
+        ensure_observability_tables(conn_str)
+        self._clean_bronze_runs(conn_str)
+        try:
+            started_at = "2026-08-01T10:30:00Z"
+            expected_run_id = hashlib.sha256(f"bronze:{started_at}".encode()).hexdigest()
+            _write_pipeline_run(
+                conn_str,
+                "bronze",
+                "ok",
+                started_at,
+                records_in=150,
+                records_out=150,
+            )
+            _write_pipeline_run(
+                conn_str,
+                "bronze",
+                "ok",
+                started_at,
+                records_in=150,
+                records_out=150,
+            )
+            with psycopg.connect(conn_str) as conn:
+                count = conn.execute(
+                    "SELECT COUNT(*) FROM observability.pipeline_runs WHERE run_id = %s",
+                    (expected_run_id,),
+                ).fetchone()[0]
+            assert count == 1
         finally:
             self._clean_bronze_runs(conn_str)
 

@@ -45,7 +45,13 @@ def _write_pipeline_run(
                 """INSERT INTO observability.pipeline_runs
                 (run_id, capa, status, started_at, finished_at, records_in, records_out, dlq_count, error_message)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (run_id) DO NOTHING""",
+                ON CONFLICT (run_id) DO UPDATE SET
+                    status = EXCLUDED.status,
+                    finished_at = EXCLUDED.finished_at,
+                    records_in = EXCLUDED.records_in,
+                    records_out = EXCLUDED.records_out,
+                    dlq_count = EXCLUDED.dlq_count,
+                    error_message = EXCLUDED.error_message""",
                 (
                     run_id,
                     capa,
