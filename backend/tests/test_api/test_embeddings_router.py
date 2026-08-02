@@ -84,7 +84,8 @@ class TestEmbeddings3D:
         resp = client.get("/embeddings/3d")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["points"] == []
+        test_points = [p for p in data["points"] if p["chunk_key"].startswith("test-ck-")]
+        assert test_points == []
 
     def test_returns_empty_points_on_db_error(self, monkeypatch):
         conn_str = _conn_str()

@@ -214,6 +214,45 @@ class TestComputeUmap3d:
         assert result == 0
         mock_conn.commit.assert_not_called()
 
+    def test_parses_string_embeddings_from_pgvector(self) -> None:
+        rows = [(f"k{i}", f"[{float(i)},{float(i + 1)},{float(i + 2)}]") for i in range(4)]
+        coords = np.array(
+            [
+                [1.0, 2.0, 3.0],
+                [4.0, 5.0, 6.0],
+                [7.0, 8.0, 9.0],
+                [10.0, 11.0, 12.0],
+            ]
+        )
+        mock_reducer = MagicMock()
+        mock_reducer.fit_transform.return_value = coords
+        mock_umap_class = MagicMock(return_value=mock_reducer)
+        fake_umap = SimpleNamespace(UMAP=mock_umap_class)
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = rows
+        mock_conn.cursor.return_value = mock_cursor
+
+        with (
+            patch.dict(sys.modules, {"umap": fake_umap}),
+            patch("lakehouse.pipeline.enrichment.psycopg.connect") as mock_connect,
+            patch("lakehouse.db.observability_conn.add_embedding_3d_column"),
+            patch("lakehouse.pipeline.enrichment.logger"),
+        ):
+            mock_connect.return_value.__enter__.return_value = mock_conn
+            result = _compute_umap_3d("postgresql://u:p@h:5433/d")
+
+        assert result == 4
+        mock_reducer.fit_transform.assert_called_once()
+        update_calls = [
+            call
+            for call in mock_cursor.execute.call_args_list
+            if "UPDATE gold.rag_corpus" in call[0][0]
+        ]
+        assert len(update_calls) == 4
+        mock_conn.commit.assert_called_once()
+
     def test_returns_0_when_conversion_fails(self) -> None:
         mock_conn = MagicMock()
         mock_cursor = MagicMock()

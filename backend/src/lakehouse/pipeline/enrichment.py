@@ -4,7 +4,7 @@ import hashlib
 import logging
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 import psycopg
@@ -388,6 +388,24 @@ def enrich_interventions(
     return {"total": total, "embedded": embedded, "failed": failed}
 
 
+def _parse_pgvector_to_list(value: object) -> list[float]:
+    """Convierte un embedding a lista de floats.
+
+    pgvector no esta registrado en psycopg, asi que la columna ``vector`` llega como
+    string de la forma ``[0.1,0.2,...]``. Si ya viene como lista/tuple (tests), se
+    devuelve tal cual.
+    """
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not (stripped.startswith("[") and stripped.endswith("]")):
+            raise ValueError(f"Formato de embedding invalido: {value!r}")
+        return [float(x) for x in stripped[1:-1].split(",")]
+    if isinstance(value, (list, tuple)):
+        seq = cast("list[float] | tuple[float, ...]", value)
+        return [float(x) for x in seq]
+    raise ValueError(f"Tipo de embedding no soportado: {type(value).__name__}")
+
+
 def _compute_umap_3d(pg_conn_str: str) -> int:  # noqa: PLR0911
     try:
         import numpy as np  # noqa: PLC0415
@@ -429,7 +447,7 @@ def _compute_umap_3d(pg_conn_str: str) -> int:  # noqa: PLR0911
 
     chunk_keys = [r[0] for r in clean_rows]
     try:
-        vectors = np.array([r[1] for r in clean_rows], dtype=np.float64)
+        vectors = np.array([_parse_pgvector_to_list(r[1]) for r in clean_rows], dtype=np.float64)
     except (ValueError, TypeError):
         logger.exception("Error convirtiendo embeddings a matriz numpy")
         return 0
