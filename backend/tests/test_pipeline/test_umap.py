@@ -21,6 +21,44 @@ class TestComputeUmap3d:
         assert result == 0
         mock_logger.warning.assert_called_once()
 
+    def test_calls_add_embedding_3d_column_before_select(self) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("k1", [0.1] * 3),
+            ("k2", [0.2] * 3),
+        ]
+        mock_conn.cursor.return_value = mock_cursor
+
+        with (
+            patch.dict(sys.modules, {"umap": SimpleNamespace(UMAP=MagicMock())}),
+            patch("lakehouse.pipeline.enrichment.psycopg.connect") as mock_connect,
+            patch("lakehouse.db.observability_conn.add_embedding_3d_column") as mock_add,
+            patch("lakehouse.pipeline.enrichment.logger"),
+        ):
+            mock_connect.return_value.__enter__.return_value = mock_conn
+            result = _compute_umap_3d("postgresql://u:p@h:5433/d")
+
+        assert result == 0
+        mock_add.assert_called_once_with("postgresql://u:p@h:5433/d")
+
+    def test_returns_0_when_column_ensure_fails(self) -> None:
+        with (
+            patch.dict(sys.modules, {"umap": SimpleNamespace(UMAP=MagicMock())}),
+            patch(
+                "lakehouse.db.observability_conn.add_embedding_3d_column",
+                side_effect=RuntimeError("db down"),
+            ) as mock_add,
+            patch("lakehouse.pipeline.enrichment.psycopg.connect") as mock_connect,
+            patch("lakehouse.pipeline.enrichment.logger") as mock_logger,
+        ):
+            result = _compute_umap_3d("postgresql://u:p@h:5433/d")
+
+        assert result == 0
+        mock_add.assert_called_once()
+        mock_connect.assert_not_called()
+        mock_logger.exception.assert_called_once()
+
     def test_returns_0_when_fewer_than_4_rows(self) -> None:
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
@@ -32,6 +70,7 @@ class TestComputeUmap3d:
 
         with (
             patch("lakehouse.pipeline.enrichment.psycopg.connect") as mock_connect,
+            patch("lakehouse.db.observability_conn.add_embedding_3d_column"),
             patch("lakehouse.pipeline.enrichment.logger"),
         ):
             mock_connect.return_value.__enter__.return_value = mock_conn
@@ -63,6 +102,7 @@ class TestComputeUmap3d:
         with (
             patch.dict(sys.modules, {"umap": fake_umap}),
             patch("lakehouse.pipeline.enrichment.psycopg.connect") as mock_connect,
+            patch("lakehouse.db.observability_conn.add_embedding_3d_column"),
             patch("lakehouse.pipeline.enrichment.logger"),
         ):
             mock_connect.return_value.__enter__.return_value = mock_conn
@@ -95,6 +135,7 @@ class TestComputeUmap3d:
         with (
             patch.dict(sys.modules, {"umap": SimpleNamespace(UMAP=MagicMock())}),
             patch("lakehouse.pipeline.enrichment.psycopg.connect") as mock_connect,
+            patch("lakehouse.db.observability_conn.add_embedding_3d_column"),
             patch("lakehouse.pipeline.enrichment.logger"),
         ):
             mock_connect.return_value.__enter__.return_value = mock_conn

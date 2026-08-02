@@ -383,12 +383,20 @@ def enrich_interventions(
     return {"total": total, "embedded": embedded, "failed": failed}
 
 
-def _compute_umap_3d(pg_conn_str: str) -> int:
+def _compute_umap_3d(pg_conn_str: str) -> int:  # noqa: PLR0911
     try:
         import numpy as np  # noqa: PLC0415
         from umap import UMAP  # noqa: PLC0415
     except ImportError:
         logger.warning("umap-learn no disponible, omitiendo reduccion 3D")
+        return 0
+
+    try:
+        from lakehouse.db.observability_conn import add_embedding_3d_column  # noqa: PLC0415
+
+        add_embedding_3d_column(pg_conn_str)
+    except Exception:
+        logger.exception("No se pudo asegurar columna embedding_3d, omitiendo UMAP")
         return 0
 
     try:
