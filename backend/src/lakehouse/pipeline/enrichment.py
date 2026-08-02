@@ -381,3 +381,54 @@ def enrich_interventions(
         )
 
     return {"total": total, "embedded": embedded, "failed": failed}
+
+
+def _compute_umap_3d(pg_conn_str: str) -> int:
+    try:
+        import numpy as np  # noqa: PLC0415
+        from umap import UMAP  # noqa: PLC0415
+    except ImportError:
+        logger.warning("umap-learn no disponible, omitiendo reduccion 3D")
+        return 0
+
+    try:
+        with psycopg.connect(pg_conn_str) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT chunk_key, embedding FROM gold.rag_corpus")
+            rows = cur.fetchall()
+    except Exception:
+        logger.exception("Error leyendo embeddings para UMAP")
+        return 0
+
+    if len(rows) < 4:
+        logger.warning("Muy pocos chunks para UMAP (< 4), omitiendo")
+        return 0
+
+    chunk_keys = [r[0] for r in rows]
+    vectors = np.array([r[1] for r in rows], dtype=np.float64)
+
+    try:
+        n_neighbors = min(15, len(rows) - 1)
+        reducer = UMAP(n_components=3, random_state=42, n_neighbors=n_neighbors)
+        coords = np.asarray(reducer.fit_transform(vectors))
+    except Exception:
+        logger.exception("UMAP fallo")
+        return 0
+
+    updated = 0
+    try:
+        with psycopg.connect(pg_conn_str) as conn:
+            cur = conn.cursor()
+            for key, coord in zip(chunk_keys, coords):
+                cur.execute(
+                    "UPDATE gold.rag_corpus SET embedding_3d = ARRAY[%s, %s, %s] WHERE chunk_key = %s",
+                    (float(coord[0]), float(coord[1]), float(coord[2]), key),
+                )
+                updated += 1
+            conn.commit()
+    except Exception:
+        logger.exception("Error guardando coordenadas UMAP")
+        return 0
+
+    logger.info("UMAP 3D completado", chunks=updated)
+    return updated

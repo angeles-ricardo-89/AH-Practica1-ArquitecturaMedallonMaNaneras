@@ -125,7 +125,7 @@ class EnrichService:
             conference_date=conference_date,
         )
         ensure_gold_tables(self._pg_conn_str)
-        return enrich_interventions(
+        result = enrich_interventions(
             windows=windows,
             conference_date=None,
             pg_conn_str=self._pg_conn_str,
@@ -133,3 +133,9 @@ class EnrichService:
             ollama_model=self._settings.ollama_embed_model,
             workers=workers,
         )
+        if result.get("embedded", 0) > 0:
+            self._logger.info("Ejecutando UMAP 3D sobre embeddings")
+            from lakehouse.pipeline.enrichment import _compute_umap_3d  # noqa: PLC0415
+
+            _compute_umap_3d(self._pg_conn_str)
+        return result
