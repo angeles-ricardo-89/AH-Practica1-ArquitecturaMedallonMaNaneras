@@ -1,6 +1,7 @@
 import psycopg
 from fastapi.testclient import TestClient
 
+from lakehouse.api.routers import embeddings
 from lakehouse.config import Settings
 from lakehouse.db.observability_conn import add_embedding_3d_column
 from lakehouse.main import app
@@ -44,13 +45,24 @@ class TestEmbeddings3D:
             resp = client.get("/embeddings/3d")
             assert resp.status_code == 200
             data = resp.json()
-            assert len(data["points"]) >= 2
-            for p in data["points"]:
-                assert "chunk_key" in p
-                assert "x" in p
-                assert "y" in p
-                assert "z" in p
-                assert "conference_date" in p
+            points = {p["chunk_key"]: p for p in data["points"]}
+            test_points = {
+                k: v for k, v in points.items() if k.startswith("test-ck-")
+            }
+            assert test_points["test-ck-1"] == {
+                "chunk_key": "test-ck-1",
+                "x": 1.0,
+                "y": 2.0,
+                "z": 3.0,
+                "conference_date": "2026-01-15",
+            }
+            assert test_points["test-ck-2"] == {
+                "chunk_key": "test-ck-2",
+                "x": 4.0,
+                "y": 5.0,
+                "z": 6.0,
+                "conference_date": "2026-01-16",
+            }
         finally:
             cur.execute("DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'test-ck-%'")
             conn.close()
@@ -61,6 +73,7 @@ class TestEmbeddings3D:
             "lakehouse.api.routers.embeddings._get_pg_conn_str",
             lambda: conn_str,
         )
+        add_embedding_3d_column(conn_str)
         conn = psycopg.connect(conn_str)
         conn.autocommit = True
         cur = conn.cursor()
@@ -73,4 +86,25 @@ class TestEmbeddings3D:
         resp = client.get("/embeddings/3d")
         assert resp.status_code == 200
         data = resp.json()
-        assert "points" in data
+        assert data["points"] == []
+
+    def test_returns_empty_points_on_db_error(self, monkeypatch):
+        conn_str = _conn_str()
+        monkeypatch.setattr(
+            "lakehouse.api.routers.embeddings._get_pg_conn_str",
+            lambda: conn_str,
+        )
+
+        def _raise(_conn_str: str) -> None:
+            raise psycopg.Error("db down")
+
+        monkeypatch.setattr(embeddings.psycopg, "connect", _raise)
+
+        resp = client.get("/embeddings/3d")
+        assert resp.status_code == 200
+        assert resp.json() == {"points": []}
+
+    def test_get_pg_conn_str_builds_url(self):
+        conn_str = embeddings._get_pg_conn_str()
+        assert conn_str.startswith("postgresql://")
+        assert "@localhost:5433/mananeras" in conn_str
