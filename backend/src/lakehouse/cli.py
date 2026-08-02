@@ -70,6 +70,42 @@ def _write_pipeline_run(
         logger.warning("No se pudo escribir pipeline_run", capa=capa, run_id=run_id)
 
 
+def _write_final_run(
+    pg_conn_str: str,
+    capa: str,
+    started_at: str,
+    dry_run: bool,
+    *,
+    records_in: int,
+    records_out: int,
+    dlq_count: int = 0,
+) -> None:
+    """Escribe el estado final de la corrida: 'interrupted' si hubo senal, si no 'ok'."""
+    if interrupt_state.requested():
+        if not dry_run:
+            _write_pipeline_run(
+                pg_conn_str,
+                capa,
+                "interrupted",
+                started_at,
+                records_in=records_in,
+                records_out=records_out,
+                dlq_count=dlq_count,
+            )
+        typer.echo("Pipeline interrumpido")
+        raise typer.Exit(code=130)
+    if not dry_run:
+        _write_pipeline_run(
+            pg_conn_str,
+            capa,
+            "ok",
+            started_at,
+            records_in=records_in,
+            records_out=records_out,
+            dlq_count=dlq_count,
+        )
+
+
 @pipeline_app.command()
 def ingest(
     dry_run: bool = typer.Option(default=False, help="Simulate without writing"),
@@ -101,32 +137,18 @@ def ingest(
             _write_pipeline_run(pg_conn_str, "bronze", "error", started_at, error_message=str(e))
         raise
 
-    if interrupt_state.requested():
-        if not dry_run:
-            records = result.get("records_inserted", 0)
-            _write_pipeline_run(
-                pg_conn_str,
-                "bronze",
-                "interrupted",
-                started_at,
-                records_in=records,
-                records_out=records,
-            )
-        typer.echo("Pipeline interrumpido")
-        raise typer.Exit(code=130)
-
+    records = result.get("records_inserted", 0)
+    _write_final_run(
+        pg_conn_str,
+        "bronze",
+        started_at,
+        dry_run,
+        records_in=records,
+        records_out=records,
+    )
     if dry_run:
         typer.echo(f"Simulacion: {result['html_count']} articulos encontrados")
     else:
-        records = result.get("records_inserted", 0)
-        _write_pipeline_run(
-            pg_conn_str,
-            "bronze",
-            "ok",
-            started_at,
-            records_in=records,
-            records_out=records,
-        )
         typer.echo(f"Ingesta completada: {records} registros insertados")
 
 
@@ -164,32 +186,16 @@ def parse(
             _write_pipeline_run(pg_conn_str, "silver", "error", started_at, error_message=str(e))
         raise
 
-    if interrupt_state.requested():
-        if not dry_run:
-            interventions = result.get("interventions", 0)
-            _write_pipeline_run(
-                pg_conn_str,
-                "silver",
-                "interrupted",
-                started_at,
-                records_in=interventions,
-                records_out=interventions,
-                dlq_count=result.get("dlq", 0),
-            )
-        typer.echo("Pipeline interrumpido")
-        raise typer.Exit(code=130)
-
-    if not dry_run:
-        interventions = result.get("interventions", 0)
-        _write_pipeline_run(
-            pg_conn_str,
-            "silver",
-            "ok",
-            started_at,
-            records_in=interventions,
-            records_out=interventions,
-            dlq_count=result.get("dlq", 0),
-        )
+    interventions = result.get("interventions", 0)
+    _write_final_run(
+        pg_conn_str,
+        "silver",
+        started_at,
+        dry_run,
+        records_in=interventions,
+        records_out=interventions,
+        dlq_count=result.get("dlq", 0),
+    )
     typer.echo(f"Parsing completado: {result['interventions']} intervenciones, {result['dlq']} DLQ")
 
 
@@ -229,28 +235,14 @@ def enrich(
             _write_pipeline_run(pg_conn_str, "gold", "error", started_at, error_message=str(e))
         raise
 
-    if interrupt_state.requested():
-        if not dry_run:
-            _write_pipeline_run(
-                pg_conn_str,
-                "gold",
-                "interrupted",
-                started_at,
-                records_in=result.get("total", 0),
-                records_out=result.get("embedded", 0),
-            )
-        typer.echo("Pipeline interrumpido")
-        raise typer.Exit(code=130)
-
-    if not dry_run:
-        _write_pipeline_run(
-            pg_conn_str,
-            "gold",
-            "ok",
-            started_at,
-            records_in=result.get("total", 0),
-            records_out=result.get("embedded", 0),
-        )
+    _write_final_run(
+        pg_conn_str,
+        "gold",
+        started_at,
+        dry_run,
+        records_in=result.get("total", 0),
+        records_out=result.get("embedded", 0),
+    )
     typer.echo(
         f"Enriquecimiento completado: {result['embedded']} incrustados, "
         f"{result['failed']} fallidos de {result['total']} totales"
