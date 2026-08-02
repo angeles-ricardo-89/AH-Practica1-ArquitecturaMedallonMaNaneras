@@ -181,7 +181,41 @@ class TestPipelineLayers:
             assert data["health_global"] == "Healthy"
             assert data["layers"][0]["capa"] == "bronze"
             assert data["layers"][0]["records_in"] == 150
-            assert data["ultima_corrida_global"] == "2026-08-01 10:00:10+00:00"
+            assert data["ultima_corrida_global"] == "2026-08-01T10:00:10+00:00"
+        finally:
+            self._clean_pipeline_runs(conn_str)
+
+    def test_layers_returns_newest_run_per_capa(self, monkeypatch):
+        conn_str = self._pg_conn_str()
+        monkeypatch.setattr(
+            "lakehouse.api.routers.observability._get_pg_conn_str",
+            lambda: conn_str,
+        )
+        ensure_observability_tables(conn_str)
+        self._clean_pipeline_runs(conn_str)
+        try:
+            self._insert_run(
+                conn_str, "r1", "bronze", "ok", "2026-08-01T10:00:00Z", "2026-08-01T10:00:12Z"
+            )
+            self._insert_run(
+                conn_str, "r2", "silver", "ok", "2026-08-01T10:00:05Z", "2026-08-01T10:00:20Z"
+            )
+            self._insert_run(
+                conn_str, "r3", "gold", "ok", "2026-08-01T10:00:10Z", "2026-08-01T10:00:30Z"
+            )
+            self._insert_run(
+                conn_str, "r4", "bronze", "error", "2026-08-01T10:30:00Z", "2026-08-01T10:30:15Z"
+            )
+
+            resp = client.get("/observability/pipeline/layers")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert len(data["layers"]) == 3
+            bronze = next(l for l in data["layers"] if l["capa"] == "bronze")
+            assert bronze["run_id"] == "r4"
+            assert bronze["status"] == "error"
+            assert bronze["started_at"] == "2026-08-01T10:30:00+00:00"
+            assert data["health_global"] == "Failed"
         finally:
             self._clean_pipeline_runs(conn_str)
 

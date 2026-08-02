@@ -107,8 +107,8 @@ def get_pipeline_layers() -> PipelineLayersResponse:
                 finished_at=finished.isoformat() if finished else None,
             )
         )
-        if started and str(started) > latest_global:
-            latest_global = str(started)
+        if started and started.isoformat() > latest_global:
+            latest_global = started.isoformat()
 
     statuses = {layer.status for layer in layers}
     if not statuses:
