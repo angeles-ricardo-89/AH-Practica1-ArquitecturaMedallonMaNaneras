@@ -42,7 +42,10 @@ class Ingestor:
         while True:
             if interrupt_state.requested():
                 break
-            url = await queue.get()
+            try:
+                url = await asyncio.wait_for(queue.get(), timeout=0.5)
+            except TimeoutError:
+                continue
             if url is None:
                 queue.task_done()
                 break

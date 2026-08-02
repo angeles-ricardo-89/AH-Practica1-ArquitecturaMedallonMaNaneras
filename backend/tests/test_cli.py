@@ -447,6 +447,21 @@ class TestPipelineRunTracking:
     @patch("lakehouse.cli.IngestService")
     @patch("lakehouse.cli.get_connection")
     @patch.object(interrupt_state, "requested", return_value=True)
+    def test_ingest_dry_run_interrupted_exits_130_without_writes(
+        self, mock_interrupt, mock_conn, mock_svc_cls, mock_write, mock_ensure
+    ):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run = AsyncMock(return_value={"html_count": 5, "records_inserted": 0})
+        result = runner.invoke(app, ["pipeline", "ingest", "--dry-run"])
+        assert result.exit_code == 130
+        mock_write.assert_not_called()
+        mock_ensure.assert_not_called()
+
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.IngestService")
+    @patch("lakehouse.cli.get_connection")
+    @patch.object(interrupt_state, "requested", return_value=True)
     def test_ingest_writes_interrupted_on_interrupt(
         self, mock_interrupt, mock_conn, mock_svc_cls, mock_write, mock_ensure
     ):
