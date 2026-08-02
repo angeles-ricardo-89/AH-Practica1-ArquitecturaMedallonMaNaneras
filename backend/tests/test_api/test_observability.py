@@ -1,10 +1,11 @@
 import json
+from datetime import UTC, datetime
 
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
-from lakehouse.api.routers.observability import _get_pg_conn_str
+from lakehouse.api.routers.observability import _find_layer_logs, _get_pg_conn_str
 from lakehouse.config import Settings
 from lakehouse.db.observability_conn import ensure_observability_tables
 from lakehouse.main import app
@@ -339,6 +340,57 @@ class TestPipelineLogsByLayer:
         data = resp.json()
         assert data["lines"] == []
         assert data["total_lines"] == 0
+
+    def test_find_layer_logs_filters_by_layer_and_sorts_newest_first(self, monkeypatch, tmp_path):
+        today = "2026-08-01"
+        log_dir = tmp_path / "logs" / today
+        log_dir.mkdir(parents=True)
+        bronze_old = log_dir / "bronze_20260801_111.log"
+        bronze_old.write_text("a\n")
+        silver = log_dir / "silver_20260801_222.log"
+        silver.write_text("b\n")
+        bronze_new = log_dir / "bronze_20260801_333.log"
+        bronze_new.write_text("c\n")
+        app_log = log_dir / "app_20260801_444.log"
+        app_log.write_text("d\n")
+
+        class _FixedDatetime:
+            @staticmethod
+            def now(_tz=None) -> datetime:
+                return datetime(2026, 8, 1, tzinfo=UTC)
+
+        monkeypatch.setattr("lakehouse.api.routers.observability.datetime", _FixedDatetime)
+
+        files = _find_layer_logs("bronze", str(tmp_path / "logs"))
+        assert files == [
+            str(bronze_new),
+            str(bronze_old),
+        ]
+
+    def test_find_layer_logs_empty_when_date_dir_missing(self, monkeypatch, tmp_path):
+        class _FixedDatetime:
+            @staticmethod
+            def now(_tz=None) -> datetime:
+                return datetime(2026, 8, 1, tzinfo=UTC)
+
+        monkeypatch.setattr("lakehouse.api.routers.observability.datetime", _FixedDatetime)
+
+        assert _find_layer_logs("bronze", str(tmp_path / "logs")) == []
+
+    def test_find_layer_logs_empty_when_layer_has_no_files(self, monkeypatch, tmp_path):
+        today = "2026-08-01"
+        log_dir = tmp_path / "logs" / today
+        log_dir.mkdir(parents=True)
+        (log_dir / "silver_20260801_222.log").write_text("b\n")
+
+        class _FixedDatetime:
+            @staticmethod
+            def now(_tz=None) -> datetime:
+                return datetime(2026, 8, 1, tzinfo=UTC)
+
+        monkeypatch.setattr("lakehouse.api.routers.observability.datetime", _FixedDatetime)
+
+        assert _find_layer_logs("gold", str(tmp_path / "logs")) == []
 
     def test_logs_by_layer_returns_most_recent_lines_across_files(self, monkeypatch, tmp_path):
         oldest_log = tmp_path / "oldest.log"

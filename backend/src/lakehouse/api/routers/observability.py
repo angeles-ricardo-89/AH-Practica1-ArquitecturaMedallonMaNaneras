@@ -1,4 +1,5 @@
 import os
+from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -40,14 +41,15 @@ def _find_layer_logs(layer: str, base_dir: str) -> list[str]:
     log_dir = Path(base_dir) / today
     if not log_dir.is_dir():
         return []
-    return sorted(
-        [
+    try:
+        files = [
             str(p)
             for p in log_dir.iterdir()
             if p.name.startswith(f"{layer}_") and p.name.endswith(".log")
-        ],
-        reverse=True,
-    )
+        ]
+    except OSError:
+        return []
+    return sorted(files, reverse=True)
 
 
 @router.get(
@@ -163,13 +165,15 @@ def get_pipeline_logs_by_layer(
     if not log_files:
         return PipelineLogs(lines=[], total_lines=0)
 
-    all_lines: list[str] = []
+    all_lines: deque[str] = deque(maxlen=lines)
+    total = 0
     for filepath in reversed(log_files):
         try:
-            with Path(filepath).open() as f:
-                all_lines.extend(line.rstrip("\n") for line in f)
+            with Path(filepath).open(encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    all_lines.append(line.rstrip("\n"))
+                    total += 1
         except OSError:
             continue
 
-    total = len(all_lines)
-    return PipelineLogs(lines=all_lines[-lines:], total_lines=total)
+    return PipelineLogs(lines=list(all_lines), total_lines=total)
