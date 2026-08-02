@@ -10,6 +10,7 @@ from lakehouse.db.duckdb_conn import (
     insert_bronze_record,
 )
 from lakehouse.log_config import ProgressReporter, get_logger
+from lakehouse.pipeline.interrupt import interrupt_state
 from lakehouse.pipeline.scraper import compute_content_hash, fetch_article_list
 
 logger = get_logger(__name__, layer="bronze")
@@ -39,6 +40,8 @@ class Ingestor:
         """Worker to consume URLs from the queue and process them."""
         records_inserted = 0
         while True:
+            if interrupt_state.requested():
+                break
             url = await queue.get()
             if url is None:
                 queue.task_done()
