@@ -10,6 +10,7 @@ const colorMap: Record<string, string> = {
   ok: 'bg-green-500',
   running: 'bg-yellow-500',
   error: 'bg-red-500',
+  interrupted: 'bg-amber-500',
   unknown: 'bg-gray-400',
 }
 
@@ -21,6 +22,7 @@ const statusLabel = computed(() => {
     ok: 'OK',
     running: 'Ejecutando',
     error: 'Error',
+    interrupted: 'Interrumpido',
     unknown: 'Desconocido',
   }
   return labelMap[props.status] ?? props.status

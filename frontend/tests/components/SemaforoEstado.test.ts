@@ -41,4 +41,12 @@ describe('SemaforoEstado', () => {
     })
     expect(wrapper.text()).toContain('Todo bien')
   })
+
+  it('shows amber dot for interrupted status', () => {
+    const wrapper = mount(SemaforoEstado, {
+      props: { status: 'interrupted' },
+    })
+    expect(wrapper.find('.bg-amber-500').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Interrumpido')
+  })
 })
