@@ -1,11 +1,13 @@
 import { apiClient } from './client'
 
 export interface SourceChunk {
+  conference_id: string
   conference_date: string
   participant: string
   chunk_text: string
   similarity: number
   conference_url: string
+  pregunta_activa: string
   qualitative_label: string
   embedding_3d: number[] | null
 }
