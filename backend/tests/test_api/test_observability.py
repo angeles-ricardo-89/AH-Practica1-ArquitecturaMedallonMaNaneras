@@ -307,3 +307,35 @@ class TestPipelineLayers:
         conn_str = _get_pg_conn_str()
         assert conn_str.startswith("postgresql://")
         assert "@localhost:5433/mananeras" in conn_str
+
+
+class TestPipelineLogsByLayer:
+    def test_logs_by_layer_filters_correctly(self, monkeypatch, tmp_path):
+        log_dir = tmp_path / "logs" / "2026-08-01"
+        log_dir.mkdir(parents=True)
+        bronze_log = log_dir / "bronze_20260801_12345.log"
+        bronze_log.write_text("[bronze] linea 1\n[bronze] linea 2\n")
+        silver_log = log_dir / "silver_20260801_12346.log"
+        silver_log.write_text("[silver] linea A\n[silver] linea B\n[silver] linea C\n")
+
+        monkeypatch.setattr(
+            "lakehouse.api.routers.observability._find_layer_logs",
+            lambda layer, _base_dir: [str(bronze_log)] if layer == "bronze" else [str(silver_log)],
+        )
+
+        resp = client.get("/observability/pipeline/logs/bronze?lines=10")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["lines"]) == 2
+        assert data["total_lines"] == 2
+
+    def test_logs_by_layer_empty_for_missing_layer(self, monkeypatch):
+        monkeypatch.setattr(
+            "lakehouse.api.routers.observability._find_layer_logs",
+            lambda _layer, _base_dir: [],
+        )
+        resp = client.get("/observability/pipeline/logs/gold?lines=5")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["lines"] == []
+        assert data["total_lines"] == 0

@@ -1,3 +1,7 @@
+import os
+from datetime import UTC, datetime
+from pathlib import Path
+
 import psycopg
 from fastapi import APIRouter, Query
 
@@ -28,6 +32,21 @@ def _get_pg_conn_str() -> str:
     return (
         f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
         f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+    )
+
+
+def _find_layer_logs(layer: str, base_dir: str) -> list[str]:
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    log_dir = Path(base_dir) / today
+    if not log_dir.is_dir():
+        return []
+    return sorted(
+        [
+            str(p)
+            for p in log_dir.iterdir()
+            if p.name.startswith(f"{layer}_") and p.name.endswith(".log")
+        ],
+        reverse=True,
     )
 
 
@@ -127,3 +146,30 @@ def get_pipeline_layers() -> PipelineLayersResponse:
         health_global=health,
         ultima_corrida_global=latest_global,
     )
+
+
+@router.get(
+    "/pipeline/logs/{layer}",
+    response_model=PipelineLogs,
+    summary="Get pipeline logs by layer",
+    description="Returns last N lines of pipeline log filtered by medallion layer",
+)
+def get_pipeline_logs_by_layer(
+    layer: str,
+    lines: int = Query(50, ge=1, le=500),
+) -> PipelineLogs:
+    base_dir = os.environ.get("PIPELINE_LOGS", "logs")
+    log_files = _find_layer_logs(layer, base_dir)
+    if not log_files:
+        return PipelineLogs(lines=[], total_lines=0)
+
+    all_lines: list[str] = []
+    for filepath in log_files:
+        try:
+            with Path(filepath).open() as f:
+                all_lines.extend(line.rstrip("\n") for line in f)
+        except OSError:
+            continue
+
+    total = len(all_lines)
+    return PipelineLogs(lines=all_lines[-lines:], total_lines=total)
