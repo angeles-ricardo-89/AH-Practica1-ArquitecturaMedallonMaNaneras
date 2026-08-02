@@ -15,9 +15,13 @@ class SourceChunk(BaseModel):
     similarity: float = Field(..., ge=0.0, le=1.0)
     conference_url: str = Field(default="")
     pregunta_activa: str = Field(default="")
+    qualitative_label: str = Field(default="Media")
+    embedding_3d: list[float] | None = Field(default=None)
 
 
 class ChatResponse(BaseModel):
     answer: str = Field(...)
     sources: list[SourceChunk] = Field(default_factory=list)
     token_usage: dict[str, int] = Field(default_factory=dict)
+    model_used: str = Field(default="")
+    latency_ms: float = Field(default=0.0)
