@@ -115,3 +115,58 @@ class TestEnsureObservabilityTables:
         finally:
             _drop_observability_schema(conn_str)
             ensure_observability_tables(conn_str)
+
+    def test_status_constraint_accepts_interrupted(self, conn_str: str) -> None:
+        _prepare_gold_rag_corpus(conn_str)
+        _drop_observability_schema(conn_str)
+        try:
+            ensure_observability_tables(conn_str)
+            with psycopg.connect(conn_str) as conn:
+                conn.execute(
+                    """INSERT INTO observability.pipeline_runs
+                    (run_id, capa, status)
+                    VALUES ('run-interrupted', 'bronze', 'interrupted')"""
+                )
+                conn.commit()
+                count = conn.execute(
+                    "SELECT COUNT(*) FROM observability.pipeline_runs WHERE run_id = %s",
+                    ("run-interrupted",),
+                ).fetchone()[0]
+            assert count == 1
+        finally:
+            _drop_observability_schema(conn_str)
+            ensure_observability_tables(conn_str)
+
+    def test_migrates_existing_constraint(self, conn_str: str) -> None:
+        _prepare_gold_rag_corpus(conn_str)
+        _drop_observability_schema(conn_str)
+        try:
+            with psycopg.connect(conn_str) as conn:
+                conn.execute("CREATE SCHEMA IF NOT EXISTS observability")
+                conn.execute(
+                    """CREATE TABLE IF NOT EXISTS observability.pipeline_runs (
+                        run_id TEXT PRIMARY KEY,
+                        capa TEXT NOT NULL
+                             CHECK (capa IN ('bronze', 'silver', 'gold')),
+                        status TEXT NOT NULL DEFAULT 'running'
+                             CHECK (status IN ('running', 'ok', 'error')),
+                        started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        finished_at TIMESTAMPTZ,
+                        records_in INTEGER NOT NULL DEFAULT 0,
+                        records_out INTEGER NOT NULL DEFAULT 0,
+                        dlq_count INTEGER NOT NULL DEFAULT 0,
+                        error_message TEXT
+                    )"""
+                )
+                conn.commit()
+            ensure_observability_tables(conn_str)
+            with psycopg.connect(conn_str) as conn:
+                conn.execute(
+                    """INSERT INTO observability.pipeline_runs
+                    (run_id, capa, status)
+                    VALUES ('run-interrupted', 'bronze', 'interrupted')"""
+                )
+                conn.commit()
+        finally:
+            _drop_observability_schema(conn_str)
+            ensure_observability_tables(conn_str)
