@@ -25,9 +25,26 @@ def _extract_urls(html: str) -> list[str]:
 
 
 def _fetch_page(client: httpx.Client, url: str) -> list[str]:
-    resp = client.get(url)
-    resp.raise_for_status()
-    return _extract_urls(resp.text)
+    # add retry logic here if needed
+    for attempt in range(3):
+        try:
+            resp = client.get(url)
+            resp.raise_for_status()
+            return _extract_urls(resp.text)
+        except (httpx.HTTPError, httpx.TimeoutException) as e:
+            if attempt == 2:
+                logger.exception(
+                    "Error máximo de reintentos alcanzado para URL",
+                    url=url,
+                    error=str(e),
+                )
+            else:
+                logger.warning(
+                    "Reintento de descarga de página", url=url, attempt=attempt + 1, error=str(e)
+                )
+                continue
+    # If we reach here, all retries have failed
+    raise RuntimeError(f"Failed to fetch page after 3 attempts: {url}")
 
 
 def _get_last_page(html: str) -> int:
@@ -41,6 +58,9 @@ def fetch_article_list(archive_url: str, max_articles: int | None = None) -> lis
         resp = client.get(archive_url)
         resp.raise_for_status()
         html = resp.text
+        logger.info(
+            "Fetched first page of archive: %s", html[:600]
+        )  # Log the first 600 characters of the HTML for debugging
         last_page = _get_last_page(html)
         logger.info("Total pages detected: %d", last_page)
 

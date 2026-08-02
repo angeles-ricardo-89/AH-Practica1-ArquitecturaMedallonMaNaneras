@@ -1,14 +1,54 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useObservabilityStore } from '../../stores/observability'
-import SemaforoEstado from './SemaforoEstado.vue'
-import LogViewer from './LogViewer.vue'
+import { useChatStore } from '../../stores/chat'
+import { useDashboardStore } from '../../stores/dashboard'
+import { getEmbeddings3D } from '../../api/embeddings'
+import type { Embedding3DPoint } from '../../api/embeddings'
+import AppHeader from '../shared/AppHeader.vue'
+import PipelineTimeline from '../pipeline/PipelineTimeline.vue'
+import EvidenceModal from '../pipeline/EvidenceModal.vue'
 import ChatWindow from '../chat/ChatWindow.vue'
+import Embeddings3D from '../inspector/Embeddings3D.vue'
+import SourcesList from '../inspector/SourcesList.vue'
 
 const obsStore = useObservabilityStore()
+const chatStore = useChatStore()
+const dashboardStore = useDashboardStore()
+
+const embeddingsPoints = ref<Embedding3DPoint[]>([])
+const embeddingsError = ref<string | null>(null)
+
+const selectedMessage = computed(() => {
+  if (!dashboardStore.selectedResponseId) return null
+  return chatStore.messages.find(
+    (m) => m.id === dashboardStore.selectedResponseId && m.role === 'assistant',
+  )
+})
+
+const selectedSources = computed(() => selectedMessage.value?.sources ?? [])
+
+const highlightedChunks = computed(() => {
+  if (!selectedSources.value.length) return []
+  return selectedSources.value
+    .map((s) => s.conference_id)
+    .filter(Boolean)
+})
+
+async function fetchEmbeddings() {
+  try {
+    const response = await getEmbeddings3D()
+    embeddingsPoints.value = response.points
+    embeddingsError.value = null
+  } catch (err) {
+    embeddingsError.value = err instanceof Error ? err.message : 'Error al obtener embeddings'
+    embeddingsPoints.value = []
+  }
+}
 
 onMounted(() => {
   obsStore.startPolling()
+  fetchEmbeddings()
 })
 
 onUnmounted(() => {
@@ -17,63 +57,63 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 p-6">
-    <header class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Lakehouse Mañaneras</h1>
-      <p class="text-sm text-gray-500">Dashboard de Observabilidad</p>
-    </header>
+  <div class="min-h-screen bg-stone-50 p-6">
+    <div class="max-w-[1440px] mx-auto space-y-5">
+      <!-- Header -->
+      <AppHeader />
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 space-y-6">
-        <div class="bg-white rounded-lg shadow p-4">
-          <h2 class="text-lg font-semibold text-gray-800 mb-3">
-            Estado del Pipeline
-          </h2>
-          <div v-if="obsStore.status" class="space-y-2">
-            <SemaforoEstado
-              :status="obsStore.status.status"
-              :label="
-                obsStore.status.status === 'ok'
-                  ? 'OK'
-                  : obsStore.status.status === 'running'
-                    ? 'Ejecutando'
-                    : obsStore.status.status === 'error'
-                      ? 'Error'
-                      : 'Desconocido'
-              "
+      <!-- Main 3-column layout -->
+      <div class="flex gap-5">
+        <!-- Columna izquierda: Pipeline -->
+        <div class="w-[300px] shrink-0">
+          <div class="bg-white border border-stone-200 rounded-2xl p-4 h-full">
+            <PipelineTimeline
+              v-if="obsStore.layers?.layers && obsStore.layers.layers.length > 0"
+              :layers="obsStore.layers.layers"
             />
-            <div class="text-sm text-gray-600">
-              <p>Última ejecución: {{ obsStore.status.last_run || 'N/A' }}</p>
-              <p>Último éxito: {{ obsStore.status.last_success || 'N/A' }}</p>
-              <p>Registros: {{ obsStore.status.records_count }}</p>
+            <div v-else-if="obsStore.layersError" class="text-xs text-red-600">
+              Error: {{ obsStore.layersError }}
+            </div>
+            <div v-else class="text-xs text-stone-400">
+              Sin datos del pipeline
             </div>
           </div>
-          <p v-else-if="obsStore.statusError" class="text-sm text-red-500">
-            Error: {{ obsStore.statusError }}
-          </p>
-          <p v-else class="text-sm text-gray-400">Cargando...</p>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-4">
-          <h2 class="text-lg font-semibold text-gray-800 mb-3">
-            Logs del Pipeline
-          </h2>
-          <LogViewer :lines="obsStore.logs" />
-          <p
-            v-if="obsStore.logsError"
-            class="text-sm text-red-500 mt-2"
-          >
-            Error: {{ obsStore.logsError }}
-          </p>
+        <!-- Columna central: Chat RAG -->
+        <div class="flex-1 min-w-0">
+          <ChatWindow />
         </div>
-      </div>
 
-      <div class="bg-white rounded-lg shadow flex flex-col h-[600px]">
-        <div class="p-4 border-b">
-          <h2 class="text-lg font-semibold text-gray-800">Chat RAG</h2>
+        <!-- Columna derecha: Inspector -->
+        <div class="w-[282px] shrink-0 flex flex-col gap-4">
+          <div v-if="embeddingsError" class="bg-white border border-stone-200 rounded-2xl p-4">
+            <h3 class="text-sm font-bold text-stone-950 mb-1">Embeddings 3D</h3>
+            <p class="text-xs text-stone-500">sin datos</p>
+          </div>
+          <Embeddings3D
+            v-else
+            :points="embeddingsPoints"
+            :highlighted-chunks="highlightedChunks"
+          />
+
+          <div v-if="!selectedMessage" class="bg-white border border-stone-200 rounded-2xl p-4 flex-1">
+            <h3 class="text-sm font-bold text-stone-950 mb-1">Fuentes usadas</h3>
+            <p class="text-xs text-stone-500">
+              Selecciona una respuesta del chat para ver fuentes usadas.
+            </p>
+          </div>
+
+          <SourcesList
+            v-else
+            :sources="selectedSources"
+            class="flex-1"
+          />
         </div>
-        <ChatWindow />
       </div>
     </div>
+
+    <!-- Modal de evidencia -->
+    <EvidenceModal />
   </div>
 </template>

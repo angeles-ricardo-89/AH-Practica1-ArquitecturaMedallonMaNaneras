@@ -1,5 +1,4 @@
 # AGENTS.md — Lakehouse Mañaneras
-
 ## PROPOSITO
 
 Este archivo define las reglas perpetuas de gobernanza, calidad y comportamiento para cualquier agente
@@ -78,7 +77,7 @@ Todo agente debe cargar y seguir estas skills. No son opcionales.
 | Vue 3 + Pinia + Tailwind | `.opencode/skills/tech/vue3_pinia_tailwind.md` | Frontend |
 | DuckDB + pgvector | `.opencode/skills/tech/duckdb_pgvector.md` | Datos, Vectores |
 | Testing + QA | `.opencode/skills/tech/testing_qa.md` | Calidad |
-
+| ECharts 3D Vue | .opencode/skills/tech/echarts_3d_vue.md | Visualización 3D |
 ### Skills de Dominio
 
 | Skill | Archivo | Responsabilidad |

@@ -1,16 +1,21 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getPipelineStatus, getPipelineLogs } from '../api/observability'
-import type { PipelineStatus } from '../api/observability'
-import type { PipelineLogs } from '../api/observability'
+import { getPipelineStatus, getPipelineLogs, getPipelineLayers } from '../api/observability'
+import type { PipelineStatus, PipelineLogs, PipelineLayersResponse } from '../api/observability'
+import { getConfig } from '../api/config'
+import type { ConfigResponse } from '../api/config'
 
-export const POLL_INTERVAL = 10000
+export const POLL_INTERVAL = 30000
 
 export const useObservabilityStore = defineStore('observability', () => {
   const status = ref<PipelineStatus | null>(null)
   const logs = ref<string[]>([])
+  const layers = ref<PipelineLayersResponse | null>(null)
+  const config = ref<ConfigResponse | null>(null)
   const statusError = ref<string | null>(null)
   const logsError = ref<string | null>(null)
+  const layersError = ref<string | null>(null)
+  const configError = ref<string | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
 
   async function fetchStatus() {
@@ -32,12 +37,33 @@ export const useObservabilityStore = defineStore('observability', () => {
     }
   }
 
+  async function fetchLayers() {
+    try {
+      layers.value = await getPipelineLayers()
+      layersError.value = null
+    } catch (err) {
+      layersError.value = err instanceof Error ? err.message : 'Error al obtener capas'
+    }
+  }
+
+  async function fetchConfig() {
+    try {
+      config.value = await getConfig()
+      configError.value = null
+    } catch (err) {
+      configError.value = err instanceof Error ? err.message : 'Error al obtener config'
+    }
+  }
+
   function startPolling() {
     fetchStatus()
     fetchLogs()
+    fetchLayers()
+    fetchConfig()
     pollTimer = setInterval(() => {
       fetchStatus()
       fetchLogs()
+      fetchLayers()
     }, POLL_INTERVAL)
   }
 
@@ -48,14 +74,27 @@ export const useObservabilityStore = defineStore('observability', () => {
     }
   }
 
+  function manualRefresh() {
+    fetchStatus()
+    fetchLogs()
+    fetchLayers()
+  }
+
   return {
     status,
     logs,
+    layers,
+    config,
     statusError,
     logsError,
+    layersError,
+    configError,
     fetchStatus,
     fetchLogs,
+    fetchLayers,
+    fetchConfig,
     startPolling,
     stopPolling,
+    manualRefresh,
   }
 })

@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     rag_top_k: int = 8
     max_context_tokens: int = 8192
-    max_ingest_pool: int = 6
+    max_ingest_pool: int = 1
     temporal_parser_temperature: float = 0.1
     temporal_parser_max_retries: int = 3
     temporal_parser_max_tokens: int = 1200

@@ -9,6 +9,14 @@ export interface ChatMessage {
   content: string
   sources?: SourceChunk[]
   timestamp: number
+  metrics?: {
+    similarity: number
+    numSources: number
+    coverage: number
+    latency: number
+    tokens: number
+    model: string
+  }
 }
 
 export const MAX_CONTEXT_TOKENS = 8192
@@ -34,10 +42,23 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const response: ChatResponse = await sendChatMessage(query)
       tokenUsage.value = response.token_usage
+      const numSources = response.sources?.length ?? 0
+      const avgSim =
+        numSources > 0
+          ? response.sources!.reduce((s, src) => s + src.similarity, 0) / numSources
+          : 0
       addMessage({
         role: 'assistant',
         content: response.answer,
         sources: response.sources,
+        metrics: {
+          similarity: avgSim,
+          numSources,
+          coverage: numSources > 0 ? 100 : 0,
+          latency: response.latency_ms,
+          tokens: response.token_usage?.total_tokens ?? 0,
+          model: response.model_used,
+        },
       })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error desconocido'

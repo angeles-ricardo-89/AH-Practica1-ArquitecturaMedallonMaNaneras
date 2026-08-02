@@ -46,5 +46,12 @@ backend/uv.lock
 
 # pnpm lock (generated)
 frontend/pnpm-lock.yaml
+frontend/.pnpm-store/
+
 
 backend/logs/*
+
+# Test artifacts
+backend/.coverage
+backend/test.db
+
