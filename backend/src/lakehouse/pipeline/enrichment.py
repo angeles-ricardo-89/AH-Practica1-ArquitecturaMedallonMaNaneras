@@ -412,11 +412,25 @@ def _compute_umap_3d(pg_conn_str: str) -> int:  # noqa: PLR0911
         logger.warning("Muy pocos chunks para UMAP (< 4), omitiendo")
         return 0
 
-    chunk_keys = [r[0] for r in rows]
-    vectors = np.array([r[1] for r in rows], dtype=np.float64)
+    clean_rows = [r for r in rows if r[1] is not None]
+    if len(clean_rows) != len(rows):
+        logger.warning(
+            "Se omitieron chunks con embedding nulo",
+            omitidos=len(rows) - len(clean_rows),
+        )
+    if len(clean_rows) < 4:
+        logger.warning("Muy pocos chunks validos para UMAP (< 4), omitiendo")
+        return 0
+
+    chunk_keys = [r[0] for r in clean_rows]
+    try:
+        vectors = np.array([r[1] for r in clean_rows], dtype=np.float64)
+    except (ValueError, TypeError):
+        logger.exception("Error convirtiendo embeddings a matriz numpy")
+        return 0
 
     try:
-        n_neighbors = min(15, len(rows) - 1)
+        n_neighbors = min(15, len(clean_rows) - 1)
         reducer = UMAP(n_components=3, random_state=42, n_neighbors=n_neighbors)
         coords = np.asarray(reducer.fit_transform(vectors))
     except Exception:
