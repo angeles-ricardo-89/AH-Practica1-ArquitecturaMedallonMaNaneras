@@ -10,6 +10,7 @@ import httpx
 import psycopg
 
 from lakehouse.log_config import ProgressReporter, get_logger
+from lakehouse.pipeline.interrupt import interrupt_state
 from lakehouse.services.token_estimator import estimate_tokens
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -294,6 +295,8 @@ def enrich_interventions(
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 futures: dict[Future, tuple[WindowRecord, str]] = {}
                 for record in windows:
+                    if interrupt_state.requested():
+                        break
                     effective_date = conference_date or record.conference_date
                     if not effective_date:
                         logger.error(
@@ -338,6 +341,8 @@ def enrich_interventions(
                     reporter.tick()
         else:
             for record in windows:
+                if interrupt_state.requested():
+                    break
                 effective_date = conference_date or record.conference_date
                 if not effective_date:
                     logger.error(

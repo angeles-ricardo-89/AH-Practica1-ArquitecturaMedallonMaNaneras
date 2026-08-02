@@ -21,6 +21,7 @@ from lakehouse.pipeline.enrichment import (
     ensure_gold_tables,
     get_pgvector_connection_string,
 )
+from lakehouse.pipeline.interrupt import interrupt_state
 from lakehouse.schemas.gold import WindowRecord
 from lakehouse.schemas.silver import InterventionRecord
 from lakehouse.services.token_estimator import estimate_tokens
@@ -948,6 +949,74 @@ class TestEnrichInterventionsParallel:
 
         assert result["embedded"] == 2
         assert result["failed"] == 0
+
+
+class TestEnrichInterrupt:
+    def _window(self, i: int, text: str = "Texto de la ventana.") -> WindowRecord:
+        return WindowRecord(
+            chunk_key=f"conf1_w{i:03d}_abc123",
+            conference_id="conf1",
+            conference_date="2025-03-01",
+            participant="PRESIDENTA",
+            text=text,
+            url="https://example.com",
+            window_index=i,
+        )
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_sequential_stops_on_interrupt(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        with patch.object(interrupt_state, "requested", side_effect=[False, True]):
+            result = enrich_interventions(
+                windows=[self._window(0), self._window(1)],
+                conference_date="2024-10-01",
+                pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+                ollama_base_url="http://localhost:11434",
+                ollama_model="nomic-embed-text",
+            )
+
+        assert result["total"] == 2
+        assert result["embedded"] == 1
+        assert result["failed"] == 0
+        assert mock_embed.call_count == 1
+
+    @patch("lakehouse.pipeline.enrichment.embed_text")
+    @patch("lakehouse.pipeline.enrichment.psycopg.connect")
+    def test_parallel_stops_submitting_on_interrupt(
+        self,
+        mock_connect: MagicMock,
+        mock_embed: MagicMock,
+    ) -> None:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value.__enter__.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_embed.return_value = [0.5] * 768
+
+        with patch.object(interrupt_state, "requested", side_effect=[False, True]):
+            result = enrich_interventions(
+                windows=[self._window(0), self._window(1)],
+                conference_date="2024-10-01",
+                pg_conn_str="postgresql://user:pass@localhost:5433/mydb",
+                ollama_base_url="http://localhost:11434",
+                ollama_model="nomic-embed-text",
+                workers=2,
+            )
+
+        assert result["total"] == 2
+        assert result["embedded"] == 1
+        assert result["failed"] == 0
+        assert mock_embed.call_count == 1
 
 
 class TestBuildWindows:
