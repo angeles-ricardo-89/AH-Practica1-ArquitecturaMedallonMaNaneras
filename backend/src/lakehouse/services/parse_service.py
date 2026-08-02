@@ -14,6 +14,7 @@ from lakehouse.db.merge import (
     merge_intervention,
 )
 from lakehouse.log_config import ProgressReporter, get_logger
+from lakehouse.pipeline.interrupt import interrupt_state
 from lakehouse.pipeline.parsing import (
     build_conference_record,
     parse_conference_date,
@@ -129,6 +130,8 @@ class ParseService:
         total_interventions = 0
         total_dlq = 0
         for source_url, raw_html in rows:
+            if interrupt_state.requested():
+                break
             conference, interventions, dlq_records = _parse_one_row(
                 source_url, raw_html, conference_date
             )
@@ -159,6 +162,8 @@ class ParseService:
 
         futures: dict[Future, tuple[str, str]] = {}
         for source_url, raw_html in rows:
+            if interrupt_state.requested():
+                break
             future = pool.submit(_parse_one_row, source_url, raw_html, conference_date)
             futures[future] = (source_url, raw_html)
 

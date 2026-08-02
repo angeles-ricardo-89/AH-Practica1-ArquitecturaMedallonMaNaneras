@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 
 from lakehouse.config import Settings
+from lakehouse.pipeline.interrupt import interrupt_state
 from lakehouse.services.parse_service import ParseService, _parse_one_row
 
 
@@ -445,3 +446,59 @@ class TestParseOneRow:
         )
         assert conference is not None
         assert conference.date == "2026-01-15"
+
+
+class TestParseServiceInterrupt:
+    def _service(self) -> ParseService:
+        return ParseService(settings=Settings(), duckdb_conn=MagicMock())
+
+    def test_run_sequential_stops_on_interrupt(self):
+        service = self._service()
+        conference = MagicMock()
+        intervention = MagicMock()
+        rows = [
+            ("https://example.com/a", "<html>a</html>"),
+            ("https://example.com/b", "<html>b</html>"),
+        ]
+        with (
+            patch(
+                "lakehouse.services.parse_service._parse_one_row",
+                return_value=(conference, [intervention], []),
+            ),
+            patch("lakehouse.services.parse_service.merge_conference"),
+            patch("lakehouse.services.parse_service.merge_intervention"),
+            patch.object(interrupt_state, "requested", side_effect=[False, True]),
+        ):
+            total_int, total_dlq = service._run_sequential(
+                rows=rows,
+                write_conn=MagicMock(),
+                conference_date=None,
+                reporter=MagicMock(),
+            )
+        assert total_int == 1
+        assert total_dlq == 0
+
+    def test_run_parallel_stops_submitting_on_interrupt(self):
+        service = self._service()
+        future = Future()
+        future.set_result((MagicMock(), [MagicMock()], []))
+        pool = _FakePool([future])
+        rows = [
+            ("https://example.com/a", "<html>a</html>"),
+            ("https://example.com/b", "<html>b</html>"),
+        ]
+        with (
+            patch("lakehouse.services.parse_service.merge_conference"),
+            patch("lakehouse.services.parse_service.merge_intervention"),
+            patch.object(interrupt_state, "requested", side_effect=[False, True]),
+        ):
+            total_int, total_dlq = service._run_parallel(
+                rows=rows,
+                write_conn=MagicMock(),
+                conference_date=None,
+                reporter=MagicMock(),
+                pool=pool,
+            )
+        assert total_int == 1
+        assert total_dlq == 0
+        assert len(pool.submit_calls) == 1
