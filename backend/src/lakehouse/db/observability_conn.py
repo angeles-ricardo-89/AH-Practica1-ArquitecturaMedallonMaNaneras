@@ -23,14 +23,20 @@ CREATE INDEX IF NOT EXISTS idx_pipeline_runs_capa_started
 """
 
 EMBEDDING_3D_DDL = """
-ALTER TABLE gold.rag_corpus
-    ADD COLUMN IF NOT EXISTS embedding_3d DOUBLE PRECISION[3];
+DO $$
+BEGIN
+    IF to_regclass('gold.rag_corpus') IS NOT NULL THEN
+        ALTER TABLE gold.rag_corpus
+            ADD COLUMN IF NOT EXISTS embedding_3d DOUBLE PRECISION[3];
+    END IF;
+END $$;
 """
 
 
 def ensure_observability_tables(pg_conn_str: str) -> None:
     with psycopg.connect(pg_conn_str) as conn:
         conn.execute(PIPELINE_RUNS_DDL)
+        conn.execute(EMBEDDING_3D_DDL)
         conn.commit()
 
 

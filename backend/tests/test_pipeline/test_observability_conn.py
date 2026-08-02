@@ -5,10 +5,7 @@ import pytest
 
 import lakehouse.config
 from lakehouse.config import Settings
-from lakehouse.db.observability_conn import (
-    add_embedding_3d_column,
-    ensure_observability_tables,
-)
+from lakehouse.db.observability_conn import ensure_observability_tables
 
 EXPECTED_PIPELINE_RUNS_COLUMNS = {
     "run_id",
@@ -56,7 +53,6 @@ class TestEnsureObservabilityTables:
         _drop_observability_schema(conn_str)
         try:
             ensure_observability_tables(conn_str)
-            add_embedding_3d_column(conn_str)
 
             with psycopg.connect(conn_str) as conn:
                 cols = {
@@ -79,8 +75,7 @@ class TestEnsureObservabilityTables:
                 assert embedding_3d is not None
         finally:
             _drop_observability_schema(conn_str)
-            with psycopg.connect(conn_str) as conn:
-                conn.execute("ALTER TABLE gold.rag_corpus DROP COLUMN IF EXISTS embedding_3d")
+            ensure_observability_tables(conn_str)
 
     def test_idempotent_on_second_call(self, conn_str: str) -> None:
         _prepare_gold_rag_corpus(conn_str)
@@ -88,8 +83,6 @@ class TestEnsureObservabilityTables:
         try:
             ensure_observability_tables(conn_str)
             ensure_observability_tables(conn_str)
-            add_embedding_3d_column(conn_str)
-            add_embedding_3d_column(conn_str)
 
             with psycopg.connect(conn_str) as conn:
                 cols = {
@@ -121,5 +114,4 @@ class TestEnsureObservabilityTables:
                 assert embedding_count == 1
         finally:
             _drop_observability_schema(conn_str)
-            with psycopg.connect(conn_str) as conn:
-                conn.execute("ALTER TABLE gold.rag_corpus DROP COLUMN IF EXISTS embedding_3d")
+            ensure_observability_tables(conn_str)
