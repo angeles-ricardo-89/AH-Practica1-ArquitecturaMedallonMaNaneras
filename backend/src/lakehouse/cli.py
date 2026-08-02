@@ -155,23 +155,41 @@ def parse(
     conn = get_connection(settings.ducklake_data_path)
     service = ParseService(settings=settings, duckdb_conn=conn)
     try:
-        result = service.run(
-            dry_run=dry_run, conference_date=conference_date, clean=clean, workers=workers
-        )
-        if not dry_run:
-            _write_pipeline_run(
-                pg_conn_str,
-                "silver",
-                "ok",
-                started_at,
-                records_in=result.get("interventions", 0),
-                records_out=result.get("interventions", 0),
-                dlq_count=result.get("dlq", 0),
+        with install_graceful_interrupt():
+            result = service.run(
+                dry_run=dry_run, conference_date=conference_date, clean=clean, workers=workers
             )
     except Exception as e:
         if not dry_run:
             _write_pipeline_run(pg_conn_str, "silver", "error", started_at, error_message=str(e))
         raise
+
+    if interrupt_state.requested():
+        if not dry_run:
+            interventions = result.get("interventions", 0)
+            _write_pipeline_run(
+                pg_conn_str,
+                "silver",
+                "interrupted",
+                started_at,
+                records_in=interventions,
+                records_out=interventions,
+                dlq_count=result.get("dlq", 0),
+            )
+        typer.echo("Pipeline interrumpido")
+        raise typer.Exit(code=130)
+
+    if not dry_run:
+        interventions = result.get("interventions", 0)
+        _write_pipeline_run(
+            pg_conn_str,
+            "silver",
+            "ok",
+            started_at,
+            records_in=interventions,
+            records_out=interventions,
+            dlq_count=result.get("dlq", 0),
+        )
     typer.echo(f"Parsing completado: {result['interventions']} intervenciones, {result['dlq']} DLQ")
 
 
@@ -202,22 +220,37 @@ def enrich(
         pg_conn_str=pg_conn_str,
     )
     try:
-        result = service.run(
-            dry_run=dry_run, conference_date=conference_date, clean=clean, workers=workers
-        )
-        if not dry_run:
-            _write_pipeline_run(
-                pg_conn_str,
-                "gold",
-                "ok",
-                started_at,
-                records_in=result.get("total", 0),
-                records_out=result.get("embedded", 0),
+        with install_graceful_interrupt():
+            result = service.run(
+                dry_run=dry_run, conference_date=conference_date, clean=clean, workers=workers
             )
     except Exception as e:
         if not dry_run:
             _write_pipeline_run(pg_conn_str, "gold", "error", started_at, error_message=str(e))
         raise
+
+    if interrupt_state.requested():
+        if not dry_run:
+            _write_pipeline_run(
+                pg_conn_str,
+                "gold",
+                "interrupted",
+                started_at,
+                records_in=result.get("total", 0),
+                records_out=result.get("embedded", 0),
+            )
+        typer.echo("Pipeline interrumpido")
+        raise typer.Exit(code=130)
+
+    if not dry_run:
+        _write_pipeline_run(
+            pg_conn_str,
+            "gold",
+            "ok",
+            started_at,
+            records_in=result.get("total", 0),
+            records_out=result.get("embedded", 0),
+        )
     typer.echo(
         f"Enriquecimiento completado: {result['embedded']} incrustados, "
         f"{result['failed']} fallidos de {result['total']} totales"

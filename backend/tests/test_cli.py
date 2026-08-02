@@ -461,6 +461,45 @@ class TestPipelineRunTracking:
         assert interrupted.kwargs["records_in"] == 3
         assert interrupted.kwargs["records_out"] == 3
 
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.ParseService")
+    @patch("lakehouse.cli.get_connection")
+    @patch.object(interrupt_state, "requested", return_value=True)
+    def test_parse_writes_interrupted_on_interrupt(
+        self, mock_interrupt, mock_conn, mock_svc_cls, mock_write, mock_ensure
+    ):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = {"interventions": 4, "dlq": 1}
+        result = runner.invoke(app, ["pipeline", "parse"])
+        assert result.exit_code == 130
+        assert mock_write.call_count == 2
+        running, interrupted = mock_write.call_args_list
+        assert running.args[2] == "running"
+        assert interrupted.args[2] == "interrupted"
+        assert interrupted.kwargs["records_in"] == 4
+        assert interrupted.kwargs["records_out"] == 4
+        assert interrupted.kwargs["dlq_count"] == 1
+
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.EnrichService")
+    @patch("lakehouse.cli.get_connection")
+    @patch.object(interrupt_state, "requested", return_value=True)
+    def test_enrich_writes_interrupted_on_interrupt(
+        self, mock_interrupt, mock_conn, mock_svc_cls, mock_write, mock_ensure
+    ):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = {"embedded": 2, "failed": 1, "total": 3}
+        result = runner.invoke(app, ["pipeline", "enrich"])
+        assert result.exit_code == 130
+        assert mock_write.call_count == 2
+        running, interrupted = mock_write.call_args_list
+        assert running.args[2] == "running"
+        assert interrupted.args[2] == "interrupted"
+        assert interrupted.kwargs["records_in"] == 3
+        assert interrupted.kwargs["records_out"] == 2
+
 
 class TestEvaluateRagCommand:
     @patch("lakehouse.cli.evaluate_rag_fn")
