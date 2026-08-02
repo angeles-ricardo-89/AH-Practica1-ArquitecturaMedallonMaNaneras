@@ -9,6 +9,7 @@ import lakehouse.config
 from lakehouse.cli import _write_pipeline_run, app
 from lakehouse.config import Settings
 from lakehouse.db.observability_conn import ensure_observability_tables
+from lakehouse.pipeline.interrupt import interrupt_state
 
 runner = CliRunner()
 
@@ -440,6 +441,25 @@ class TestPipelineRunTracking:
         assert result.exit_code == 0
         mock_write.assert_not_called()
         mock_ensure.assert_not_called()
+
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.IngestService")
+    @patch("lakehouse.cli.get_connection")
+    @patch.object(interrupt_state, "requested", return_value=True)
+    def test_ingest_writes_interrupted_on_interrupt(
+        self, mock_interrupt, mock_conn, mock_svc_cls, mock_write, mock_ensure
+    ):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run = AsyncMock(return_value={"html_count": 5, "records_inserted": 3})
+        result = runner.invoke(app, ["pipeline", "ingest"])
+        assert result.exit_code == 130
+        assert mock_write.call_count == 2
+        running, interrupted = mock_write.call_args_list
+        assert running.args[2] == "running"
+        assert interrupted.args[2] == "interrupted"
+        assert interrupted.kwargs["records_in"] == 3
+        assert interrupted.kwargs["records_out"] == 3
 
 
 class TestEvaluateRagCommand:

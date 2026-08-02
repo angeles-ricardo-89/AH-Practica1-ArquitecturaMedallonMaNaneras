@@ -10,6 +10,7 @@ from lakehouse.db.duckdb_conn import get_connection
 from lakehouse.db.observability_conn import ensure_observability_tables
 from lakehouse.log_config import get_logger
 from lakehouse.pipeline.evaluate_rag import evaluate_rag as evaluate_rag_fn
+from lakehouse.pipeline.interrupt import install_graceful_interrupt, interrupt_state
 from lakehouse.services.enrich_service import EnrichService
 from lakehouse.services.ingest_service import IngestService
 from lakehouse.services.parse_service import ParseService
@@ -91,20 +92,42 @@ def ingest(
     conn = get_connection(settings.ducklake_data_path)
     service = IngestService(settings=settings, duckdb_conn=conn)
     try:
-        result = asyncio.run(service.run(dry_run=dry_run, max_articles=max_articles, clean=clean))
-        if not dry_run:
-            records = result.get("records_inserted", 0)
-            _write_pipeline_run(
-                pg_conn_str, "bronze", "ok", started_at, records_in=records, records_out=records
+        with install_graceful_interrupt():
+            result = asyncio.run(
+                service.run(dry_run=dry_run, max_articles=max_articles, clean=clean)
             )
     except Exception as e:
         if not dry_run:
             _write_pipeline_run(pg_conn_str, "bronze", "error", started_at, error_message=str(e))
         raise
+
+    if interrupt_state.requested():
+        if not dry_run:
+            records = result.get("records_inserted", 0)
+            _write_pipeline_run(
+                pg_conn_str,
+                "bronze",
+                "interrupted",
+                started_at,
+                records_in=records,
+                records_out=records,
+            )
+        typer.echo("Pipeline interrumpido")
+        raise typer.Exit(code=130)
+
     if dry_run:
         typer.echo(f"Simulacion: {result['html_count']} articulos encontrados")
     else:
-        typer.echo(f"Ingesta completada: {result['records_inserted']} registros insertados")
+        records = result.get("records_inserted", 0)
+        _write_pipeline_run(
+            pg_conn_str,
+            "bronze",
+            "ok",
+            started_at,
+            records_in=records,
+            records_out=records,
+        )
+        typer.echo(f"Ingesta completada: {records} registros insertados")
 
 
 @pipeline_app.command()
