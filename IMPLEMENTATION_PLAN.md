@@ -391,6 +391,30 @@ Criterios de Aceptacion del PRD se cumplen.
 
 ---
 
+### FASE 6: Interrupcion Graceful
+
+#### CP-16: Interrupcion Graceful de Pipelines
+
+**Objetivo:** Que ingest/parse/enrich terminen gracefulmente ante SIGINT/SIGTERM,
+escribiendo su corrida como `interrupted` con conteos parciales.
+
+**Archivos:**
+- `backend/src/lakehouse/pipeline/interrupt.py` (nuevo)
+- `backend/src/lakehouse/cli.py`
+- `backend/src/lakehouse/db/observability_conn.py`
+- `backend/src/lakehouse/pipeline/ingestion.py`, `parse_service.py`, `enrichment.py`
+- `frontend/src/components/pipeline/PipelineCard.vue`, `PipelineTimeline.vue`
+- `frontend/src/components/dashboard/SemaforoEstado.vue`
+
+**Evidencia Requerida:**
+- `uv run pytest -xvs --cov=src --cov-report=term-missing` pasa (>= 90% coverage).
+- `uv run ruff check --fix && uv run ruff format` sin errores.
+- `uv run ty check` sin errores.
+- `pnpm lint`, `pnpm typecheck`, `pnpm test:unit` pasan.
+- Manual: `Ctrl+C` durante `pipeline ingest` escribe `status='interrupted'` con parciales y exit 130.
+
+---
+
 ## Resumen de Checkpoints
 
 | CP | Fase | Nombre | Estado |
@@ -411,3 +435,4 @@ Criterios de Aceptacion del PRD se cumplen.
 | CP-13 | QA | Evaluacion RAG (LLM-as-a-Judge) | [x] |
 | CP-14 | QA | Idempotencia End-to-End | [x] |
 | CP-15 | Cierre | Docker Full Stack + DoD | [x] |
+| CP-16 | Cierre | Interrupcion Graceful de Pipelines | [ ] |
