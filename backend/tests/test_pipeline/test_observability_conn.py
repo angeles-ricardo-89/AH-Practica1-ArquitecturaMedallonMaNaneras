@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import psycopg
+import pytest
 
 import lakehouse.config
 from lakehouse.config import Settings
@@ -7,59 +10,116 @@ from lakehouse.db.observability_conn import (
     ensure_observability_tables,
 )
 
+EXPECTED_PIPELINE_RUNS_COLUMNS = {
+    "run_id",
+    "capa",
+    "status",
+    "started_at",
+    "finished_at",
+    "records_in",
+    "records_out",
+    "dlq_count",
+    "error_message",
+}
+
+
+@pytest.fixture
+def conn_str(monkeypatch: pytest.MonkeyPatch) -> str:
+    monkeypatch.setattr(lakehouse.config.Settings, "model_config", {})
+    settings = Settings()
+    return (
+        f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
+        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+    )
+
+
+def _prepare_gold_rag_corpus(conn_str: str) -> None:
+    with psycopg.connect(conn_str) as conn:
+        conn.execute("CREATE SCHEMA IF NOT EXISTS gold")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS gold.rag_corpus (
+                chunk_key VARCHAR PRIMARY KEY,
+                embedding vector(768)
+            )
+        """)
+        conn.execute("ALTER TABLE gold.rag_corpus DROP COLUMN IF EXISTS embedding_3d")
+
+
+def _drop_observability_schema(conn_str: str) -> None:
+    with psycopg.connect(conn_str) as conn:
+        conn.execute("DROP SCHEMA IF EXISTS observability CASCADE")
+
 
 class TestEnsureObservabilityTables:
-    def test_creates_schema_and_table(self, monkeypatch):
-        monkeypatch.setattr(lakehouse.config.Settings, "model_config", {})
-        settings = Settings()
-        conn_str = (
-            f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
-            f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-        )
-        conn = psycopg.connect(conn_str)
-        conn.autocommit = True
-        cur = conn.cursor()
-        cur.execute("DROP SCHEMA IF EXISTS observability CASCADE")
+    def test_creates_schema_and_table(self, conn_str: str) -> None:
+        _prepare_gold_rag_corpus(conn_str)
+        _drop_observability_schema(conn_str)
+        try:
+            ensure_observability_tables(conn_str)
+            add_embedding_3d_column(conn_str)
 
-        ensure_observability_tables(conn_str)
-        add_embedding_3d_column(conn_str)
+            with psycopg.connect(conn_str) as conn:
+                cols = {
+                    row[0]
+                    for row in conn.execute("""
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_schema = 'observability'
+                          AND table_name = 'pipeline_runs'
+                    """).fetchall()
+                }
+                assert cols == EXPECTED_PIPELINE_RUNS_COLUMNS
 
-        cur.execute("""
-            SELECT column_name, data_type
-            FROM information_schema.columns
-            WHERE table_schema = 'observability' AND table_name = 'pipeline_runs'
-            ORDER BY ordinal_position
-        """)
-        cols = {row[0]: row[1] for row in cur.fetchall()}
-        assert "run_id" in cols
-        assert "capa" in cols
-        assert "status" in cols
-        assert "started_at" in cols
-        assert "finished_at" in cols
-        assert "records_in" in cols
-        assert "records_out" in cols
-        assert "dlq_count" in cols
-        assert "error_message" in cols
+                embedding_3d = conn.execute("""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_schema = 'gold' AND table_name = 'rag_corpus'
+                      AND column_name = 'embedding_3d'
+                """).fetchone()
+                assert embedding_3d is not None
+        finally:
+            _drop_observability_schema(conn_str)
+            with psycopg.connect(conn_str) as conn:
+                conn.execute("ALTER TABLE gold.rag_corpus DROP COLUMN IF EXISTS embedding_3d")
 
-        cur.execute("""
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_schema = 'gold' AND table_name = 'rag_corpus'
-            AND column_name = 'embedding_3d'
-        """)
-        assert cur.fetchone() is not None
+    def test_idempotent_on_second_call(self, conn_str: str) -> None:
+        _prepare_gold_rag_corpus(conn_str)
+        _drop_observability_schema(conn_str)
+        try:
+            ensure_observability_tables(conn_str)
+            ensure_observability_tables(conn_str)
+            add_embedding_3d_column(conn_str)
+            add_embedding_3d_column(conn_str)
 
-        cur.execute("DROP SCHEMA IF EXISTS observability CASCADE")
-        conn.close()
+            with psycopg.connect(conn_str) as conn:
+                cols = {
+                    row[0]
+                    for row in conn.execute("""
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_schema = 'observability'
+                          AND table_name = 'pipeline_runs'
+                    """).fetchall()
+                }
+                assert cols == EXPECTED_PIPELINE_RUNS_COLUMNS
 
-    def test_idempotent_on_second_call(self, monkeypatch):
-        monkeypatch.setattr(lakehouse.config.Settings, "model_config", {})
-        settings = Settings()
-        conn_str = (
-            f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
-            f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-        )
-        ensure_observability_tables(conn_str)
-        ensure_observability_tables(conn_str)
-        add_embedding_3d_column(conn_str)
-        add_embedding_3d_column(conn_str)
+                index_count = conn.execute("""
+                    SELECT COUNT(*)
+                    FROM pg_indexes
+                    WHERE schemaname = 'observability'
+                      AND tablename = 'pipeline_runs'
+                      AND indexname = 'idx_pipeline_runs_capa_started'
+                """).fetchone()[0]
+                assert index_count == 1
+
+                embedding_count = conn.execute("""
+                    SELECT COUNT(*)
+                    FROM information_schema.columns
+                    WHERE table_schema = 'gold' AND table_name = 'rag_corpus'
+                      AND column_name = 'embedding_3d'
+                """).fetchone()[0]
+                assert embedding_count == 1
+        finally:
+            _drop_observability_schema(conn_str)
+            with psycopg.connect(conn_str) as conn:
+                conn.execute("ALTER TABLE gold.rag_corpus DROP COLUMN IF EXISTS embedding_3d")
