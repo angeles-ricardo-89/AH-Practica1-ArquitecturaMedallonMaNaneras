@@ -416,7 +416,7 @@ class TestParseOneRow:
             source_url="https://example.com/27-de-julio-de-2026",
             raw_html=(
                 "<html><title>Titulo</title><main>"
-                "<strong>PERIODISTA:</strong> Buenos dias.</p>"
+                "<p><strong>PERIODISTA:</strong> Buenos dias.</p>"
                 "</main></html>"
             ),
             conference_date=None,

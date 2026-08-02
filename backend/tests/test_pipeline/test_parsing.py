@@ -16,6 +16,18 @@ SAMPLE_HTML = """
 </main></body></html>
 """
 
+REAL_WORLD_HTML = """
+<html><body><main>
+<p><strong>PRESIDENTA DE M&Eacute;XICO, CLAUDIA SHEINBAUM PARDO:</strong> Buenos d&iacute;as.</p>
+<p><strong>PREGUNTA: Buenos d&iacute;as, Presidenta.</strong></p>
+<p><strong>PRESIDENTA DE M&Eacute;XICO, CLAUDIA SHEINBAUM PARDO:</strong> Disculpen, se nos hizo un poco tarde ah&iacute; en el Gabinete de Seguridad.</p>
+<p>&mdash;Si&eacute;ntense, por favor&mdash;.</p>
+<p>Bueno, hoy es lunes 27 de julio, ya se est&aacute; acabando julio.</p>
+<p><strong>INTERVENCI&Oacute;N DE REPORTERO:</strong> Gracias, Presidenta. Mi pregunta es sobre energ&iacute;a.</p>
+<p>¿Cu&aacute;ndo se espera que las nuevas plantas solares entren en operaci&oacute;n?</p>
+</main></body></html>
+"""
+
 
 class TestParseHtml:
     def test_extracts_interventions(self):
@@ -70,6 +82,60 @@ class TestParseHtml:
             conference_date="2024-10-01",
         )
         assert len(result) == 0  # No interventions detected
+
+
+class TestParseHtmlRealWorld:
+    def test_captures_interventions_from_real_format(self):
+        result = parse_html_to_interventions(
+            raw_html=REAL_WORLD_HTML,
+            source_url="https://example.com/conf",
+            conference_date="2026-07-27",
+        )
+        interventions = [r for r in result if isinstance(r, InterventionRecord)]
+        assert len(interventions) == 3
+
+    def test_accumulates_continuation_paragraphs(self):
+        result = parse_html_to_interventions(
+            raw_html=REAL_WORLD_HTML,
+            source_url="https://example.com/conf",
+            conference_date="2026-07-27",
+        )
+        interventions = [r for r in result if isinstance(r, InterventionRecord)]
+        presidenta_pre = interventions[0]
+        assert presidenta_pre.participant == "PRESIDENTA DE MÉXICO, CLAUDIA SHEINBAUM PARDO"
+        assert "Buenos días" in presidenta_pre.text
+        assert presidenta_pre.pregunta_activa == ""
+
+        presidenta_post = interventions[1]
+        assert presidenta_post.participant == "PRESIDENTA DE MÉXICO, CLAUDIA SHEINBAUM PARDO"
+        assert "Disculpen" in presidenta_post.text
+        assert "Siéntense" in presidenta_post.text
+        assert "hoy es lunes 27 de julio" in presidenta_post.text
+        assert presidenta_post.pregunta_activa == "Buenos días, Presidenta."
+
+    def test_extracts_pregunta_from_strong(self):
+        result = parse_html_to_interventions(
+            raw_html=REAL_WORLD_HTML,
+            source_url="https://example.com/conf",
+            conference_date="2026-07-27",
+        )
+        interventions = [r for r in result if isinstance(r, InterventionRecord)]
+        assert "Buenos días, Presidenta." in interventions[1].pregunta_activa
+        assert "Buenos días, Presidenta." in interventions[2].pregunta_activa
+
+    def test_acumula_continuacion_reportero(self):
+        result = parse_html_to_interventions(
+            raw_html=REAL_WORLD_HTML,
+            source_url="https://example.com/conf",
+            conference_date="2026-07-27",
+        )
+        interventions = [r for r in result if isinstance(r, InterventionRecord)]
+        reportero = interventions[2]
+        assert reportero.participant == "INTERVENCIÓN DE REPORTERO"
+        assert "Gracias, Presidenta" in reportero.text
+        assert (
+            "Cuándo se espera que las nuevas plantas solares entren en operación" in reportero.text
+        )
 
 
 class TestParticipantDetection:
