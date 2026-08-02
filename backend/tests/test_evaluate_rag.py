@@ -263,7 +263,10 @@ class TestCallFunctions:
     ) -> None:
         mock_search.return_value = []
         mock_builder = MagicMock()
-        mock_builder.build.return_value = ("contexto\n\nFuentes:\nfuente1\n\nPregunta: ¿Hola?", MagicMock())
+        mock_builder.build.return_value = (
+            "contexto\n\nFuentes:\nfuente1\n\nPregunta: ¿Hola?",
+            MagicMock(),
+        )
         mock_builder_cls.return_value = mock_builder
         mock_client = MagicMock()
         mock_client_class.return_value.__enter__.return_value = mock_client

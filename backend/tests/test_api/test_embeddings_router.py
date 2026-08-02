@@ -46,9 +46,7 @@ class TestEmbeddings3D:
             assert resp.status_code == 200
             data = resp.json()
             points = {p["chunk_key"]: p for p in data["points"]}
-            test_points = {
-                k: v for k, v in points.items() if k.startswith("test-ck-")
-            }
+            test_points = {k: v for k, v in points.items() if k.startswith("test-ck-")}
             assert test_points["test-ck-1"] == {
                 "chunk_key": "test-ck-1",
                 "x": 1.0,
