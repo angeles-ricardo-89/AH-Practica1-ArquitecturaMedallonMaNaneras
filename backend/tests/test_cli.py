@@ -338,6 +338,36 @@ class TestPipelineRunTracking:
 
     @patch("lakehouse.cli.ensure_observability_tables")
     @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.ParseService")
+    @patch("lakehouse.cli.get_connection")
+    def test_parse_continues_when_observability_setup_fails(
+        self, mock_conn, mock_svc_cls, mock_write, mock_ensure
+    ):
+        mock_ensure.side_effect = RuntimeError("pg down")
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = {"interventions": 10, "dlq": 2}
+        result = runner.invoke(app, ["pipeline", "parse"])
+        assert result.exit_code == 0
+        assert "Parsing completado" in result.output
+        assert mock_write.call_count == 2
+
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.ParseService")
+    @patch("lakehouse.cli.get_connection")
+    def test_parse_writes_error_on_failure(self, mock_conn, mock_svc_cls, mock_write, mock_ensure):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.side_effect = RuntimeError("boom")
+        result = runner.invoke(app, ["pipeline", "parse"])
+        assert result.exit_code != 0
+        assert mock_write.call_count == 2
+        running, error = mock_write.call_args_list
+        assert running.args[2] == "running"
+        assert error.args[2] == "error"
+        assert error.kwargs["error_message"] == "boom"
+
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli._write_pipeline_run")
     @patch("lakehouse.cli.EnrichService")
     @patch("lakehouse.cli.get_connection")
     def test_enrich_writes_running_then_ok(self, mock_conn, mock_svc_cls, mock_write, mock_ensure):
@@ -353,6 +383,51 @@ class TestPipelineRunTracking:
         assert ok.args[2] == "ok"
         assert ok.kwargs["records_in"] == 8
         assert ok.kwargs["records_out"] == 7
+
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.EnrichService")
+    @patch("lakehouse.cli.get_connection")
+    def test_enrich_continues_when_observability_setup_fails(
+        self, mock_conn, mock_svc_cls, mock_write, mock_ensure
+    ):
+        mock_ensure.side_effect = RuntimeError("pg down")
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = {"embedded": 7, "failed": 1, "total": 8}
+        result = runner.invoke(app, ["pipeline", "enrich"])
+        assert result.exit_code == 0
+        assert "Enriquecimiento completado" in result.output
+        assert mock_write.call_count == 2
+
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.EnrichService")
+    @patch("lakehouse.cli.get_connection")
+    def test_enrich_writes_error_on_failure(self, mock_conn, mock_svc_cls, mock_write, mock_ensure):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.side_effect = RuntimeError("boom")
+        result = runner.invoke(app, ["pipeline", "enrich"])
+        assert result.exit_code != 0
+        assert mock_write.call_count == 2
+        running, error = mock_write.call_args_list
+        assert running.args[2] == "running"
+        assert error.args[2] == "error"
+        assert error.kwargs["error_message"] == "boom"
+
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.IngestService")
+    @patch("lakehouse.cli.get_connection")
+    def test_ingest_continues_when_observability_setup_fails(
+        self, mock_conn, mock_svc_cls, mock_write, mock_ensure
+    ):
+        mock_ensure.side_effect = RuntimeError("pg down")
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run = AsyncMock(return_value={"html_count": 5, "records_inserted": 5})
+        result = runner.invoke(app, ["pipeline", "ingest"])
+        assert result.exit_code == 0
+        assert "Ingesta completada" in result.output
+        assert mock_write.call_count == 2
 
     @patch("lakehouse.cli.ensure_observability_tables")
     @patch("lakehouse.cli._write_pipeline_run")

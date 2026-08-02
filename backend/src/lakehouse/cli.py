@@ -78,7 +78,12 @@ def ingest(
     settings = Settings()
     pg_conn_str = _get_pg_conn_str(settings)
     if not dry_run:
-        ensure_observability_tables(pg_conn_str)
+        try:
+            ensure_observability_tables(pg_conn_str)
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "No se pudo inicializar observability, continuando sin tracking", capa="bronze"
+            )
     started_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     if not dry_run:
         _write_pipeline_run(pg_conn_str, "bronze", "running", started_at)
@@ -114,7 +119,12 @@ def parse(
     settings = Settings()
     pg_conn_str = _get_pg_conn_str(settings)
     if not dry_run:
-        ensure_observability_tables(pg_conn_str)
+        try:
+            ensure_observability_tables(pg_conn_str)
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "No se pudo inicializar observability, continuando sin tracking", capa="silver"
+            )
     started_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     if not dry_run:
         _write_pipeline_run(pg_conn_str, "silver", "running", started_at)
@@ -152,7 +162,12 @@ def enrich(
     settings = Settings()
     pg_conn_str = _get_pg_conn_str(settings)
     if not dry_run:
-        ensure_observability_tables(pg_conn_str)
+        try:
+            ensure_observability_tables(pg_conn_str)
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "No se pudo inicializar observability, continuando sin tracking", capa="gold"
+            )
     started_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     if not dry_run:
         _write_pipeline_run(pg_conn_str, "gold", "running", started_at)
