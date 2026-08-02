@@ -77,6 +77,13 @@ def _embed_query(
 def _rows_to_results(rows: list) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for row in rows:
+        embedding_3d_raw = row[7] if len(row) > 7 else None
+        if embedding_3d_raw:
+            embedding_3d = (
+                list(embedding_3d_raw) if isinstance(embedding_3d_raw, (list, tuple)) else None
+            )
+        else:
+            embedding_3d = None
         results.append(
             {
                 "conference_date": str(row[0]),
@@ -86,6 +93,7 @@ def _rows_to_results(rows: list) -> list[dict[str, Any]]:
                 "url": row[4],
                 "pregunta_activa": row[5] or "",
                 "similarity": float(row[6]),
+                "embedding_3d": embedding_3d,
             }
         )
     return results
@@ -109,7 +117,8 @@ def search_gold_corpus_from_vector(
                 "LiteralString",
                 f"""
                 SELECT conference_date, conference_id, participant, chunk_text, url, pregunta_activa,
-                    1 - (embedding <=> %s::vector) AS similarity
+                    1 - (embedding <=> %s::vector) AS similarity,
+                    embedding_3d
                 FROM gold.rag_corpus
                 WHERE LENGTH(chunk_text) >= {MIN_CHUNK_LENGTH}
                 ORDER BY embedding <=> %s::vector
@@ -166,7 +175,8 @@ def search_with_date_filter(
                 "LiteralString",
                 f"""
                 SELECT conference_date, conference_id, participant, chunk_text, url, pregunta_activa,
-                    1 - (embedding <=> %s::vector) AS similarity
+                    1 - (embedding <=> %s::vector) AS similarity,
+                    embedding_3d
                 FROM gold.rag_corpus
                 WHERE conference_date BETWEEN %s::date AND %s::date
                   AND LENGTH(chunk_text) >= {MIN_CHUNK_LENGTH}
@@ -206,6 +216,7 @@ def search_sources(query: str, top_k: int) -> list[SourceChunk]:
             similarity=r["similarity"],
             conference_url=r["url"],
             pregunta_activa=r["pregunta_activa"],
+            embedding_3d=r.get("embedding_3d"),
         )
         for r in results
     ]
