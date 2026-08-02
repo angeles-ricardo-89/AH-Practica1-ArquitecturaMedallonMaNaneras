@@ -339,3 +339,20 @@ class TestPipelineLogsByLayer:
         data = resp.json()
         assert data["lines"] == []
         assert data["total_lines"] == 0
+
+    def test_logs_by_layer_returns_most_recent_lines_across_files(self, monkeypatch, tmp_path):
+        oldest_log = tmp_path / "oldest.log"
+        oldest_log.write_text("o1\no2\no3\no4\no5\n")
+        newest_log = tmp_path / "newest.log"
+        newest_log.write_text("n1\nn2\n")
+
+        monkeypatch.setattr(
+            "lakehouse.api.routers.observability._find_layer_logs",
+            lambda _layer, _base_dir: [str(newest_log), str(oldest_log)],
+        )
+
+        resp = client.get("/observability/pipeline/logs/bronze?lines=3")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["lines"] == ["o5", "n1", "n2"]
+        assert data["total_lines"] == 7

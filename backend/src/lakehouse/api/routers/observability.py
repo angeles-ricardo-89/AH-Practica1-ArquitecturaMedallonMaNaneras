@@ -164,7 +164,7 @@ def get_pipeline_logs_by_layer(
         return PipelineLogs(lines=[], total_lines=0)
 
     all_lines: list[str] = []
-    for filepath in log_files:
+    for filepath in reversed(log_files):
         try:
             with Path(filepath).open() as f:
                 all_lines.extend(line.rstrip("\n") for line in f)
