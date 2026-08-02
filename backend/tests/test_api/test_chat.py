@@ -184,6 +184,108 @@ class TestChatEndpoint:
             assert "No se encontraron resultados para el rango de fechas solicitado" in context
 
 
+SEARCH_RESULTS_WITH_3D = [
+    {
+        "conference_date": "2024-10-01",
+        "conference_id": "conf_001",
+        "participant": "PRESIDENTA",
+        "chunk_text": "El día de hoy hablamos sobre la reforma energética.",
+        "similarity": 0.95,
+        "url": "https://example.com/1",
+        "pregunta_activa": "¿Cómo va la reforma?",
+        "embedding_3d": [0.1, 0.2, 0.3],
+    },
+    {
+        "conference_date": "2024-10-02",
+        "conference_id": "conf_002",
+        "participant": "SECRETARIO DE HACIENDA",
+        "chunk_text": "El presupuesto para el próximo año está balanceado.",
+        "similarity": 0.88,
+        "url": "https://example.com/2",
+        "pregunta_activa": "¿Cuál es el plan económico?",
+        "embedding_3d": [0.2, 0.3, 0.4],
+    },
+    {
+        "conference_date": "2024-10-03",
+        "conference_id": "conf_003",
+        "participant": "SECRETARIA DE SALUD",
+        "chunk_text": "La campaña de vacunación avanza en todo el país.",
+        "similarity": 0.72,
+        "url": "https://example.com/3",
+        "pregunta_activa": "¿Cómo va la campaña de salud?",
+        "embedding_3d": [0.3, 0.4, 0.5],
+    },
+    {
+        "conference_date": "2024-10-04",
+        "conference_id": "conf_004",
+        "participant": "VOCERO",
+        "chunk_text": "Se anunció una nueva fecha para el evento.",
+        "similarity": 0.61,
+        "url": "https://example.com/4",
+        "pregunta_activa": "¿Cuándo es el evento?",
+        "embedding_3d": [0.4, 0.5, 0.6],
+    },
+]
+
+
+class TestChatWithNewFields:
+    def test_chat_populates_model_latency_and_tokens(self, mock_llamacpp) -> None:
+        _, mock_search, _, _ = mock_llamacpp
+        mock_search.return_value = SEARCH_RESULTS_WITH_3D
+        resp = client.post(
+            "/chat/",
+            json={"query": "reforma energética", "top_k": 4},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["model_used"] == "gemma4"
+        assert isinstance(data["latency_ms"], float)
+        assert data["latency_ms"] > 0
+        assert data["token_usage"]["total"] == 150 + 50
+        assert (
+            data["token_usage"]["total"]
+            == data["token_usage"]["prompt"] + data["token_usage"]["completion"]
+        )
+
+    def test_chat_sources_have_qualitative_labels(self, mock_llamacpp) -> None:
+        _, mock_search, _, _ = mock_llamacpp
+        mock_search.return_value = SEARCH_RESULTS_WITH_3D
+        resp = client.post(
+            "/chat/",
+            json={"query": "reforma energética", "top_k": 4},
+        )
+        assert resp.status_code == 200
+        sources = resp.json()["sources"]
+        assert len(sources) == 4
+        labels = [s["qualitative_label"] for s in sources]
+        assert all(label in {"Alta", "Media", "Baja"} for label in labels)
+        assert labels == ["Alta", "Media", "Media", "Baja"]
+
+    def test_chat_sources_include_embedding_3d(self, mock_llamacpp) -> None:
+        _, mock_search, _, _ = mock_llamacpp
+        mock_search.return_value = SEARCH_RESULTS_WITH_3D
+        resp = client.post(
+            "/chat/",
+            json={"query": "reforma energética", "top_k": 4},
+        )
+        assert resp.status_code == 200
+        sources = resp.json()["sources"]
+        for source, result in zip(sources, SEARCH_RESULTS_WITH_3D):
+            assert source["embedding_3d"] == result["embedding_3d"]
+
+    def test_chat_all_high_similarity_when_fewer_than_4_sources(self, mock_llamacpp) -> None:
+        _, mock_search, _, _ = mock_llamacpp
+        mock_search.return_value = SEARCH_RESULTS_WITH_3D[:2]
+        resp = client.post(
+            "/chat/",
+            json={"query": "reforma energética", "top_k": 2},
+        )
+        assert resp.status_code == 200
+        sources = resp.json()["sources"]
+        assert len(sources) == 2
+        assert all(s["qualitative_label"] == "Alta" for s in sources)
+
+
 class TestChatSourceDetails:
     def test_source_includes_required_fields(self) -> None:
         source = SourceChunk(
