@@ -1,3 +1,5 @@
+import time
+
 import httpx
 from fastapi import APIRouter
 
@@ -5,6 +7,7 @@ from lakehouse.config import Settings
 from lakehouse.log_config import get_logger
 from lakehouse.schemas.chat import ChatRequest, ChatResponse, SourceChunk
 from lakehouse.services.context_builder import ContextBuilder
+from lakehouse.services.qualitative_label import assign_qualitative_labels
 from lakehouse.services.rag_search import (
     _embed_query,
     search_gold_corpus_from_vector,
@@ -31,6 +34,7 @@ SYSTEM_PROMPT = (
     description="Send a query and get an answer with sources from the RAG corpus",
 )
 def chat(request: ChatRequest) -> ChatResponse:
+    t_start = time.perf_counter()
     settings = Settings()
     logger.info(
         "Chat request recibido",
@@ -83,9 +87,15 @@ def chat(request: ChatRequest) -> ChatResponse:
             similarity=r["similarity"],
             conference_url=r["url"],
             pregunta_activa=r["pregunta_activa"],
+            embedding_3d=r.get("embedding_3d"),
         )
         for r in results
     ]
+
+    scores = [s.similarity for s in sources]
+    labels = assign_qualitative_labels(scores)
+    for source, label in zip(sources, labels):
+        source.qualitative_label = label
 
     builder = ContextBuilder(max_context_tokens=settings.max_context_tokens)
     context, token_usage = builder.build(
@@ -127,11 +137,17 @@ def chat(request: ChatRequest) -> ChatResponse:
         logger.exception("Backend LLM no disponible")
         raise RuntimeError("LLM backend unavailable") from e
 
+    t_end = time.perf_counter()
+    latency_ms = (t_end - t_start) * 1000.0
+
     return ChatResponse(
         answer=answer,
         sources=sources,
         token_usage={
             "prompt": prompt_tokens,
             "completion": completion_tokens,
+            "total": prompt_tokens + completion_tokens,
         },
+        model_used=settings.llamacpp_model,
+        latency_ms=round(latency_ms, 1),
     )
