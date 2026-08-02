@@ -108,7 +108,7 @@ Todo agente debe cargar y seguir estas skills. No son opcionales.
 ```bash
 # Backend (desde backend/)
 uv run ruff check --fix && uv run ruff format
-uv run ty src/
+uv run ty check
 uv run pytest -xvs --cov=src --cov-report=term-missing
 
 # Frontend (desde frontend/)

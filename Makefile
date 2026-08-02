@@ -55,7 +55,7 @@ lint-fix:
 	cd backend && uv run ruff check --fix src/ tests/ && uv run ruff format src/ tests/
 
 typecheck-backend:
-	cd backend && uv run pyright src/
+	cd backend && uv run ty check
 
 typecheck-frontend:
 	cd frontend && pnpm typecheck

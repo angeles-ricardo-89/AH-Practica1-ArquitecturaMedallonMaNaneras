@@ -85,7 +85,7 @@ addopts = "--cov=src --cov-report=term-missing --cov-fail-under=90"
 Usar `ty` (typecheck estricto) desde `uv`:
 
 ```bash
-uv run ty src/
+uv run ty check
 ```
 
 ### Reglas de Estilo
@@ -134,7 +134,7 @@ async def fetch_page(url: str, *, timeout: float = 30.0) -> str:
 
 - [ ] `uv run ruff check` pasa sin errores.
 - [ ] `uv run ruff format --check` no reporta cambios pendientes.
-- [ ] `uv run ty src/` no reporta errores de tipo.
+- [ ] `uv run ty check` no reporta errores de tipo.
 - [ ] `uv sync` resuelve sin conflictos.
 - [ ] No hay imports de `pip`, `poetry`, `conda` en ningun archivo.
 - [ ] pyproject.toml declara `requires-python = ">=3.13"`.

@@ -331,7 +331,7 @@ Al comenzar una nueva sesion, el agente debe:
 - `uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=90` pasa.
 - `pnpm test:unit --coverage` pasa con >= 80% en frontend.
 - `uv run ruff check` sin errores.
-- `uv run ty src/` sin errores.
+- `uv run ty check` sin errores.
 - `pnpm typecheck` sin errores.
 
 ---
