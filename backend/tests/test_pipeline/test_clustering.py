@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import numpy as np
 import psycopg
 import pytest
@@ -476,3 +478,141 @@ def test_validate_label_accepts_single_word():
     label, error = validate_label("Economia")
     assert label == "Economia"
     assert error is None
+
+
+def test_load_prompt_template_returns_content():
+    from lakehouse.pipeline.clustering import load_prompt_template
+
+    template = load_prompt_template("v1")
+    assert "{textos_formateados}" in template
+    assert "REGLAS ESTRICTAS" in template
+
+
+def test_load_prompt_template_missing_version():
+    from lakehouse.pipeline.clustering import load_prompt_template
+
+    with pytest.raises(FileNotFoundError):
+        load_prompt_template("no_existe")
+
+
+def test_format_labeling_prompt_replaces_placeholder():
+    from lakehouse.pipeline.clustering import format_labeling_prompt
+
+    template = "INST: {textos_formateados}"
+    samples = [
+        {"chunk_key": "a", "chunk_text": "texto uno"},
+        {"chunk_key": "b", "chunk_text": "texto dos"},
+    ]
+    result = format_labeling_prompt(template, samples, max_chars=100)
+    assert "- texto uno\n- texto dos" in result
+
+
+def test_format_labeling_prompt_truncates_long_text():
+    from lakehouse.pipeline.clustering import format_labeling_prompt
+
+    template = "{textos_formateados}"
+    samples = [{"chunk_key": "a", "chunk_text": "x" * 200}]
+    result = format_labeling_prompt(template, samples, max_chars=10)
+    assert "- xxxxxxxxxx" in result
+    assert "x" * 11 not in result
+
+
+def test_generate_label_returns_content(monkeypatch):
+    from lakehouse.pipeline import clustering
+
+    fake_response = MagicMock()
+    fake_response.json.return_value = {
+        "choices": [{"message": {"content": "  Salud Publica  "}}],
+    }
+    monkeypatch.setattr(clustering.httpx, "post", lambda *a, **k: fake_response)
+
+    result = clustering.generate_label("prompt", "http://llm", "gemma4")
+    assert result == "Salud Publica"
+
+
+def test_generate_label_raises_on_empty_response(monkeypatch):
+    from lakehouse.pipeline import clustering
+
+    fake_response = MagicMock()
+    fake_response.json.return_value = {"choices": [{"message": {"content": "   "}}]}
+    monkeypatch.setattr(clustering.httpx, "post", lambda *a, **k: fake_response)
+
+    with pytest.raises(ValueError):
+        clustering.generate_label("prompt", "http://llm", "gemma4")
+
+
+def test_generate_label_raises_on_http_error(monkeypatch):
+    from lakehouse.pipeline import clustering
+
+    fake_response = MagicMock()
+    fake_response.raise_for_status.side_effect = RuntimeError("500")
+    monkeypatch.setattr(clustering.httpx, "post", lambda *a, **k: fake_response)
+
+    with pytest.raises(RuntimeError):
+        clustering.generate_label("prompt", "http://llm", "gemma4")
+
+
+def test_label_clusters_completes_all(monkeypatch, pg_conn_str):
+    from lakehouse.config import Settings
+    from lakehouse.pipeline import clustering
+
+    settings = Settings()
+    settings.k_hdbscan_sampling = 2
+    settings.cluster_label_max_retries = 1
+    settings.cluster_label_prompt_version = "v1"
+    settings.llamacpp_base_url = "http://llm"
+    settings.llamacpp_model = "gemma4"
+
+    chunks = [
+        {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.9, "chunk_text": "t a"},
+        {"chunk_key": "b", "cluster_id": 0, "cluster_pertenencia": 0.8, "chunk_text": "t b"},
+        {"chunk_key": "c", "cluster_id": 1, "cluster_pertenencia": 0.7, "chunk_text": "t c"},
+        {"chunk_key": "n", "cluster_id": -1, "cluster_pertenencia": 0.0, "chunk_text": "t n"},
+    ]
+
+    monkeypatch.setattr(clustering, "generate_label", lambda *a, **k: "Salud Publica")
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cm = MagicMock()
+    mock_cm.__enter__.return_value = mock_conn
+    monkeypatch.setattr(clustering.psycopg, "connect", lambda *a, **k: mock_cm)
+
+    completed, failed = clustering.label_clusters(pg_conn_str, "run-1", [0, 1], chunks, settings)
+    assert completed == 2
+    assert failed == 0
+    assert mock_conn.commit.call_count == 2
+
+
+def test_label_clusters_marks_failed_when_invalid(monkeypatch, pg_conn_str):
+    from lakehouse.config import Settings
+    from lakehouse.pipeline import clustering
+
+    settings = Settings()
+    settings.k_hdbscan_sampling = 2
+    settings.cluster_label_max_retries = 1
+    settings.cluster_label_prompt_version = "v1"
+    settings.llamacpp_base_url = "http://llm"
+    settings.llamacpp_model = "gemma4"
+
+    chunks = [
+        {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.9, "chunk_text": "t a"},
+    ]
+
+    monkeypatch.setattr(
+        clustering,
+        "generate_label",
+        lambda *a, **k: "una etiqueta con mas de cuatro palabras aqui",
+    )
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cm = MagicMock()
+    mock_cm.__enter__.return_value = mock_conn
+    monkeypatch.setattr(clustering.psycopg, "connect", lambda *a, **k: mock_cm)
+
+    completed, failed = clustering.label_clusters(pg_conn_str, "run-2", [0], chunks, settings)
+    assert completed == 0
+    assert failed == 1

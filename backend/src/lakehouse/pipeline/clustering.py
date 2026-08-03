@@ -293,6 +293,141 @@ def validate_label(raw_label: str) -> tuple[str | None, str | None]:
     return label.strip(), None
 
 
+def load_prompt_template(version: str = "v1") -> str:
+    prompt_dir = Path(__file__).parent.parent / "prompts"
+    prompt_path = prompt_dir / f"cluster_label_{version}.txt"
+    if not prompt_path.exists():
+        raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
+    return prompt_path.read_text(encoding="utf-8")
+
+
+def format_labeling_prompt(
+    prompt_template: str,
+    samples: list[dict],
+    max_chars: int = 1500,
+) -> str:
+    texts = []
+    for chunk in samples:
+        text = chunk.get("chunk_text", "")
+        if len(text) > max_chars:
+            text = text[:max_chars]
+        texts.append(f"- {text}")
+    return prompt_template.replace("{textos_formateados}", "\n".join(texts))
+
+
+def generate_label(
+    prompt: str,
+    base_url: str,
+    model: str,
+    max_tokens: int = 20,
+    timeout: int = 30,
+) -> str:
+    response = httpx.post(
+        f"{base_url}/chat/completions",
+        json={
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0,
+            "max_tokens": max_tokens,
+        },
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    data = response.json()
+    raw = data["choices"][0]["message"]["content"].strip()
+    if not raw:
+        raise ValueError("empty_response")
+    return raw
+
+
+def label_clusters(
+    pg_conn_str: str,
+    run_id: str,
+    cluster_ids: list[int],
+    chunks: list[dict],
+    settings,
+) -> tuple[int, int]:
+    prompt_template = load_prompt_template(settings.cluster_label_prompt_version)
+
+    completed = 0
+    failed = 0
+
+    for cid in cluster_ids:
+        if cid < 0:
+            continue
+
+        samples = select_representative_chunks(
+            chunks, cid, k=settings.k_hdbscan_sampling,
+        )
+        if not samples:
+            continue
+
+        prompt = format_labeling_prompt(
+            prompt_template, samples,
+            max_chars=settings.cluster_label_max_chars_per_chunk,
+        )
+
+        label = None
+        error_msg = None
+        total_attempts = 0
+
+        for attempt in range(settings.cluster_label_max_retries + 1):
+            total_attempts = attempt + 1
+            try:
+                raw = generate_label(
+                    prompt,
+                    settings.llamacpp_base_url,
+                    settings.llamacpp_model,
+                )
+                label, validation_error = validate_label(raw)
+                if label:
+                    break
+                error_msg = validation_error
+            except Exception as e:
+                error_msg = str(e)
+
+        with psycopg.connect(pg_conn_str) as conn:
+            cur = conn.cursor()
+            sample_keys = [s["chunk_key"] for s in samples]
+
+            if label:
+                cur.execute("""
+                    INSERT INTO gold.cluster_labels
+                        (clustering_run_id, cluster_id, cluster_label, label_status,
+                         sample_size, sample_chunk_keys, model_name, prompt_version,
+                         attempt_count)
+                    VALUES (%s, %s, %s, 'completed', %s, %s, %s, %s, %s)
+                    ON CONFLICT (clustering_run_id, cluster_id) DO UPDATE
+                    SET cluster_label = EXCLUDED.cluster_label,
+                        label_status = 'completed',
+                        sample_size = EXCLUDED.sample_size,
+                        sample_chunk_keys = EXCLUDED.sample_chunk_keys,
+                        attempt_count = EXCLUDED.attempt_count,
+                        updated_at = NOW()
+                """, (run_id, cid, label, len(samples), sample_keys,
+                      settings.llamacpp_model, settings.cluster_label_prompt_version, total_attempts))
+                completed += 1
+            else:
+                cur.execute("""
+                    INSERT INTO gold.cluster_labels
+                        (clustering_run_id, cluster_id, label_status, error_message,
+                         sample_size, sample_chunk_keys, model_name, prompt_version,
+                         attempt_count)
+                    VALUES (%s, %s, 'failed', %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (clustering_run_id, cluster_id) DO UPDATE
+                    SET label_status = 'failed',
+                        error_message = EXCLUDED.error_message,
+                        attempt_count = EXCLUDED.attempt_count,
+                        updated_at = NOW()
+                """, (run_id, cid, error_msg or "unknown", len(samples), sample_keys,
+                      settings.llamacpp_model, settings.cluster_label_prompt_version, total_attempts))
+                failed += 1
+
+            conn.commit()
+
+    return completed, failed
+
+
 
 
 
