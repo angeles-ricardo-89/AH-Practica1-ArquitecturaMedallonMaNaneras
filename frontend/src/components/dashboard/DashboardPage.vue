@@ -45,6 +45,7 @@ const visiblePoints = computed(() => {
         y: src.embedding_3d[1],
         z: src.embedding_3d[2],
         conference_date: src.conference_date,
+        cluster_id: src.cluster_id ?? undefined,
       })
     }
   }

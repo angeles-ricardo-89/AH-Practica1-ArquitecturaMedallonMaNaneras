@@ -31,7 +31,19 @@ const noiseColor = 'rgba(168, 162, 158, 0.3)'
 
 const chartData = computed(() => {
   return props.points.map((p) => {
-    const cp = clusterPointMap.value.get(p.chunk_key)
+    // En modo filtered usamos cluster_id directo del punto (viene de SourceChunk).
+    // En modo full hacemos lookup por chunk_key en el universo de clusters.
+    let clusterId: number | undefined
+    let pertenencia = 0
+    if (props.mode === 'filtered' && p.cluster_id !== undefined) {
+      clusterId = p.cluster_id
+    } else {
+      const cp = clusterPointMap.value.get(p.chunk_key)
+      if (cp) {
+        clusterId = cp.cluster_id
+        pertenencia = cp.pertenencia
+      }
+    }
 
     let color: string
     let opacity: number
@@ -39,10 +51,10 @@ const chartData = computed(() => {
 
     if (props.mode === 'filtered') {
       // Modo filtrado: colores de cluster, siempre visibles
-      if (cp && cp.cluster_id >= 0) {
-        color = dashboardStore.getClusterColor(cp.cluster_id)
+      if (clusterId !== undefined && clusterId >= 0) {
+        color = dashboardStore.getClusterColor(clusterId)
         opacity = 1.0
-      } else if (cp && cp.cluster_id === -1) {
+      } else if (clusterId === -1) {
         color = '#A8A29E'
         opacity = 0.5
       } else {
@@ -52,12 +64,12 @@ const chartData = computed(() => {
       size = 8
     } else {
       // Modo full: comportamiento original
-      if (cp) {
-        if (cp.cluster_id === -1) {
+      if (clusterId !== undefined) {
+        if (clusterId === -1) {
           color = noiseColor
           opacity = 0.3
         } else {
-          color = dashboardStore.getClusterColor(cp.cluster_id)
+          color = dashboardStore.getClusterColor(clusterId)
           opacity = 0.7
         }
       } else {
@@ -68,10 +80,10 @@ const chartData = computed(() => {
     }
 
     let name = p.chunk_key
-    if (cp && cp.cluster_id >= 0) {
-      const label = dashboardStore.clusterData?.clusters.find(c => c.cluster_id === cp.cluster_id)?.label
-      name = label ? `${label} (${cp.pertenencia.toFixed(2)})` : `Cluster ${cp.cluster_id} (${cp.pertenencia.toFixed(2)})`
-    } else if (cp && cp.cluster_id === -1) {
+    if (clusterId !== undefined && clusterId >= 0) {
+      const label = dashboardStore.clusterData?.clusters.find(c => c.cluster_id === clusterId)?.label
+      name = label ? `${label} (${pertenencia.toFixed(2)})` : `Cluster ${clusterId} (${pertenencia.toFixed(2)})`
+    } else if (clusterId === -1) {
       name = 'Ruido'
     }
 
@@ -88,9 +100,9 @@ const visibleClusters = computed(() => {
   if (props.mode !== 'filtered' || !dashboardStore.clusterData) return []
   const presentIds = new Set<number>()
   for (const p of props.points) {
-    const cp = clusterPointMap.value.get(p.chunk_key)
-    if (cp && cp.cluster_id >= 0) {
-      presentIds.add(cp.cluster_id)
+    const cid = p.cluster_id !== undefined ? p.cluster_id : clusterPointMap.value.get(p.chunk_key)?.cluster_id
+    if (cid !== undefined && cid >= 0) {
+      presentIds.add(cid)
     }
   }
   return dashboardStore.clusterData.clusters.filter(c => presentIds.has(c.cluster_id))
@@ -99,8 +111,8 @@ const visibleClusters = computed(() => {
 const visibleNoiseCount = computed(() => {
   if (props.mode !== 'filtered') return 0
   return props.points.filter(p => {
-    const cp = clusterPointMap.value.get(p.chunk_key)
-    return cp && cp.cluster_id === -1
+    const cid = p.cluster_id !== undefined ? p.cluster_id : clusterPointMap.value.get(p.chunk_key)?.cluster_id
+    return cid === -1
   }).length
 })
 
