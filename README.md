@@ -1,4 +1,4 @@
-# Lakehouse Mañaneras
+# Datalake Mañaneras
 
 Pipeline de datos con arquitectura medallon (Bronze → Silver → Gold) y sistema RAG
 para procesar, estructurar y consultar conferencias de prensa matutinas del Gobierno
