@@ -253,6 +253,46 @@ def select_representative_chunks(
     return cluster_chunks[:k]
 
 
+_LABEL_RE = re.compile(r"\s+")
+_LABEL_PREFIXES = [
+    "etiqueta:", "tema:", "categoria:", "respuesta:",
+    "label:", "category:", "topic:",
+]
+
+
+def validate_label(raw_label: str) -> tuple[str | None, str | None]:
+    if not raw_label or not raw_label.strip():
+        return None, "empty"
+
+    label = raw_label.strip()
+
+    lines = [l for l in label.split("\n") if l.strip()]
+    if len(lines) > 1:
+        return None, "multiline"
+
+    label = _LABEL_RE.sub(" ", label)
+    label = label.strip('"').strip("'")
+    label = label.rstrip(".")
+
+    lower = label.lower()
+    for prefix in _LABEL_PREFIXES:
+        if lower.startswith(prefix):
+            label = label[len(prefix):].strip()
+            break
+
+    if not label:
+        return None, "empty_after_normalize"
+
+    words = label.split()
+    if len(words) > 4:
+        return None, "too_many_words"
+
+    if not label.strip():
+        return None, "empty_after_normalize"
+
+    return label.strip(), None
+
+
 
 
 

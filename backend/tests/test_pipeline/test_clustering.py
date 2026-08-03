@@ -399,3 +399,80 @@ def test_select_representative_chunks_excludes_noise():
     ]
     result = select_representative_chunks(chunks, cluster_id=-1, k=5)
     assert len(result) == 0
+
+
+def test_validate_label_rejects_empty():
+    from lakehouse.pipeline.clustering import validate_label
+
+    label, error = validate_label("")
+    assert label is None
+    assert error == "empty"
+
+
+def test_validate_label_rejects_multiline():
+    from lakehouse.pipeline.clustering import validate_label
+
+    label, error = validate_label("linea1\nlinea2")
+    assert label is None
+    assert error == "multiline"
+
+
+def test_validate_label_rejects_too_many_words():
+    from lakehouse.pipeline.clustering import validate_label
+
+    label, error = validate_label("una etiqueta con mas de cuatro palabras aqui")
+    assert label is None
+    assert error == "too_many_words"
+
+
+def test_validate_label_strips_prefixes():
+    from lakehouse.pipeline.clustering import validate_label
+
+    label, _ = validate_label("Etiqueta: Salud Publica")
+    assert label == "Salud Publica"
+
+    label, _ = validate_label("Tema: Educacion")
+    assert label == "Educacion"
+
+    label, _ = validate_label("Categoria: Seguridad Nacional")
+    assert label == "Seguridad Nacional"
+
+    label, _ = validate_label("Respuesta: Economia")
+    assert label == "Economia"
+
+
+def test_validate_label_strips_quotes():
+    from lakehouse.pipeline.clustering import validate_label
+
+    label, _ = validate_label('"Salud Publica"')
+    assert label == "Salud Publica"
+
+
+def test_validate_label_normalizes_spaces():
+    from lakehouse.pipeline.clustering import validate_label
+
+    label, _ = validate_label("  mucha   salud  publica  .")
+    assert label == "mucha salud publica"
+
+
+def test_validate_label_collapses_single_newline_with_text():
+    from lakehouse.pipeline.clustering import validate_label
+
+    label, _ = validate_label("texto\n")
+    assert label == "texto"
+
+
+def test_validate_label_accepts_valid_four_words():
+    from lakehouse.pipeline.clustering import validate_label
+
+    label, error = validate_label("Seguridad y Salud Publica")
+    assert label == "Seguridad y Salud Publica"
+    assert error is None
+
+
+def test_validate_label_accepts_single_word():
+    from lakehouse.pipeline.clustering import validate_label
+
+    label, error = validate_label("Economia")
+    assert label == "Economia"
+    assert error is None
