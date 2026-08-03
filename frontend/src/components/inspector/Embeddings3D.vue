@@ -13,6 +13,7 @@ const props = defineProps<{
 
 const dashboardStore = useDashboardStore()
 
+const containerRef = ref<HTMLElement | null>(null)
 const chartRef = ref<HTMLElement | null>(null)
 let myChart: echarts.ECharts | null = null
 let rafId: number | null = null
@@ -195,7 +196,7 @@ function updateChart() {
 }
 
 function initChart() {
-  if (!chartRef.value) return
+  if (!chartRef.value || !containerRef.value) return
   myChart = echarts.init(chartRef.value)
   updateChart()
 
@@ -204,7 +205,7 @@ function initChart() {
   resizeObserver = new ResizeObserver(() => {
     myChart?.resize()
   })
-  resizeObserver.observe(chartRef.value)
+  resizeObserver.observe(containerRef.value)
 }
 
 function handleResize() {
@@ -230,12 +231,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col">
+  <div ref="containerRef" class="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col h-full">
     <div class="flex items-center justify-between mb-2">
       <h3 class="text-sm font-bold text-stone-950">Embeddings 3D</h3>
       <span class="text-[10px] text-stone-400">rotar + zoom limitado</span>
     </div>
-    <div ref="chartRef" class="w-full h-48" />
+    <div ref="chartRef" class="w-full flex-1 min-h-0" />
     <div class="flex items-center gap-3 mt-2 text-[10px] text-stone-500 flex-wrap">
       <template v-if="!hasSelection">
         <div class="flex items-center gap-1">
