@@ -3,8 +3,16 @@ from __future__ import annotations
 import os
 
 import psycopg
+import pytest
 
 TEST_DB = "mananeras_test"
+
+
+@pytest.fixture
+def pg_conn_str() -> str:
+    """Cadena de conexion a la base de datos de pruebas."""
+    return f"postgresql://mananeras:mananeras@localhost:5433/{TEST_DB}"
+
 
 
 def pytest_configure(config) -> None:
