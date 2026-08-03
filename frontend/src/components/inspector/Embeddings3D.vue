@@ -17,6 +17,7 @@ const dashboardStore = useDashboardStore()
 
 const chartRef = ref<HTMLElement | null>(null)
 let myChart: echarts.ECharts | null = null
+let rafId: number | null = null
 
 const clusterPointMap = computed(() => {
   const map = new Map<string, ClusterPoint>()
@@ -88,6 +89,7 @@ const chartData = computed(() => {
     }
 
     return {
+      id: p.chunk_key,
       value: [p.x, p.y, p.z],
       itemStyle: { color, opacity },
       symbolSize: size,
@@ -124,63 +126,78 @@ function initChart() {
   window.addEventListener('resize', handleResize)
 }
 
+function applyChartUpdate() {
+  if (!myChart) return
+  myChart.setOption(
+    {
+      tooltip: {
+        show: true,
+        formatter: (params: any) => {
+          const d = params.data || {}
+          return d.name || ''
+        },
+        textStyle: { fontSize: 10 },
+      },
+      xAxis3D: {
+        type: 'value', name: '',
+        axisLine: { lineStyle: { color: '#D6D3D1' } },
+        axisLabel: { show: false },
+        splitLine: { show: false },
+      },
+      yAxis3D: {
+        type: 'value', name: '',
+        axisLine: { lineStyle: { color: '#D6D3D1' } },
+        axisLabel: { show: false },
+        splitLine: { show: false },
+      },
+      zAxis3D: {
+        type: 'value', name: '',
+        axisLine: { lineStyle: { color: '#D6D3D1' } },
+        axisLabel: { show: false },
+        splitLine: { show: false },
+      },
+      grid3D: {
+        boxWidth: 100, boxHeight: 100, boxDepth: 100,
+        viewControl: {
+          autoRotate: false,
+          projection: 'perspective',
+          rotateSensitivity: 1,
+          zoomSensitivity: 1,
+          panSensitivity: 0,
+        },
+        light: {
+          main: { intensity: 1.2, shadow: false },
+          ambient: { intensity: 0.3 },
+        },
+      },
+      series: [{
+        type: 'scatter3D',
+        data: chartData.value,
+        symbolSize: (data: any, params: any) => {
+          return chartData.value[params?.dataIndex]?.symbolSize ?? 6
+        },
+        itemStyle: { borderWidth: 0 },
+        emphasis: { itemStyle: { color: '#7F1D1D' } },
+        animation: true,
+        animationDuration: 600,
+        animationDurationUpdate: 600,
+        animationEasing: 'cubicInOut',
+        animationEasingUpdate: 'cubicInOut',
+        universalTransition: { enabled: true },
+      }],
+    },
+    { notMerge: false, lazyUpdate: false },
+  )
+}
+
 function updateChart() {
   if (!myChart) return
-  myChart.setOption({
-    tooltip: {
-      show: true,
-      formatter: (params: any) => {
-        const d = params.data || {}
-        return d.name || ''
-      },
-      textStyle: { fontSize: 10 },
-    },
-    xAxis3D: {
-      type: 'value', name: '',
-      axisLine: { lineStyle: { color: '#D6D3D1' } },
-      axisLabel: { show: false },
-      splitLine: { show: false },
-    },
-    yAxis3D: {
-      type: 'value', name: '',
-      axisLine: { lineStyle: { color: '#D6D3D1' } },
-      axisLabel: { show: false },
-      splitLine: { show: false },
-    },
-    zAxis3D: {
-      type: 'value', name: '',
-      axisLine: { lineStyle: { color: '#D6D3D1' } },
-      axisLabel: { show: false },
-      splitLine: { show: false },
-    },
-    grid3D: {
-      boxWidth: 100, boxHeight: 100, boxDepth: 100,
-      viewControl: {
-        autoRotate: false,
-        projection: 'perspective',
-        rotateSensitivity: 1,
-        zoomSensitivity: 1,
-        panSensitivity: 0,
-      },
-      light: {
-        main: { intensity: 1.2, shadow: false },
-        ambient: { intensity: 0.3 },
-      },
-    },
-    series: [{
-      type: 'scatter3D',
-      data: chartData.value,
-      symbolSize: (data: any, params: any) => {
-        return chartData.value[params?.dataIndex]?.symbolSize ?? 6
-      },
-      itemStyle: { borderWidth: 0 },
-      emphasis: { itemStyle: { color: '#7F1D1D' } },
-      animation: true,
-      animationDuration: 600,
-      animationDurationUpdate: 600,
-      animationEasing: 'cubicInOut',
-      animationEasingUpdate: 'cubicInOut',
-    }],
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+  }
+  rafId = requestAnimationFrame(() => {
+    rafId = null
+    applyChartUpdate()
   })
 }
 
@@ -195,6 +212,10 @@ watch(() => dashboardStore.clusterData, updateChart, { deep: true })
 onMounted(initChart)
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
   myChart?.dispose()
   myChart = null
 })
