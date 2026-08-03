@@ -608,3 +608,114 @@ def run_clustering(settings, force: bool = False) -> dict | None:
             )
             conn.commit()
         raise
+
+
+def run_labeling(settings, run_id: str | None = None) -> dict | None:
+    pg_conn_str = _build_pg_conn_str(settings)
+
+    with psycopg.connect(pg_conn_str) as conn:
+        ensure_clustering_schema(conn)
+
+    with psycopg.connect(pg_conn_str) as conn:
+        if run_id:
+            cur = conn.execute(
+                """
+                SELECT run_id FROM gold.clustering_runs
+                WHERE run_id = %s AND status IN ('completed', 'partial')
+                """,
+                (run_id,),
+            )
+        else:
+            cur = conn.execute(
+                """
+                SELECT run_id FROM gold.clustering_runs
+                WHERE status IN ('completed', 'partial')
+                ORDER BY started_at DESC LIMIT 1
+                """
+            )
+        row = cur.fetchone()
+    if row is None:
+        logger.info("etiquetado_sin_corrida_objetivo", run_id=run_id)
+        return None
+    target_run_id = row[0]
+
+    with psycopg.connect(pg_conn_str) as conn:
+        cur = conn.execute(
+            """
+            SELECT chunk_key, chunk_text, cluster_id, cluster_pertenencia
+            FROM gold.rag_corpus
+            WHERE clustering_run_id = %s AND cluster_id >= 0
+            """,
+            (target_run_id,),
+        )
+        chunk_rows = cur.fetchall()
+
+    chunks = [
+        {
+            "chunk_key": r[0],
+            "chunk_text": r[1] or "",
+            "cluster_id": int(r[2]),
+            "cluster_pertenencia": float(r[3]) if r[3] is not None else 0.0,
+        }
+        for r in chunk_rows
+    ]
+    if not chunks:
+        logger.info("etiquetado_sin_chunks", run_id=target_run_id)
+        return None
+
+    cluster_ids = sorted({int(c["cluster_id"]) for c in chunks})
+
+    with psycopg.connect(pg_conn_str) as conn:
+        cur = conn.execute(
+            """
+            SELECT cluster_id FROM gold.cluster_labels
+            WHERE clustering_run_id = %s AND label_status = 'completed'
+            """,
+            (target_run_id,),
+        )
+        done = {r[0] for r in cur.fetchall()}
+
+    targets = [cid for cid in cluster_ids if cid not in done]
+    if not targets:
+        logger.info("etiquetado_sin_pendientes", run_id=target_run_id)
+        return None
+
+    completed, failed = label_clusters(pg_conn_str, target_run_id, targets, chunks, settings)
+
+    with psycopg.connect(pg_conn_str) as conn:
+        cur = conn.execute(
+            """
+            SELECT label_status, COUNT(*) FROM gold.cluster_labels
+            WHERE clustering_run_id = %s GROUP BY label_status
+            """,
+            (target_run_id,),
+        )
+        counts = {r[0]: r[1] for r in cur.fetchall()}
+        labeled_count = counts.get("completed", 0)
+        failed_count = counts.get("failed", 0)
+        final_status = "partial" if failed_count > 0 else "completed"
+        cur = conn.cursor()
+        cur.execute(
+            f"""
+            UPDATE gold.clustering_runs
+            SET labeled_cluster_count = %s, failed_label_count = %s,
+                status = '{final_status}', finished_at = NOW()
+            WHERE run_id = %s
+            """,
+            (labeled_count, failed_count, target_run_id),
+        )
+        conn.commit()
+
+    logger.info(
+        "etiquetado_completado",
+        run_id=target_run_id,
+        clusters=len(targets),
+        completed=completed,
+        failed=failed,
+    )
+    return {
+        "run_id": target_run_id,
+        "clusters": len(targets),
+        "completed": completed,
+        "failed": failed,
+    }

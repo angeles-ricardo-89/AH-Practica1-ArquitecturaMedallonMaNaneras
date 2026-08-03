@@ -684,3 +684,162 @@ def test_run_clustering_does_not_label(monkeypatch):
     result = run_clustering(Settings())
     assert result["clusters"] == 2
     labeled.assert_not_called()
+
+
+def _mock_labeling_connect(
+    monkeypatch, run_row, chunk_rows=None, completed_rows=None, count_rows=None
+) -> dict[str, list]:
+    captured: dict[str, list] = {"cursors": []}
+
+    def _connect(*_args: object, **_kwargs: object) -> MagicMock:
+        conn = MagicMock()
+        cursor = MagicMock()
+        conn.cursor.return_value = cursor
+        captured["cursors"].append(cursor)
+
+        def _execute(sql, params=None) -> MagicMock:
+            result = MagicMock()
+            if "FROM gold.clustering_runs" in sql:
+                result.fetchone.return_value = run_row
+            elif "FROM gold.rag_corpus" in sql:
+                result.fetchall.return_value = chunk_rows or []
+            elif "GROUP BY label_status" in sql:
+                result.fetchall.return_value = count_rows or []
+            elif "FROM gold.cluster_labels" in sql:
+                result.fetchall.return_value = completed_rows or []
+            else:
+                result.fetchall.return_value = []
+            conn.execute.return_value = result
+            return result
+
+        conn.execute.side_effect = _execute
+        cm = MagicMock()
+        cm.__enter__.return_value = conn
+        return cm
+
+    monkeypatch.setattr(clustering.psycopg, "connect", _connect)
+    return captured
+
+
+def test_run_labeling_targets_latest_run(monkeypatch):
+    chunk_rows = [
+        ("k1", "texto uno sobre salud", 0, 0.9),
+        ("k2", "texto dos sobre salud", 0, 0.8),
+        ("k3", "texto tres sobre economia", 1, 0.7),
+    ]
+    _mock_labeling_connect(
+        monkeypatch,
+        run_row=("run-latest",),
+        chunk_rows=chunk_rows,
+        count_rows=[("completed", 2)],
+    )
+    captured: dict = {}
+
+    def _fake_label(pg_conn_str, run_id, cluster_ids, chunks, settings) -> tuple[int, int]:
+        captured["run_id"] = run_id
+        captured["cluster_ids"] = cluster_ids
+        captured["chunks"] = chunks
+        return (2, 0)
+
+    monkeypatch.setattr(clustering, "label_clusters", _fake_label)
+
+    result = clustering.run_labeling(Settings())
+
+    assert result["run_id"] == "run-latest"
+    assert result["completed"] == 2
+    assert result["failed"] == 0
+    assert captured["run_id"] == "run-latest"
+    assert captured["cluster_ids"] == [0, 1]
+    assert captured["chunks"][0]["chunk_text"] == "texto uno sobre salud"
+
+
+def test_run_labeling_skips_completed_labels(monkeypatch):
+    chunk_rows = [
+        ("k1", "t1", 0, 0.9),
+        ("k2", "t2", 1, 0.8),
+    ]
+    _mock_labeling_connect(
+        monkeypatch,
+        run_row=("run-1",),
+        chunk_rows=chunk_rows,
+        completed_rows=[(0,)],
+        count_rows=[("completed", 1)],
+    )
+    captured: dict = {}
+
+    def _fake_label(pg_conn_str, run_id, cluster_ids, chunks, settings) -> tuple[int, int]:
+        captured["ids"] = cluster_ids
+        return (1, 0)
+
+    monkeypatch.setattr(clustering, "label_clusters", _fake_label)
+
+    result = clustering.run_labeling(Settings())
+    assert result["run_id"] == "run-1"
+    assert captured["ids"] == [1]
+
+
+def test_run_labeling_with_explicit_run_id(monkeypatch):
+    chunk_rows = [("k1", "t1", 0, 0.9)]
+    _mock_labeling_connect(
+        monkeypatch,
+        run_row=("run-explicit",),
+        chunk_rows=chunk_rows,
+        count_rows=[("completed", 1)],
+    )
+    captured: dict = {}
+
+    def _fake_label(pg_conn_str, run_id, cluster_ids, chunks, settings) -> tuple[int, int]:
+        captured["run_id"] = run_id
+        return (1, 0)
+
+    monkeypatch.setattr(clustering, "label_clusters", _fake_label)
+
+    result = clustering.run_labeling(Settings(), run_id="run-explicit")
+    assert result["run_id"] == "run-explicit"
+    assert captured["run_id"] == "run-explicit"
+
+
+def test_run_labeling_no_runs_returns_none(monkeypatch):
+    _mock_labeling_connect(monkeypatch, run_row=None)
+    labeled = MagicMock()
+    monkeypatch.setattr(clustering, "label_clusters", labeled)
+
+    assert clustering.run_labeling(Settings()) is None
+    labeled.assert_not_called()
+
+
+def test_run_labeling_no_pending_returns_none(monkeypatch):
+    chunk_rows = [("k1", "t1", 0, 0.9)]
+    _mock_labeling_connect(
+        monkeypatch,
+        run_row=("run-1",),
+        chunk_rows=chunk_rows,
+        completed_rows=[(0,)],
+    )
+    labeled = MagicMock()
+    monkeypatch.setattr(clustering, "label_clusters", labeled)
+
+    assert clustering.run_labeling(Settings()) is None
+    labeled.assert_not_called()
+
+
+def test_run_labeling_updates_status_partial(monkeypatch):
+    chunk_rows = [("k1", "t1", 0, 0.9)]
+    captured = _mock_labeling_connect(
+        monkeypatch,
+        run_row=("run-1",),
+        chunk_rows=chunk_rows,
+        count_rows=[("failed", 1)],
+    )
+    monkeypatch.setattr(clustering, "label_clusters", lambda *_args, **_kwargs: (0, 1))
+
+    result = clustering.run_labeling(Settings())
+    assert result["failed"] == 1
+
+    update_calls = [
+        c
+        for cursor in captured["cursors"]
+        for c in cursor.execute.call_args_list
+        if "status = 'partial'" in c[0][0]
+    ]
+    assert len(update_calls) == 1
