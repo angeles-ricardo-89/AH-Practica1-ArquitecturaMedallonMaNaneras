@@ -66,9 +66,14 @@ const agregados = computed(() => {
     </p>
 
     <div class="space-y-1.5 text-xs text-stone-600">
-      <div class="flex justify-between">
-        <span class="text-stone-400 font-medium">Run ID</span>
-        <span class="font-mono text-stone-700">{{ props.layer.run_id || '—' }}</span>
+      <div class="flex justify-between gap-2">
+        <span class="text-stone-400 font-medium shrink-0">Run ID</span>
+        <span
+          class="font-mono text-stone-700 truncate max-w-[140px]"
+          :title="props.layer.run_id || undefined"
+        >
+          {{ props.layer.run_id || '—' }}
+        </span>
       </div>
       <div class="flex justify-between">
         <span class="text-stone-400 font-medium">Duración</span>

@@ -43,7 +43,10 @@ function handleRefresh() {
           <span class="font-semibold text-stone-700">App</span> {{ version }}
         </span>
         <span class="w-px h-3 bg-stone-300" />
-        <span class="text-stone-500">
+        <span
+          class="text-stone-500 truncate max-w-[200px]"
+          :title="ultimaCorrida"
+        >
           <span class="font-semibold text-stone-700">Última corrida:</span> {{ ultimaCorrida }}
         </span>
         <span class="w-px h-3 bg-stone-300" />

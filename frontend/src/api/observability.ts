@@ -31,6 +31,11 @@ export interface PipelineLayersResponse {
   ultima_corrida_global: string
 }
 
+export interface LayerHistoryResponse {
+  capa: string
+  runs: LayerRun[]
+}
+
 export async function getPipelineStatus(): Promise<PipelineStatus> {
   return apiClient<PipelineStatus>('/observability/status')
 }
@@ -45,4 +50,8 @@ export async function getPipelineLayers(): Promise<PipelineLayersResponse> {
 
 export async function getPipelineLogsByLayer(layer: string, lines = 50): Promise<PipelineLogs> {
   return apiClient<PipelineLogs>(`/observability/pipeline/logs/${layer}?lines=${lines}`)
+}
+
+export async function getLayerHistory(layer: string, limit = 50): Promise<LayerHistoryResponse> {
+  return apiClient<LayerHistoryResponse>(`/observability/pipeline/layers/${layer}/history?limit=${limit}`)
 }

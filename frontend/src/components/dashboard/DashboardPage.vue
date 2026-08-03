@@ -57,16 +57,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-stone-50 p-6">
-    <div class="max-w-[1440px] mx-auto space-y-5">
+  <div class="h-screen bg-stone-50 p-6 flex flex-col">
+    <div class="max-w-[1440px] mx-auto w-full flex flex-col gap-5 h-full">
       <!-- Header -->
       <AppHeader />
 
       <!-- Main 3-column layout -->
-      <div class="flex gap-5">
+      <div class="flex gap-5 flex-1 min-h-0 overflow-hidden">
         <!-- Columna izquierda: Pipeline -->
-        <div class="w-[300px] shrink-0">
-          <div class="bg-white border border-stone-200 rounded-2xl p-4 h-full">
+        <div class="w-[300px] shrink-0 overflow-y-auto">
+          <div class="bg-white border border-stone-200 rounded-2xl p-4 min-h-full">
             <PipelineTimeline
               v-if="obsStore.layers?.layers && obsStore.layers.layers.length > 0"
               :layers="obsStore.layers.layers"
@@ -81,13 +81,13 @@ onUnmounted(() => {
         </div>
 
         <!-- Columna central: Chat RAG -->
-        <div class="flex-1 min-w-0">
-          <ChatWindow />
+        <div class="flex-1 min-w-0 overflow-hidden">
+          <ChatWindow class="h-full" />
         </div>
 
         <!-- Columna derecha: Inspector -->
-        <div class="w-[282px] shrink-0 flex flex-col gap-4">
-          <div v-if="embeddingsError" class="bg-white border border-stone-200 rounded-2xl p-4">
+        <div class="w-[282px] shrink-0 flex flex-col gap-4 overflow-hidden">
+          <div v-if="embeddingsError" class="bg-white border border-stone-200 rounded-2xl p-4 shrink-0">
             <h3 class="text-sm font-bold text-stone-950 mb-1">Embeddings 3D</h3>
             <p class="text-xs text-stone-500">sin datos</p>
           </div>
@@ -95,9 +95,10 @@ onUnmounted(() => {
             v-else
             :points="embeddingsPoints"
             :highlighted-chunks="highlightedChunks"
+            class="shrink-0"
           />
 
-          <div v-if="!selectedMessage" class="bg-white border border-stone-200 rounded-2xl p-4 flex-1">
+          <div v-if="!selectedMessage" class="bg-white border border-stone-200 rounded-2xl p-4 flex-1 min-h-0 overflow-hidden">
             <h3 class="text-sm font-bold text-stone-950 mb-1">Fuentes usadas</h3>
             <p class="text-xs text-stone-500">
               Selecciona una respuesta del chat para ver fuentes usadas.
@@ -107,7 +108,7 @@ onUnmounted(() => {
           <SourcesList
             v-else
             :sources="selectedSources"
-            class="flex-1"
+            class="flex-1 min-h-0 overflow-hidden"
           />
         </div>
       </div>
