@@ -212,5 +212,32 @@ def run_hdbscan(
     return labels, probs
 
 
+def persist_cluster_assignments(
+    pg_conn_str: str,
+    run_id: str,
+    assignments: list[tuple[str, int, float]],
+) -> None:
+    if not assignments:
+        return
+    with psycopg.connect(pg_conn_str) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "CREATE TEMP TABLE _cluster_assignments (chunk_key VARCHAR, cluster_id INT, pertenencia REAL) ON COMMIT DROP"
+        )
+        with cur.copy("COPY _cluster_assignments FROM STDIN") as copy:
+            for chunk_key, cid, membership in assignments:
+                copy.write_row((chunk_key, cid, membership))
+        cur.execute("""
+            UPDATE gold.rag_corpus AS g
+            SET cluster_id = a.cluster_id,
+                cluster_pertenencia = a.pertenencia,
+                clustering_run_id = %s
+            FROM _cluster_assignments AS a
+            WHERE g.chunk_key = a.chunk_key
+        """, (run_id,))
+        conn.commit()
+
+
+
 
 

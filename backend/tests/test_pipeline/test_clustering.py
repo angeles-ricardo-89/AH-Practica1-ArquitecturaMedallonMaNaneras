@@ -295,3 +295,44 @@ def test_noise_gets_cluster_minus_one():
     for i in range(len(labels)):
         if labels[i] == -1:
             assert probs[i] == 0.0, f"Ruido debe tener pertenencia 0.0, obtuvo {probs[i]}"
+
+
+def test_persist_cluster_assignments(pg_conn_str):
+    from lakehouse.pipeline.clustering import ensure_clustering_schema, persist_cluster_assignments
+
+    run_id = "00000000-0000-0000-0000-000000000001"
+
+    with psycopg.connect(pg_conn_str) as conn:
+        ensure_clustering_schema(conn)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO gold.rag_corpus (chunk_key, conference_id, conference_date,
+                                         participant, chunk_text, payload)
+            VALUES
+            ('assign_1', 'c1', '2025-01-01', 'p1', 't1', 'pl1'),
+            ('assign_2', 'c1', '2025-01-01', 'p1', 't2', 'pl2')
+            ON CONFLICT (chunk_key) DO NOTHING
+        """)
+        conn.commit()
+
+    assignments = [
+        ("assign_1", 0, 0.95),
+        ("assign_2", 1, 0.80),
+    ]
+    persist_cluster_assignments(pg_conn_str, run_id, assignments)
+
+    with psycopg.connect(pg_conn_str) as conn:
+        cur = conn.execute(
+            "SELECT chunk_key, cluster_id, cluster_pertenencia, clustering_run_id "
+            "FROM gold.rag_corpus WHERE chunk_key IN ('assign_1', 'assign_2') "
+            "ORDER BY chunk_key"
+        )
+        rows = cur.fetchall()
+        assert rows[0][0] == "assign_1"
+        assert rows[0][1] == 0
+        assert rows[0][2] == pytest.approx(0.95)
+        assert str(rows[0][3]) == run_id
+        assert rows[1][0] == "assign_2"
+        assert rows[1][1] == 1
+        assert rows[1][2] == pytest.approx(0.80)
+        assert str(rows[1][3]) == run_id
