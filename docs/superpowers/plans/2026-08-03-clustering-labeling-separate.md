@@ -30,7 +30,7 @@
 - Modify: `backend/tests/test_pipeline/test_clustering.py`
 - Modify: `backend/src/lakehouse/pipeline/clustering.py`
 
-- [ ] **Step 1: Actualizar tests — renombrar y agregar test de "no etiqueta"**
+- [x] **Step 1: Actualizar tests — renombrar y agregar test de "no etiqueta"**
 
 En `backend/tests/test_pipeline/test_clustering.py`, en el bloque de imports cambiar:
 
@@ -86,7 +86,7 @@ def test_run_clustering_does_not_label(monkeypatch):
     labeled.assert_not_called()
 ```
 
-- [ ] **Step 2: Verificar que fallan**
+- [x] **Step 2: Verificar que fallan**
 
 ```bash
 cd backend && uv run pytest tests/test_pipeline/test_clustering.py -xvs --no-cov -k "run_clustering"
@@ -94,7 +94,7 @@ cd backend && uv run pytest tests/test_pipeline/test_clustering.py -xvs --no-cov
 
 Expected: FAIL — `ImportError: cannot import name 'run_clustering'` (o `AttributeError` al recolectar).
 
-- [ ] **Step 3: Refactorizar en clustering.py**
+- [x] **Step 3: Refactorizar en clustering.py**
 
 Agregar helper `_build_pg_conn_str` justo después de `logger = ...`:
 
@@ -250,7 +250,7 @@ def run_clustering(settings, force: bool = False) -> dict | None:
 
 (Esto elimina el bloque `chunks = [...]` y el `if unique_clusters:` completo de `label_clusters`.)
 
-- [ ] **Step 4: Verificar que pasan**
+- [x] **Step 4: Verificar que pasan**
 
 ```bash
 cd backend && uv run pytest tests/test_pipeline/test_clustering.py -xvs --no-cov -k "run_clustering"
@@ -258,7 +258,7 @@ cd backend && uv run pytest tests/test_pipeline/test_clustering.py -xvs --no-cov
 
 Expected: 6 PASS (`test_run_clustering_aborts_with_fewer_than_4`, `test_run_clustering_skips_existing_run`, `test_run_clustering_success`, `test_run_clustering_marks_failed_on_error`, `test_run_clustering_all_noise_no_labeling`, `test_run_clustering_does_not_label`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/lakehouse/pipeline/clustering.py backend/tests/test_pipeline/test_clustering.py
@@ -273,7 +273,7 @@ git commit -m "separa run_clustering del etiquetado y renombra a run_clustering"
 - Modify: `backend/tests/test_pipeline/test_clustering.py`
 - Modify: `backend/src/lakehouse/pipeline/clustering.py`
 
-- [ ] **Step 1: Agregar helper de mock y tests de run_labeling**
+- [x] **Step 1: Agregar helper de mock y tests de run_labeling**
 
 En `backend/tests/test_pipeline/test_clustering.py`, agregar al final:
 
@@ -435,7 +435,7 @@ def test_run_labeling_updates_status_partial(monkeypatch):
     assert len(update_calls) == 1
 ```
 
-- [ ] **Step 2: Verificar que fallan**
+- [x] **Step 2: Verificar que fallan**
 
 ```bash
 cd backend && uv run pytest tests/test_pipeline/test_clustering.py -xvs --no-cov -k "run_labeling"
@@ -443,7 +443,7 @@ cd backend && uv run pytest tests/test_pipeline/test_clustering.py -xvs --no-cov
 
 Expected: FAIL — `AttributeError: module 'lakehouse.pipeline.clustering' has no attribute 'run_labeling'`.
 
-- [ ] **Step 3: Implementar run_labeling()**
+- [x] **Step 3: Implementar run_labeling()**
 
 Agregar en `backend/src/lakehouse/pipeline/clustering.py`, después de `run_clustering`:
 
@@ -559,7 +559,7 @@ def run_labeling(settings, run_id: str | None = None) -> dict | None:
     }
 ```
 
-- [ ] **Step 4: Verificar que pasan**
+- [x] **Step 4: Verificar que pasan**
 
 ```bash
 cd backend && uv run pytest tests/test_pipeline/test_clustering.py -xvs --no-cov -k "run_labeling"
@@ -567,7 +567,7 @@ cd backend && uv run pytest tests/test_pipeline/test_clustering.py -xvs --no-cov
 
 Expected: 6 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/lakehouse/pipeline/clustering.py backend/tests/test_pipeline/test_clustering.py
@@ -582,7 +582,7 @@ git commit -m "agrega run_labeling para etiquetado semantico independiente"
 - Modify: `backend/tests/test_pipeline/test_umap.py`
 - Modify: `backend/src/lakehouse/services/enrich_service.py`
 
-- [ ] **Step 1: Actualizar y agregar tests de EnrichService**
+- [x] **Step 1: Actualizar y agregar tests de EnrichService**
 
 En `backend/tests/test_pipeline/test_umap.py`, reemplazar TODA la clase `TestEnrichServiceCallsUmap` (líneas ~280-366) por:
 
@@ -743,7 +743,7 @@ class TestEnrichServiceCallsUmap:
         assert mock_label.call_args.kwargs["run_id"] == "r9"
 ```
 
-- [ ] **Step 2: Verificar que fallan**
+- [x] **Step 2: Verificar que fallan**
 
 ```bash
 cd backend && uv run pytest tests/test_pipeline/test_umap.py -xvs --no-cov
@@ -751,7 +751,7 @@ cd backend && uv run pytest tests/test_pipeline/test_umap.py -xvs --no-cov
 
 Expected: FAIL — `TypeError: EnrichService.run() got an unexpected keyword argument 'run_clustering'`.
 
-- [ ] **Step 3: Implementar flags en EnrichService.run()**
+- [x] **Step 3: Implementar flags en EnrichService.run()**
 
 En `backend/src/lakehouse/services/enrich_service.py`, cambiar la firma de `run()`:
 
@@ -824,7 +824,7 @@ Y reemplazar el bloque `if result.get("embedded", 0) > 0:` (desde `if result.get
         return result
 ```
 
-- [ ] **Step 4: Verificar que pasan**
+- [x] **Step 4: Verificar que pasan**
 
 ```bash
 cd backend && uv run pytest tests/test_pipeline/test_umap.py -xvs --no-cov && uv run pytest tests/test_services/test_enrich_service.py -q --no-cov
@@ -832,7 +832,7 @@ cd backend && uv run pytest tests/test_pipeline/test_umap.py -xvs --no-cov && uv
 
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/lakehouse/services/enrich_service.py backend/tests/test_pipeline/test_umap.py
@@ -847,7 +847,7 @@ git commit -m "integra flags de clustering y etiquetado en EnrichService"
 - Modify: `backend/tests/test_cli.py`
 - Modify: `backend/src/lakehouse/cli.py`
 
-- [ ] **Step 1: Actualizar y agregar tests de CLI**
+- [x] **Step 1: Actualizar y agregar tests de CLI**
 
 En `backend/tests/test_cli.py`, en `TestPipelineEnrich`, actualizar los cuatro `assert_called_once_with` existentes para incluir los nuevos kwargs:
 
@@ -966,7 +966,7 @@ Agregar al final de `TestPipelineEnrich`:
         )
 ```
 
-- [ ] **Step 2: Verificar que fallan**
+- [x] **Step 2: Verificar que fallan**
 
 ```bash
 cd backend && uv run pytest tests/test_cli.py -xvs --no-cov -k "enrich"
@@ -974,7 +974,7 @@ cd backend && uv run pytest tests/test_cli.py -xvs --no-cov -k "enrich"
 
 Expected: FAIL — `AssertionError: Expected call ... run_clustering=...` o `KeyError`.
 
-- [ ] **Step 3: Implementar flags en cli.py**
+- [x] **Step 3: Implementar flags en cli.py**
 
 En `backend/src/lakehouse/cli.py`, en `def enrich(...)`, agregar tras el parámetro `workers`:
 
@@ -1002,7 +1002,7 @@ Y cambiar la llamada a `service.run(...)`:
             )
 ```
 
-- [ ] **Step 4: Verificar que pasan**
+- [x] **Step 4: Verificar que pasan**
 
 ```bash
 cd backend && uv run pytest tests/test_cli.py -xvs --no-cov -k "enrich"
@@ -1010,7 +1010,7 @@ cd backend && uv run pytest tests/test_cli.py -xvs --no-cov -k "enrich"
 
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/lakehouse/cli.py backend/tests/test_cli.py
@@ -1024,7 +1024,7 @@ git commit -m "agrega flags --run-clustering y --run-semantic-cluster-labeling a
 **Files:**
 - Modify: `backend/tests/test_pipeline/test_clustering_integration.py`
 
-- [ ] **Step 1: Agregar imports y tests**
+- [x] **Step 1: Agregar imports y tests**
 
 En `backend/tests/test_pipeline/test_clustering_integration.py`, agregar al bloque de imports:
 
@@ -1162,7 +1162,7 @@ def test_labeling_independent_after_clustering(pg_conn_str, monkeypatch):
             conn.commit()
 ```
 
-- [ ] **Step 2: Ejecutar tests de integración**
+- [x] **Step 2: Ejecutar tests de integración**
 
 ```bash
 cd backend && uv run pytest tests/test_pipeline/test_clustering_integration.py -xvs --no-cov
@@ -1170,7 +1170,7 @@ cd backend && uv run pytest tests/test_pipeline/test_clustering_integration.py -
 
 Expected: 7 PASS (5 existentes + 2 nuevos).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/tests/test_pipeline/test_clustering_integration.py
@@ -1181,7 +1181,7 @@ git commit -m "agrega tests de integracion para fases independientes de clusteri
 
 ### Task 6: Verificación final — ruff + typecheck + coverage
 
-- [ ] **Step 1: Ruff check + format**
+- [x] **Step 1: Ruff check + format**
 
 ```bash
 cd backend && uv run ruff check --fix && uv run ruff format
@@ -1189,7 +1189,7 @@ cd backend && uv run ruff check --fix && uv run ruff format
 
 Expected: zero errors.
 
-- [ ] **Step 2: Typecheck backend**
+- [x] **Step 2: Typecheck backend**
 
 ```bash
 cd backend && uv run ty check
@@ -1197,7 +1197,7 @@ cd backend && uv run ty check
 
 Expected: zero errors.
 
-- [ ] **Step 3: Suite completa con coverage**
+- [x] **Step 3: Suite completa con coverage**
 
 ```bash
 cd backend && uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=90
@@ -1205,7 +1205,7 @@ cd backend && uv run pytest --cov=src --cov-report=term-missing --cov-fail-under
 
 Expected: all PASS, coverage >= 90%.
 
-- [ ] **Step 4: Commit final**
+- [x] **Step 4: Commit final**
 
 ```bash
 git add -A
