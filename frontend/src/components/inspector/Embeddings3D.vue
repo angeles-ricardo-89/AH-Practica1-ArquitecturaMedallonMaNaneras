@@ -18,6 +18,7 @@ const chartRef = ref<HTMLElement | null>(null)
 let myChart: echarts.ECharts | null = null
 let rafId: number | null = null
 let resizeObserver: ResizeObserver | null = null
+let resizeTimeout: ReturnType<typeof setTimeout> | null = null
 
 const hasSelection = computed(() => props.activeChunkKeys && props.activeChunkKeys.size > 0)
 
@@ -195,6 +196,16 @@ function updateChart() {
   })
 }
 
+function scheduleResize() {
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout)
+  }
+  resizeTimeout = setTimeout(() => {
+    resizeTimeout = null
+    myChart?.resize()
+  }, 50)
+}
+
 function initChart() {
   if (!chartRef.value || !containerRef.value) return
   myChart = echarts.init(chartRef.value)
@@ -203,7 +214,7 @@ function initChart() {
   window.addEventListener('resize', handleResize)
 
   resizeObserver = new ResizeObserver(() => {
-    myChart?.resize()
+    scheduleResize()
   })
   resizeObserver.observe(containerRef.value)
 }
@@ -221,6 +232,10 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   resizeObserver?.disconnect()
   resizeObserver = null
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout)
+    resizeTimeout = null
+  }
   if (rafId !== null) {
     cancelAnimationFrame(rafId)
     rafId = null
