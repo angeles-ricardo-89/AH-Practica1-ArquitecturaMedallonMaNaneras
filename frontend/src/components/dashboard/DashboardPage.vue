@@ -83,7 +83,7 @@ onUnmounted(() => {
 
 <template>
   <div class="h-screen bg-stone-50 p-6 flex flex-col">
-    <div class="max-w-[1440px] mx-auto w-full flex flex-col gap-5 h-full">
+    <div class="w-full flex flex-col gap-5 h-full">
       <!-- Header -->
       <AppHeader />
 
@@ -106,12 +106,12 @@ onUnmounted(() => {
         </div>
 
         <!-- Columna central: Chat RAG -->
-        <div ref="chatAreaRef" class="flex-1 min-w-0 overflow-hidden">
+        <div ref="chatAreaRef" class="flex-[1] min-w-0 overflow-hidden">
           <ChatWindow class="h-full" />
         </div>
 
         <!-- Columna derecha: Inspector -->
-        <div class="w-[282px] shrink-0 flex flex-col gap-4 overflow-hidden">
+        <div class="flex-[0.7] min-w-[280px] flex flex-col gap-4 overflow-hidden">
           <div v-if="embeddingsError" class="bg-white border border-stone-200 rounded-2xl p-4 shrink-0">
             <h3 class="text-sm font-bold text-stone-950 mb-1">Embeddings 3D</h3>
             <p class="text-xs text-stone-500">sin datos</p>
