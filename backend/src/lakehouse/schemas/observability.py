@@ -30,3 +30,8 @@ class PipelineLayersResponse(BaseModel):
     layers: list[LayerRun] = Field(default_factory=list)
     health_global: str = Field(default="sin datos")
     ultima_corrida_global: str = Field(default="")
+
+
+class LayerHistoryResponse(BaseModel):
+    capa: str = Field(...)
+    runs: list[LayerRun] = Field(default_factory=list)

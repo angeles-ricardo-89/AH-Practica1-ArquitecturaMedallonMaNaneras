@@ -1,4 +1,5 @@
 from lakehouse.schemas.observability import (
+    LayerHistoryResponse,
     LayerRun,
     PipelineLayersResponse,
     PipelineLogs,
@@ -80,3 +81,19 @@ class TestPipelineLayersResponse:
         )
         assert len(r.layers) == 3
         assert r.health_global == "Healthy"
+
+
+class TestLayerHistoryResponse:
+    def test_empty(self):
+        r = LayerHistoryResponse(capa="bronze", runs=[])
+        assert r.capa == "bronze"
+        assert r.runs == []
+
+    def test_with_runs(self):
+        runs = [
+            LayerRun(capa="bronze", status="ok", run_id="r1"),
+            LayerRun(capa="bronze", status="error", run_id="r2"),
+        ]
+        r = LayerHistoryResponse(capa="bronze", runs=runs)
+        assert len(r.runs) == 2
+        assert r.capa == "bronze"

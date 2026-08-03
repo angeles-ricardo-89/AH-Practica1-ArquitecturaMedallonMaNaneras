@@ -7,7 +7,7 @@ import psycopg
 TEST_DB = "mananeras_test"
 
 
-def pytest_configure(config) -> None:  # noqa: ARG001
+def pytest_configure(config) -> None:
     """Crea la base de datos de pruebas y la activa para todos los tests."""
     os.environ["POSTGRES_DB"] = TEST_DB
 
@@ -46,6 +46,4 @@ def pytest_configure(config) -> None:  # noqa: ARG001
                 )
             """)
     except psycopg.Error as e:
-        raise SystemExit(
-            f"No se pudo inicializar la base de datos de pruebas: {e}"
-        ) from None
+        raise SystemExit(f"No se pudo inicializar la base de datos de pruebas: {e}") from None

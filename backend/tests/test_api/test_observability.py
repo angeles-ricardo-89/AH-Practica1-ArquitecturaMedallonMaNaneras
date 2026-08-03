@@ -408,3 +408,115 @@ class TestPipelineLogsByLayer:
         data = resp.json()
         assert data["lines"] == ["o5", "n1", "n2"]
         assert data["total_lines"] == 7
+
+
+class TestPipelineLayerHistory:
+    def _pg_conn_str(self) -> str:
+        settings = Settings()
+        return (
+            f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
+            f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+        )
+
+    def _clean_pipeline_runs(self, conn_str: str) -> None:
+        conn = psycopg.connect(conn_str)
+        conn.autocommit = True
+        conn.execute("DELETE FROM observability.pipeline_runs")
+        conn.close()
+
+    def test_history_empty_when_no_runs(self, monkeypatch):
+        conn_str = self._pg_conn_str()
+        monkeypatch.setattr(
+            "lakehouse.api.routers.observability._get_pg_conn_str",
+            lambda: conn_str,
+        )
+        ensure_observability_tables(conn_str)
+        self._clean_pipeline_runs(conn_str)
+        try:
+            resp = client.get("/observability/pipeline/layers/bronze/history")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["capa"] == "bronze"
+            assert data["runs"] == []
+        finally:
+            self._clean_pipeline_runs(conn_str)
+
+    def test_history_returns_runs_ordered_desc(self, monkeypatch):
+        conn_str = self._pg_conn_str()
+        monkeypatch.setattr(
+            "lakehouse.api.routers.observability._get_pg_conn_str",
+            lambda: conn_str,
+        )
+        ensure_observability_tables(conn_str)
+        self._clean_pipeline_runs(conn_str)
+        try:
+            conn = psycopg.connect(conn_str)
+            conn.autocommit = True
+            conn.execute(
+                """INSERT INTO observability.pipeline_runs
+                (run_id, capa, status, started_at, finished_at, records_in, records_out)
+                VALUES
+                ('r1', 'bronze', 'ok', '2026-08-01T10:00:00Z', '2026-08-01T10:00:12Z', 150, 150),
+                ('r2', 'bronze', 'error', '2026-08-01T10:30:00Z', '2026-08-01T10:30:15Z', 150, 0),
+                ('r3', 'silver', 'ok', '2026-08-01T10:00:05Z', '2026-08-01T10:00:20Z', 150, 140)
+                """
+            )
+            conn.close()
+
+            resp = client.get("/observability/pipeline/layers/bronze/history")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["capa"] == "bronze"
+            assert len(data["runs"]) == 2
+            assert data["runs"][0]["run_id"] == "r2"
+            assert data["runs"][0]["status"] == "error"
+            assert data["runs"][1]["run_id"] == "r1"
+            assert data["runs"][1]["status"] == "ok"
+        finally:
+            self._clean_pipeline_runs(conn_str)
+
+    def test_history_respects_limit(self, monkeypatch):
+        conn_str = self._pg_conn_str()
+        monkeypatch.setattr(
+            "lakehouse.api.routers.observability._get_pg_conn_str",
+            lambda: conn_str,
+        )
+        ensure_observability_tables(conn_str)
+        self._clean_pipeline_runs(conn_str)
+        try:
+            conn = psycopg.connect(conn_str)
+            conn.autocommit = True
+            for i in range(5):
+                conn.execute(
+                    """INSERT INTO observability.pipeline_runs
+                    (run_id, capa, status, started_at, finished_at, records_in, records_out)
+                    VALUES (%s, %s, %s, %s, %s, 100, 100)
+                    """,
+                    (
+                        f"run-{i}",
+                        "gold",
+                        "ok",
+                        f"2026-08-01T{i:02d}:00:00Z",
+                        f"2026-08-01T{i:02d}:00:10Z",
+                    ),
+                )
+            conn.close()
+
+            resp = client.get("/observability/pipeline/layers/gold/history?limit=3")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert len(data["runs"]) == 3
+            assert data["runs"][0]["run_id"] == "run-4"
+        finally:
+            self._clean_pipeline_runs(conn_str)
+
+    def test_history_returns_sin_datos_on_db_error(self, monkeypatch):
+        monkeypatch.setattr(
+            "lakehouse.api.routers.observability._get_pg_conn_str",
+            lambda: "postgresql://invalid:invalid@localhost:1/invalid",
+        )
+        resp = client.get("/observability/pipeline/layers/bronze/history")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["capa"] == "bronze"
+        assert data["runs"] == []

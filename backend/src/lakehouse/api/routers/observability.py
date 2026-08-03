@@ -8,6 +8,7 @@ from fastapi import APIRouter, Query
 
 from lakehouse.config import Settings
 from lakehouse.schemas.observability import (
+    LayerHistoryResponse,
     LayerRun,
     PipelineLayersResponse,
     PipelineLogs,
@@ -177,3 +178,56 @@ def get_pipeline_logs_by_layer(
             continue
 
     return PipelineLogs(lines=list(all_lines), total_lines=total)
+
+
+@router.get(
+    "/pipeline/layers/{layer}/history",
+    response_model=LayerHistoryResponse,
+    summary="Get pipeline run history by layer",
+    description="Returns the last N runs for a medallion layer",
+)
+def get_pipeline_layer_history(
+    layer: str,
+    limit: int = Query(50, ge=1, le=500),
+) -> LayerHistoryResponse:
+    conn_str = _get_pg_conn_str()
+    runs: list[LayerRun] = []
+    try:
+        with psycopg.connect(conn_str) as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT
+                    capa, status, run_id,
+                    EXTRACT(EPOCH FROM (finished_at - started_at)) AS duracion_seg,
+                    records_in, records_out, dlq_count,
+                    started_at, finished_at
+                FROM observability.pipeline_runs
+                WHERE capa = %s
+                ORDER BY started_at DESC
+                LIMIT %s
+                """,
+                (layer, limit),
+            )
+            rows = cur.fetchall()
+    except (psycopg.Error, OSError):
+        return LayerHistoryResponse(capa=layer, runs=runs)
+
+    for row in rows:
+        started = row[7]
+        finished = row[8]
+        runs.append(
+            LayerRun(
+                capa=row[0],
+                status=row[1] if row[1] else "unknown",
+                run_id=row[2],
+                duracion_seg=float(row[3]) if row[3] is not None else None,
+                records_in=row[4] or 0,
+                records_out=row[5] or 0,
+                dlq_count=row[6] or 0,
+                started_at=started.isoformat() if started else None,
+                finished_at=finished.isoformat() if finished else None,
+            )
+        )
+
+    return LayerHistoryResponse(capa=layer, runs=runs)
