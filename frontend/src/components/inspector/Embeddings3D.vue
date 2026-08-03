@@ -6,18 +6,18 @@ import type { Embedding3DPoint } from '../../api/embeddings'
 import { useDashboardStore } from '../../stores/dashboard'
 import type { ClusterPoint } from '../../api/clusters'
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   points: Embedding3DPoint[]
-  mode?: 'full' | 'filtered'
-}>(), {
-  mode: 'full',
-})
+  activeChunkKeys?: Set<string>
+}>()
 
 const dashboardStore = useDashboardStore()
 
 const chartRef = ref<HTMLElement | null>(null)
 let myChart: echarts.ECharts | null = null
 let rafId: number | null = null
+
+const hasSelection = computed(() => props.activeChunkKeys && props.activeChunkKeys.size > 0)
 
 const clusterPointMap = computed(() => {
   const map = new Map<string, ClusterPoint>()
@@ -32,39 +32,37 @@ const noiseColor = 'rgba(168, 162, 158, 0.3)'
 
 const chartData = computed(() => {
   return props.points.map((p) => {
-    // En modo filtered usamos cluster_id directo del punto (viene de SourceChunk).
-    // En modo full hacemos lookup por chunk_key en el universo de clusters.
-    let clusterId: number | undefined
-    let pertenencia = 0
-    if (props.mode === 'filtered' && p.cluster_id !== undefined) {
-      clusterId = p.cluster_id
-    } else {
-      const cp = clusterPointMap.value.get(p.chunk_key)
-      if (cp) {
-        clusterId = cp.cluster_id
-        pertenencia = cp.pertenencia
-      }
-    }
+    const isActive = hasSelection.value && props.activeChunkKeys!.has(p.chunk_key)
+    const cp = clusterPointMap.value.get(p.chunk_key)
+    const clusterId = cp?.cluster_id
+    const pertenencia = cp?.pertenencia ?? 0
 
     let color: string
     let opacity: number
     let size: number
 
-    if (props.mode === 'filtered') {
-      // Modo filtrado: colores de cluster, siempre visibles
-      if (clusterId !== undefined && clusterId >= 0) {
-        color = dashboardStore.getClusterColor(clusterId)
-        opacity = 1.0
-      } else if (clusterId === -1) {
-        color = '#A8A29E'
-        opacity = 0.5
+    if (hasSelection.value) {
+      // Hay selección: puntos activos resaltados, inactivos casi invisibles
+      if (isActive) {
+        if (clusterId !== undefined && clusterId >= 0) {
+          color = dashboardStore.getClusterColor(clusterId)
+          opacity = 1.0
+        } else if (clusterId === -1) {
+          color = '#A8A29E'
+          opacity = 0.5
+        } else {
+          color = '#A8A29E'
+          opacity = 1.0
+        }
+        size = 8
       } else {
+        // Inactivo: muy tenue para no distraer
         color = '#A8A29E'
-        opacity = 1.0
+        opacity = 0.03
+        size = 3
       }
-      size = 8
     } else {
-      // Modo full: comportamiento original
+      // Sin selección: comportamiento original
       if (clusterId !== undefined) {
         if (clusterId === -1) {
           color = noiseColor
@@ -99,32 +97,26 @@ const chartData = computed(() => {
 })
 
 const visibleClusters = computed(() => {
-  if (props.mode !== 'filtered' || !dashboardStore.clusterData) return []
+  if (!hasSelection.value || !dashboardStore.clusterData) return []
   const presentIds = new Set<number>()
   for (const p of props.points) {
-    const cid = p.cluster_id !== undefined ? p.cluster_id : clusterPointMap.value.get(p.chunk_key)?.cluster_id
-    if (cid !== undefined && cid >= 0) {
-      presentIds.add(cid)
+    if (!props.activeChunkKeys!.has(p.chunk_key)) continue
+    const cp = clusterPointMap.value.get(p.chunk_key)
+    if (cp && cp.cluster_id >= 0) {
+      presentIds.add(cp.cluster_id)
     }
   }
   return dashboardStore.clusterData.clusters.filter(c => presentIds.has(c.cluster_id))
 })
 
 const visibleNoiseCount = computed(() => {
-  if (props.mode !== 'filtered') return 0
+  if (!hasSelection.value) return 0
   return props.points.filter(p => {
-    const cid = p.cluster_id !== undefined ? p.cluster_id : clusterPointMap.value.get(p.chunk_key)?.cluster_id
-    return cid === -1
+    if (!props.activeChunkKeys!.has(p.chunk_key)) return false
+    const cp = clusterPointMap.value.get(p.chunk_key)
+    return cp && cp.cluster_id === -1
   }).length
 })
-
-function initChart() {
-  if (!chartRef.value) return
-  myChart = echarts.init(chartRef.value)
-  updateChart()
-
-  window.addEventListener('resize', handleResize)
-}
 
 function applyChartUpdate() {
   if (!myChart) return
@@ -201,12 +193,20 @@ function updateChart() {
   })
 }
 
+function initChart() {
+  if (!chartRef.value) return
+  myChart = echarts.init(chartRef.value)
+  updateChart()
+
+  window.addEventListener('resize', handleResize)
+}
+
 function handleResize() {
   myChart?.resize()
 }
 
 watch(() => props.points, updateChart, { deep: true })
-watch(() => props.mode, updateChart)
+watch(() => props.activeChunkKeys, updateChart, { deep: true })
 watch(() => dashboardStore.clusterData, updateChart, { deep: true })
 
 onMounted(initChart)
@@ -229,7 +229,7 @@ onUnmounted(() => {
     </div>
     <div ref="chartRef" class="w-full h-48" />
     <div class="flex items-center gap-3 mt-2 text-[10px] text-stone-500 flex-wrap">
-      <template v-if="mode === 'full'">
+      <template v-if="!hasSelection">
         <div class="flex items-center gap-1">
           <span class="w-2 h-2 rounded-full bg-stone-400" />
           <span>chunks neutros</span>

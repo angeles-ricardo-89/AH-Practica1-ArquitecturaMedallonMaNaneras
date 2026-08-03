@@ -28,28 +28,26 @@ const selectedMessage = computed(() => {
 
 const selectedSources = computed(() => selectedMessage.value?.sources ?? [])
 
-const chartMode = computed(() => {
-  return dashboardStore.selectedResponseId ? 'filtered' : 'full'
+const posToChunkKey = computed(() => {
+  const map = new Map<string, string>()
+  for (const p of embeddingsPoints.value) {
+    const key = `${p.x.toFixed(6)}_${p.y.toFixed(6)}_${p.z.toFixed(6)}`
+    map.set(key, p.chunk_key)
+  }
+  return map
 })
 
-const visiblePoints = computed(() => {
-  if (!dashboardStore.selectedResponseId) {
-    return embeddingsPoints.value
-  }
-  const pts: Embedding3DPoint[] = []
+const activeChunkKeys = computed(() => {
+  if (!dashboardStore.selectedResponseId) return new Set<string>()
+  const set = new Set<string>()
   for (const src of selectedSources.value) {
     if (src.embedding_3d && src.embedding_3d.length === 3) {
-      pts.push({
-        chunk_key: src.conference_id,
-        x: src.embedding_3d[0],
-        y: src.embedding_3d[1],
-        z: src.embedding_3d[2],
-        conference_date: src.conference_date,
-        cluster_id: src.cluster_id ?? undefined,
-      })
+      const key = `${src.embedding_3d[0].toFixed(6)}_${src.embedding_3d[1].toFixed(6)}_${src.embedding_3d[2].toFixed(6)}`
+      const ck = posToChunkKey.value.get(key)
+      if (ck) set.add(ck)
     }
   }
-  return pts
+  return set
 })
 
 async function fetchEmbeddings() {
@@ -111,8 +109,8 @@ onUnmounted(() => {
           </div>
           <Embeddings3D
             v-else
-            :points="visiblePoints"
-            :mode="chartMode"
+            :points="embeddingsPoints"
+            :active-chunk-keys="activeChunkKeys"
             class="shrink-0"
           />
 
