@@ -33,7 +33,6 @@ function toggleDetail(e: Event) {
   <div
     class="w-full"
     :class="message.role === 'user' ? 'flex justify-end' : 'flex justify-start'"
-    @click="handleClick"
   >
     <!-- User message -->
     <div
