@@ -23,19 +23,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   const isModalOpen = computed(() => modalCapa.value !== null)
 
-  const clusterColorMap = computed(() => {
-    const palette = [
-      '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-      '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
-    ]
-    const map = new Map<number, string>()
-    if (!clusterData.value) return map
-    for (const cluster of clusterData.value.clusters) {
-      const color = palette[cluster.cluster_id % palette.length]
-      map.set(cluster.cluster_id, color!)
-    }
-    return map
-  })
+  const sessionClusterColors = ref<Map<number, string>>(new Map())
+
+  const PALETTE = [
+    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+    '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+  ]
+
+  function getClusterColor(clusterId: number): string {
+    return sessionClusterColors.value.get(clusterId) ?? '#A8A29E'
+  }
 
   function selectResponse(id: string | null) {
     selectedResponseId.value = id
@@ -55,8 +52,17 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   async function fetchClusters() {
     try {
-      clusterData.value = await getClustersLatest()
+      const data = await getClustersLatest()
+      clusterData.value = data
       clusterError.value = null
+
+      // Preservar colores existentes, asignar nuevos
+      for (const cluster of data.clusters) {
+        if (!sessionClusterColors.value.has(cluster.cluster_id)) {
+          const color = PALETTE[cluster.cluster_id % PALETTE.length]
+          sessionClusterColors.value.set(cluster.cluster_id, color!)
+        }
+      }
     } catch (err) {
       clusterError.value = err instanceof Error ? err.message : 'Error al obtener clusters'
     }
@@ -68,7 +74,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     autoRefresh,
     clusterData,
     clusterError,
-    clusterColorMap,
+    sessionClusterColors,
+    getClusterColor,
     isModalOpen,
     selectResponse,
     openModal,
