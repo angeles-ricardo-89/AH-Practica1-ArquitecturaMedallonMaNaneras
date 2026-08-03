@@ -57,6 +57,8 @@ class EnrichService:
         conference_date: str | None = None,
         clean: bool = False,
         workers: int = 1,
+        run_clustering: bool = False,
+        run_semantic_cluster_labeling: bool = False,
     ) -> dict:
         rows = self._conn.execute(
             """
@@ -139,11 +141,19 @@ class EnrichService:
 
             _compute_umap_3d(self._pg_conn_str)
 
+        flags = run_clustering or run_semantic_cluster_labeling
+        do_cluster = run_clustering or (not flags and result.get("embedded", 0) > 0)
+        do_label = run_semantic_cluster_labeling or (not flags and result.get("embedded", 0) > 0)
+
+        cluster_result: dict | None = None
+        if do_cluster:
             self._logger.info("Ejecutando clusterizacion semantica")
             try:
-                from lakehouse.pipeline.clustering import run_clustering_pipeline  # noqa: PLC0415
+                from lakehouse.pipeline.clustering import (  # noqa: PLC0415
+                    run_clustering as _run_clustering,
+                )
 
-                cluster_result = run_clustering_pipeline(self._settings)
+                cluster_result = _run_clustering(self._settings, force=run_clustering)
                 if cluster_result and cluster_result.get("skipped"):
                     self._logger.info(
                         "clusterizacion_omitida",
@@ -158,4 +168,24 @@ class EnrichService:
                     )
             except Exception:
                 self._logger.exception("clusterizacion_fallida")
+                cluster_result = None
+
+        if do_label:
+            self._logger.info("Ejecutando autoetiquetado semantico")
+            try:
+                from lakehouse.pipeline.clustering import run_labeling  # noqa: PLC0415
+
+                label_result = run_labeling(
+                    self._settings,
+                    run_id=cluster_result["run_id"] if cluster_result else None,
+                )
+                if label_result:
+                    self._logger.info(
+                        "etiquetado_completado",
+                        run_id=label_result.get("run_id"),
+                        completed=label_result.get("completed"),
+                        failed=label_result.get("failed"),
+                    )
+            except Exception:
+                self._logger.exception("etiquetado_fallido")
         return result
