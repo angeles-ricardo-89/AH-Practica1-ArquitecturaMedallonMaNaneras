@@ -823,6 +823,19 @@ def test_run_labeling_no_pending_returns_none(monkeypatch):
     labeled.assert_not_called()
 
 
+def test_run_labeling_no_chunks_returns_none(monkeypatch):
+    _mock_labeling_connect(
+        monkeypatch,
+        run_row=("run-1",),
+        chunk_rows=[],
+    )
+    labeled = MagicMock()
+    monkeypatch.setattr(clustering, "label_clusters", labeled)
+
+    assert clustering.run_labeling(Settings()) is None
+    labeled.assert_not_called()
+
+
 def test_run_labeling_updates_status_partial(monkeypatch):
     chunk_rows = [("k1", "t1", 0, 0.9)]
     captured = _mock_labeling_connect(
