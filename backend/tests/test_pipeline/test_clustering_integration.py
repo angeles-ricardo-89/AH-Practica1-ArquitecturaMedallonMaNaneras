@@ -4,6 +4,7 @@ import pytest
 from sklearn.preprocessing import normalize
 
 from lakehouse.config import Settings
+from lakehouse.pipeline import clustering
 from lakehouse.pipeline.clustering import (
     compute_corpus_fingerprint,
     compute_parameters_hash,
@@ -195,4 +196,127 @@ def test_embedding_3d_not_used_for_hdbscan(pg_conn_str):
     finally:
         with psycopg.connect(pg_conn_str) as conn:
             conn.execute("DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'viz_chunk_%'")
+            conn.commit()
+
+
+def test_run_clustering_no_label_rows(pg_conn_str):
+    with psycopg.connect(pg_conn_str) as conn:
+        conn.execute(
+            "DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'clust_only_%' "
+            "OR chunk_key LIKE 'viz_chunk_%' OR chunk_key LIKE 'ck_test_%'"
+        )
+        ensure_clustering_schema(conn)
+        cur = conn.cursor()
+        vectors = [np.random.RandomState(i).randn(768).tolist() for i in (11, 12, 13, 14)]
+        cur.executemany(
+            """
+            INSERT INTO gold.rag_corpus (chunk_key, conference_id, conference_date,
+                                         participant, chunk_text, payload, embedding)
+            VALUES (%s, 'c1', '2025-01-01', 'p1', 'texto', 'payload', %s::vector)
+            """,
+            [
+                (f"clust_only_{i}", "[" + ",".join(str(x) for x in v) + "]")
+                for i, v in enumerate(vectors)
+            ],
+        )
+        conn.commit()
+
+    run_id = None
+    try:
+        settings = Settings()
+        settings.umap_clustering_n_components = 2
+        settings.umap_clustering_n_neighbors = 3
+        settings.hdbscan_min_cluster_size = 2
+        settings.hdbscan_min_samples = 2
+
+        result = clustering.run_clustering(settings)
+        assert result is not None
+        run_id = result["run_id"]
+
+        with psycopg.connect(pg_conn_str) as conn:
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM gold.cluster_labels WHERE clustering_run_id = %s",
+                (run_id,),
+            )
+            row = cur.fetchone()
+            assert row is not None
+            assert row[0] == 0
+    finally:
+        with psycopg.connect(pg_conn_str) as conn:
+            conn.execute("DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'clust_only_%'")
+            if run_id:
+                conn.execute(
+                    "DELETE FROM gold.cluster_labels WHERE clustering_run_id = %s", (run_id,)
+                )
+                conn.execute("DELETE FROM gold.clustering_runs WHERE run_id = %s", (run_id,))
+            conn.commit()
+
+
+def test_labeling_independent_after_clustering(pg_conn_str, monkeypatch):
+    run_id = "33333333-3333-3333-3333-333333333333"
+
+    with psycopg.connect(pg_conn_str) as conn:
+        conn.execute("DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'label_after_%'")
+        ensure_clustering_schema(conn)
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO gold.clustering_runs
+                (run_id, status, cluster_count, noise_count, corpus_fingerprint,
+                 parameters_hash, embedding_model)
+            VALUES (%s, 'completed', 1, 0, 'fp', 'ph', 'model')
+            """,
+            (run_id,),
+        )
+        cur.execute(
+            """
+            INSERT INTO gold.rag_corpus (chunk_key, conference_id, conference_date,
+                                         participant, chunk_text, payload,
+                                         cluster_id, cluster_pertenencia, clustering_run_id)
+            VALUES
+            ('label_after_1', 'c1', '2025-01-01', 'p1', 'texto sobre salud publica', 'pl1',
+             0, 0.95, %s),
+            ('label_after_2', 'c1', '2025-01-01', 'p1', 'otro texto sobre salud', 'pl2',
+             0, 0.85, %s),
+            ('label_after_3', 'c1', '2025-01-01', 'p1', 'texto de economia', 'pl3',
+             1, 0.75, %s)
+            ON CONFLICT (chunk_key) DO NOTHING
+            """,
+            (run_id, run_id, run_id),
+        )
+        conn.commit()
+
+    try:
+        monkeypatch.setattr(clustering, "generate_label", lambda *_args, **_kwargs: "Salud Publica")
+        result = clustering.run_labeling(Settings(), run_id=run_id)
+
+        assert str(result["run_id"]) == run_id
+        assert result["completed"] == 2
+        assert result["failed"] == 0
+
+        with psycopg.connect(pg_conn_str) as conn:
+            cur = conn.execute(
+                "SELECT cluster_id, cluster_label, label_status FROM gold.cluster_labels "
+                "WHERE clustering_run_id = %s ORDER BY cluster_id",
+                (run_id,),
+            )
+            rows = cur.fetchall()
+            assert rows[0] == (0, "Salud Publica", "completed")
+            assert rows[1] == (1, "Salud Publica", "completed")
+
+            cur = conn.execute(
+                "SELECT labeled_cluster_count, failed_label_count, status "
+                "FROM gold.clustering_runs WHERE run_id = %s",
+                (run_id,),
+            )
+            run_row = cur.fetchone()
+            assert run_row is not None
+            assert run_row[0] == 2
+            assert run_row[1] == 0
+            assert run_row[2] == "completed"
+    finally:
+        with psycopg.connect(pg_conn_str) as conn:
+            conn.execute("DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'label_after_%'")
+            conn.execute("DELETE FROM gold.cluster_labels WHERE clustering_run_id = %s", (run_id,))
+            conn.execute("DELETE FROM gold.clustering_runs WHERE run_id = %s", (run_id,))
             conn.commit()
