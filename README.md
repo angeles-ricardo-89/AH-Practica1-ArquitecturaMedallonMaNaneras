@@ -6,7 +6,8 @@ de Mexico.
 
 **Fuente oficial:** [https://www.gob.mx/presidencia/es/archivo/articulos](https://www.gob.mx/presidencia/es/archivo/articulos)
 
-<img width="1774" height="887" alt="11ac5489-cbd7-4016-9d1d-92af89a00728" src="https://github.com/user-attachments/assets/26111313-b0a3-4b6e-87db-a5f66d9151b4" />
+<img width="1774" height="887" alt="df1c51bc-70a1-41b6-8883-0c3934f07bdc" src="https://github.com/user-attachments/assets/260cd5e4-3f72-497d-96e1-1fb8e11709f7" />
+
 
 
 [![Backend Tests](https://img.shields.io/badge/backend%20tests-380%20passed-brightgreen)]()
