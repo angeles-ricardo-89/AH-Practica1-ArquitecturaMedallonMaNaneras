@@ -16,6 +16,7 @@ const dashboardStore = useDashboardStore()
 const chartRef = ref<HTMLElement | null>(null)
 let myChart: echarts.ECharts | null = null
 let rafId: number | null = null
+let resizeObserver: ResizeObserver | null = null
 
 const hasSelection = computed(() => props.activeChunkKeys && props.activeChunkKeys.size > 0)
 
@@ -199,6 +200,11 @@ function initChart() {
   updateChart()
 
   window.addEventListener('resize', handleResize)
+
+  resizeObserver = new ResizeObserver(() => {
+    myChart?.resize()
+  })
+  resizeObserver.observe(chartRef.value)
 }
 
 function handleResize() {
@@ -212,6 +218,8 @@ watch(() => dashboardStore.clusterData, updateChart, { deep: true })
 onMounted(initChart)
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  resizeObserver?.disconnect()
+  resizeObserver = null
   if (rafId !== null) {
     cancelAnimationFrame(rafId)
     rafId = null
