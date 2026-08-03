@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from lakehouse.api.routers import chat, config, embeddings, health, observability, search
+from lakehouse.api.routers import chat, clusters, config, embeddings, health, observability, search
 
 
 @asynccontextmanager
@@ -25,6 +25,7 @@ app.include_router(chat.router)
 app.include_router(observability.router)
 app.include_router(config.router)
 app.include_router(embeddings.router)
+app.include_router(clusters.router)
 
 
 @app.exception_handler(RuntimeError)
