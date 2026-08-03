@@ -205,6 +205,14 @@ def enrich(
     conference_date: str | None = typer.Option(None, "--date", help="Conference date"),
     clean: bool = typer.Option(default=False, help="Drop gold tables before enriching"),
     workers: int = typer.Option(default=1, help="Parallel Ollama embedding workers"),
+    run_clustering: bool = typer.Option(
+        default=False,
+        help="Fuerza re-clusterizacion semantica (UMAP+HDBSCAN) sobre el corpus",
+    ),
+    run_semantic_cluster_labeling: bool = typer.Option(
+        default=False,
+        help="Ejecuta autoetiquetado LLM sobre clusters existentes de la ultima corrida",
+    ),
 ) -> None:
     settings = Settings()
     pg_conn_str = _get_pg_conn_str(settings)
@@ -228,7 +236,12 @@ def enrich(
     try:
         with install_graceful_interrupt():
             result = service.run(
-                dry_run=dry_run, conference_date=conference_date, clean=clean, workers=workers
+                dry_run=dry_run,
+                conference_date=conference_date,
+                clean=clean,
+                workers=workers,
+                run_clustering=run_clustering,
+                run_semantic_cluster_labeling=run_semantic_cluster_labeling,
             )
     except Exception as e:
         if not dry_run:
