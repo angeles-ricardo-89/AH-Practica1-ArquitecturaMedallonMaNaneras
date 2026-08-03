@@ -238,6 +238,21 @@ def persist_cluster_assignments(
         conn.commit()
 
 
+def select_representative_chunks(
+    chunks: list[dict],
+    cluster_id: int,
+    k: int = 5,
+) -> list[dict]:
+    if cluster_id < 0:
+        return []
+    cluster_chunks = [
+        c for c in chunks
+        if c.get("cluster_id") == cluster_id
+    ]
+    cluster_chunks.sort(key=lambda c: (-c.get("cluster_pertenencia", 0.0), c["chunk_key"]))
+    return cluster_chunks[:k]
+
+
 
 
 

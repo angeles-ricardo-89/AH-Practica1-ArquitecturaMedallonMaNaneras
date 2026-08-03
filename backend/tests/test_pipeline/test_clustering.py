@@ -336,3 +336,66 @@ def test_persist_cluster_assignments(pg_conn_str):
         assert rows[1][1] == 1
         assert rows[1][2] == pytest.approx(0.80)
         assert str(rows[1][3]) == run_id
+
+
+def test_select_representative_chunks_top_k():
+    from lakehouse.pipeline.clustering import select_representative_chunks
+
+    chunks = [
+        {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.5},
+        {"chunk_key": "b", "cluster_id": 0, "cluster_pertenencia": 0.9},
+        {"chunk_key": "c", "cluster_id": 0, "cluster_pertenencia": 0.3},
+        {"chunk_key": "d", "cluster_id": 0, "cluster_pertenencia": 0.7},
+        {"chunk_key": "e", "cluster_id": 0, "cluster_pertenencia": 0.6},
+        {"chunk_key": "f", "cluster_id": 0, "cluster_pertenencia": 0.8},
+    ]
+    result = select_representative_chunks(chunks, cluster_id=0, k=3)
+    assert len(result) == 3
+    assert result[0]["chunk_key"] == "b"
+    assert result[1]["chunk_key"] == "f"
+    assert result[2]["chunk_key"] == "d"
+
+
+def test_select_representative_chunks_tiebreaker():
+    from lakehouse.pipeline.clustering import select_representative_chunks
+
+    chunks = [
+        {"chunk_key": "z", "cluster_id": 0, "cluster_pertenencia": 0.9},
+        {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.9},
+    ]
+    result = select_representative_chunks(chunks, cluster_id=0, k=2)
+    assert result[0]["chunk_key"] == "a"
+    assert result[1]["chunk_key"] == "z"
+
+
+def test_select_representative_chunks_small_cluster():
+    from lakehouse.pipeline.clustering import select_representative_chunks
+
+    chunks = [
+        {"chunk_key": "x", "cluster_id": 1, "cluster_pertenencia": 0.8},
+    ]
+    result = select_representative_chunks(chunks, cluster_id=1, k=5)
+    assert len(result) == 1
+
+
+def test_select_representative_chunks_excludes_other_clusters():
+    from lakehouse.pipeline.clustering import select_representative_chunks
+
+    chunks = [
+        {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.9},
+        {"chunk_key": "b", "cluster_id": 1, "cluster_pertenencia": 0.95},
+    ]
+    result = select_representative_chunks(chunks, cluster_id=0, k=5)
+    assert len(result) == 1
+    assert result[0]["chunk_key"] == "a"
+
+
+def test_select_representative_chunks_excludes_noise():
+    from lakehouse.pipeline.clustering import select_representative_chunks
+
+    chunks = [
+        {"chunk_key": "n", "cluster_id": -1, "cluster_pertenencia": 0.0},
+        {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.9},
+    ]
+    result = select_representative_chunks(chunks, cluster_id=-1, k=5)
+    assert len(result) == 0
