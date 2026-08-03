@@ -18,6 +18,7 @@ const dashboardStore = useDashboardStore()
 
 const embeddingsPoints = ref<Embedding3DPoint[]>([])
 const embeddingsError = ref<string | null>(null)
+const chatAreaRef = ref<HTMLElement>()
 
 const selectedMessage = computed(() => {
   if (!dashboardStore.selectedResponseId) return null
@@ -27,6 +28,12 @@ const selectedMessage = computed(() => {
 })
 
 const selectedSources = computed(() => selectedMessage.value?.sources ?? [])
+
+function handleOutsideClick(e: MouseEvent) {
+  if (!chatAreaRef.value?.contains(e.target as Node)) {
+    dashboardStore.selectResponse(null)
+  }
+}
 
 const posToChunkKey = computed(() => {
   const map = new Map<string, string>()
@@ -65,10 +72,12 @@ onMounted(() => {
   obsStore.startPolling()
   fetchEmbeddings()
   dashboardStore.fetchClusters()
+  document.addEventListener('click', handleOutsideClick)
 })
 
 onUnmounted(() => {
   obsStore.stopPolling()
+  document.removeEventListener('click', handleOutsideClick)
 })
 </script>
 
@@ -97,7 +106,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Columna central: Chat RAG -->
-        <div class="flex-1 min-w-0 overflow-hidden">
+        <div ref="chatAreaRef" class="flex-1 min-w-0 overflow-hidden">
           <ChatWindow class="h-full" />
         </div>
 
