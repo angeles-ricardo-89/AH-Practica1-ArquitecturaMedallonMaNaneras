@@ -23,6 +23,19 @@ corpus indexado y consultable semanticamente. Responde preguntas sobre el conten
 de las conferencias con citas verificables a las fuentes originales, usando un modelo
 de lenguaje local sin depender de APIs externas.
 
+## Motivación
+
+Elegí las conferencias matutinas de la Presidencia de México como tema del proyecto porque constituyen una fuente pública, periódica y abundante de información sobre las decisiones, acciones, prioridades y posturas de la administración federal.
+
+Más allá de cualquier valoración política, este tipo de comunicación representa un caso de estudio interesante desde la perspectiva de la ingeniería de datos y la inteligencia artificial: combina grandes volúmenes de texto, diversidad de temas, participación de distintas dependencias, preguntas de periodistas y respuestas que pueden relacionarse entre sí a lo largo del tiempo.
+
+La dinámica de exponer públicamente decisiones, avances y explicaciones de gobierno también ofrece una oportunidad para facilitar la consulta y trazabilidad de información que, aunque está disponible, puede resultar difícil de revisar de forma manual debido a su extensión y frecuencia.
+
+Por ello, el propósito del proyecto no es calificar, promover ni desacreditar a una administración, partido político o figura pública. Su objetivo es construir una herramienta técnica que permita organizar, buscar y consultar el contenido de las conferencias, conservando referencias a las fuentes originales y diferenciando, en la medida de lo posible, entre información documentada, interpretaciones y afirmaciones para las que no existe evidencia suficiente en el corpus.
+
+La selección del tema responde, por tanto, a su relevancia pública, a la disponibilidad de una fuente oficial y a la riqueza técnica que ofrece para demostrar una arquitectura de datos medallón y un sistema RAG con recuperación semántica, citas y mecanismos para reducir alucinaciones.
+
+
 ### Fuente de datos
 
 Todas las publicaciones del archivo de articulos de la Presidencia de Mexico en
