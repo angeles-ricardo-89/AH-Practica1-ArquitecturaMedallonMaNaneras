@@ -213,7 +213,7 @@ onUnmounted(() => {
           <span>{{ cluster.label || `Cluster ${cluster.cluster_id}` }}</span>
         </div>
         <div v-if="visibleNoiseCount > 0" class="flex items-center gap-1">
-          <span class="w-2 h-2 rounded-full opacity-30" style="background-color: rgba(168, 162, 158, 0.3);" />
+          <span class="w-2 h-2 rounded-full opacity-50" style="background-color: #A8A29E;" />
           <span>ruido ({{ visibleNoiseCount }})</span>
         </div>
       </template>
