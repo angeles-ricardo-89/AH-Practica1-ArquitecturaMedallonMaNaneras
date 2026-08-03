@@ -6,10 +6,12 @@ import type { Embedding3DPoint } from '../../api/embeddings'
 import { useDashboardStore } from '../../stores/dashboard'
 import type { ClusterPoint } from '../../api/clusters'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   points: Embedding3DPoint[]
-  mode: 'full' | 'filtered'
-}>()
+  mode?: 'full' | 'filtered'
+}>(), {
+  mode: 'full',
+})
 
 const dashboardStore = useDashboardStore()
 
@@ -193,10 +195,6 @@ onUnmounted(() => {
         <div class="flex items-center gap-1">
           <span class="w-2 h-2 rounded-full bg-stone-400" />
           <span>chunks neutros</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <span class="w-2 h-2 rounded-full bg-red-900" />
-          <span>chunks citados</span>
         </div>
         <div v-if="dashboardStore.clusterData && dashboardStore.clusterData.noise_count > 0" class="flex items-center gap-1">
           <span class="w-2 h-2 rounded-full opacity-30" style="background-color: rgba(168, 162, 158, 0.3);" />
