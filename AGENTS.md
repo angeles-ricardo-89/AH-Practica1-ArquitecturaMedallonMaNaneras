@@ -78,6 +78,8 @@ Todo agente debe cargar y seguir estas skills. No son opcionales.
 | DuckDB + pgvector | `.opencode/skills/tech/duckdb_pgvector.md` | Datos, Vectores |
 | Testing + QA | `.opencode/skills/tech/testing_qa.md` | Calidad |
 | ECharts 3D Vue | .opencode/skills/tech/echarts_3d_vue.md | Visualización 3D |
+| UMAP + HDBSCAN Clustering | `.opencode/skills/tech/umap_hdbscan_clustering.md` | Clustering semantico |
+| LLM Auto-Labeling | `.opencode/skills/tech/llm_auto_labeling.md` | Etiquetado automatico |
 ### Skills de Dominio
 
 | Skill | Archivo | Responsabilidad |
