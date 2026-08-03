@@ -41,7 +41,7 @@ const chartData = computed(() => {
         color = dashboardStore.getClusterColor(cp.cluster_id)
         opacity = 1.0
       } else if (cp && cp.cluster_id === -1) {
-        color = noiseColor
+        color = '#A8A29E'
         opacity = 0.5
       } else {
         color = '#A8A29E'
