@@ -34,17 +34,23 @@ def _fetch_cluster_data(conn_str: str, run_id: str | None = None) -> ClusterData
         run_row = cur.fetchone()
         if not run_row:
             return ClusterDataResponse(
-                run_id="", status="not_found", cluster_count=0, noise_count=0,
+                run_id="",
+                status="not_found",
+                cluster_count=0,
+                noise_count=0,
             )
         run_id_val, status, cluster_count, noise_count = run_row
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT gl.cluster_id, gl.cluster_label, gl.label_status,
                    gl.sample_size, gl.sample_chunk_keys
             FROM gold.cluster_labels gl
             WHERE gl.clustering_run_id = %s
             ORDER BY gl.cluster_id
-        """, (run_id_val,))
+        """,
+            (run_id_val,),
+        )
         label_rows = cur.fetchall()
 
         labels_map: dict[int, ClusterInfo] = {}
@@ -55,13 +61,16 @@ def _fetch_cluster_data(conn_str: str, run_id: str | None = None) -> ClusterData
                 sample_chunk_keys=list(sck) if sck else [],
             )
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT g.cluster_id, COUNT(*) AS cnt, AVG(g.cluster_pertenencia) AS avg_p
             FROM gold.rag_corpus g
             WHERE g.clustering_run_id = %s AND g.cluster_id IS NOT NULL
             GROUP BY g.cluster_id
             ORDER BY g.cluster_id
-        """, (run_id_val,))
+        """,
+            (run_id_val,),
+        )
         count_rows = cur.fetchall()
 
         for cid, cnt, avg_p in count_rows:
@@ -70,16 +79,20 @@ def _fetch_cluster_data(conn_str: str, run_id: str | None = None) -> ClusterData
                 labels_map[cid].avg_membership = round(float(avg_p), 4) if avg_p else 0.0
             else:
                 labels_map[cid] = ClusterInfo(
-                    cluster_id=cid, chunk_count=cnt,
+                    cluster_id=cid,
+                    chunk_count=cnt,
                     avg_membership=round(float(avg_p), 4) if avg_p else 0.0,
                 )
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT g.chunk_key, g.cluster_id, g.cluster_pertenencia,
                    g.embedding_3d[1] AS x, g.embedding_3d[2] AS y, g.embedding_3d[3] AS z
             FROM gold.rag_corpus g
             WHERE g.clustering_run_id = %s AND g.embedding_3d IS NOT NULL
-        """, (run_id_val,))
+        """,
+            (run_id_val,),
+        )
         point_rows = cur.fetchall()
 
         points = [

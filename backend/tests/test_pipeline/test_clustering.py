@@ -3,8 +3,25 @@ from unittest.mock import MagicMock
 import numpy as np
 import psycopg
 import pytest
+import umap
+from hdbscan import HDBSCAN
+from sklearn.preprocessing import normalize
 
-from lakehouse.pipeline.clustering import ensure_clustering_schema
+from lakehouse.config import Settings
+from lakehouse.pipeline import clustering
+from lakehouse.pipeline.clustering import (
+    compute_corpus_fingerprint,
+    compute_parameters_hash,
+    ensure_clustering_schema,
+    format_labeling_prompt,
+    load_embeddings,
+    load_prompt_template,
+    persist_cluster_assignments,
+    run_clustering_pipeline,
+    select_representative_chunks,
+    validate_embeddings,
+    validate_label,
+)
 
 
 def test_ensure_clustering_schema_creates_columns_and_tables(pg_conn_str):
@@ -69,9 +86,7 @@ def test_cluster_labels_no_negative_cluster_id(pg_conn_str):
 
 
 def test_validate_embeddings_rejects_null():
-    from lakehouse.pipeline.clustering import validate_embeddings
-
-    keys, vecs, rejected = validate_embeddings(
+    keys, _, rejected = validate_embeddings(
         keys=["k1", "k2"],
         embeddings=[None, np.array([1.0, 2.0, 3.0], dtype=np.float64)],
         expected_dim=3,
@@ -82,9 +97,7 @@ def test_validate_embeddings_rejects_null():
 
 
 def test_validate_embeddings_rejects_nan():
-    from lakehouse.pipeline.clustering import validate_embeddings
-
-    keys, vecs, rejected = validate_embeddings(
+    _, _, rejected = validate_embeddings(
         keys=["k1"],
         embeddings=[np.array([1.0, np.nan, 3.0], dtype=np.float64)],
         expected_dim=3,
@@ -94,9 +107,7 @@ def test_validate_embeddings_rejects_nan():
 
 
 def test_validate_embeddings_rejects_inf():
-    from lakehouse.pipeline.clustering import validate_embeddings
-
-    keys, vecs, rejected = validate_embeddings(
+    _, _, rejected = validate_embeddings(
         keys=["k1"],
         embeddings=[np.array([1.0, np.inf, 3.0], dtype=np.float64)],
         expected_dim=3,
@@ -106,9 +117,7 @@ def test_validate_embeddings_rejects_inf():
 
 
 def test_validate_embeddings_rejects_wrong_dim():
-    from lakehouse.pipeline.clustering import validate_embeddings
-
-    keys, vecs, rejected = validate_embeddings(
+    _, _, rejected = validate_embeddings(
         keys=["k1"],
         embeddings=[np.array([1.0, 2.0], dtype=np.float64)],
         expected_dim=3,
@@ -118,9 +127,7 @@ def test_validate_embeddings_rejects_wrong_dim():
 
 
 def test_validate_embeddings_rejects_zero_norm():
-    from lakehouse.pipeline.clustering import validate_embeddings
-
-    keys, vecs, rejected = validate_embeddings(
+    _, _, rejected = validate_embeddings(
         keys=["k1"],
         embeddings=[np.array([0.0, 0.0, 0.0], dtype=np.float64)],
         expected_dim=3,
@@ -130,8 +137,6 @@ def test_validate_embeddings_rejects_zero_norm():
 
 
 def test_validate_embeddings_accepts_valid():
-    from lakehouse.pipeline.clustering import validate_embeddings
-
     keys, vecs, rejected = validate_embeddings(
         keys=["k1", "k2"],
         embeddings=[
@@ -146,16 +151,12 @@ def test_validate_embeddings_accepts_valid():
 
 
 def test_normalize_l2_preserves_shape():
-    from sklearn.preprocessing import normalize
-
     vecs = np.array([[3.0, 4.0, 0.0], [1.0, 1.0, 1.0]], dtype=np.float64)
     result = normalize(vecs, norm="l2")
     assert result.shape == vecs.shape
 
 
 def test_normalize_l2_unit_norm():
-    from sklearn.preprocessing import normalize
-
     vecs = np.random.RandomState(42).randn(10, 768).astype(np.float64)
     result = normalize(vecs, norm="l2")
     norms = np.linalg.norm(result, axis=1)
@@ -163,8 +164,6 @@ def test_normalize_l2_unit_norm():
 
 
 def test_corpus_fingerprint_deterministic():
-    from lakehouse.pipeline.clustering import compute_corpus_fingerprint
-
     keys = ["key_a", "key_b", "key_c"]
     emb = np.random.RandomState(42).randn(3, 768).astype(np.float64)
     fp1 = compute_corpus_fingerprint(keys, emb, "embeddinggemma")
@@ -173,8 +172,6 @@ def test_corpus_fingerprint_deterministic():
 
 
 def test_corpus_fingerprint_changes_with_data():
-    from lakehouse.pipeline.clustering import compute_corpus_fingerprint
-
     keys = ["k1", "k2"]
     emb1 = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
     emb2 = np.array([[1.0, 2.0], [3.0, 5.0]], dtype=np.float64)
@@ -184,8 +181,6 @@ def test_corpus_fingerprint_changes_with_data():
 
 
 def test_corpus_fingerprint_different_key_order_same_hash():
-    from lakehouse.pipeline.clustering import compute_corpus_fingerprint
-
     emb = np.array([[1.0], [2.0], [3.0]], dtype=np.float64)
     fp1 = compute_corpus_fingerprint(["c", "a", "b"], emb, "model")
     fp2 = compute_corpus_fingerprint(["a", "b", "c"], emb, "model")
@@ -193,32 +188,32 @@ def test_corpus_fingerprint_different_key_order_same_hash():
 
 
 def test_parameters_hash_deterministic():
-    from lakehouse.pipeline.clustering import compute_parameters_hash
-
     params1 = {"umap_n_components": 15, "hdbscan_min_cluster_size": 10}
     params2 = {"umap_n_components": 15, "hdbscan_min_cluster_size": 10}
     assert compute_parameters_hash(params1) == compute_parameters_hash(params2)
 
 
 def test_parameters_hash_changes_with_params():
-    from lakehouse.pipeline.clustering import compute_parameters_hash
-
     h1 = compute_parameters_hash({"x": 15})
     h2 = compute_parameters_hash({"x": 16})
     assert h1 != h2
 
 
 def test_load_embeddings_returns_keys_and_array(pg_conn_str):
-    from lakehouse.pipeline.clustering import ensure_clustering_schema, load_embeddings
-
     rng = np.random.RandomState(42)
     vec_a = rng.randn(768).tolist()
     vec_b = rng.randn(768).tolist()
 
     with psycopg.connect(pg_conn_str) as conn:
+        conn.execute(
+            "DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'ck_test_%' "
+            "OR chunk_key LIKE 'viz_chunk_%' OR chunk_key LIKE 'assign_%' "
+            "OR chunk_key LIKE 'int_test_%'"
+        )
         ensure_clustering_schema(conn)
         cur = conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO gold.rag_corpus (chunk_key, conference_id, conference_date,
                                          participant, chunk_text, payload, embedding)
             VALUES
@@ -229,10 +224,12 @@ def test_load_embeddings_returns_keys_and_array(pg_conn_str):
             ('ck_test_null', 'conf_1', '2025-01-01', 'p1', 'texto null', 'payload null',
              NULL)
             ON CONFLICT (chunk_key) DO NOTHING
-        """, (
-            "[" + ",".join(str(x) for x in vec_a) + "]",
-            "[" + ",".join(str(x) for x in vec_b) + "]",
-        ))
+        """,
+            (
+                "[" + ",".join(str(x) for x in vec_a) + "]",
+                "[" + ",".join(str(x) for x in vec_b) + "]",
+            ),
+        )
         conn.commit()
 
     try:
@@ -249,50 +246,45 @@ def test_load_embeddings_returns_keys_and_array(pg_conn_str):
 
 
 def test_load_embeddings_empty_table(pg_conn_str):
-    from lakehouse.pipeline.clustering import load_embeddings
-
     with psycopg.connect(pg_conn_str) as conn:
         conn.execute("DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'ck_test_%'")
         conn.commit()
 
-    keys, embeddings, null_keys = load_embeddings(pg_conn_str)
+    keys, embeddings, _ = load_embeddings(pg_conn_str)
     assert keys == []
     assert embeddings.shape[0] == 0
 
 
 def test_umap_clustering_output_dimension():
-    import umap
-
-    X = np.random.RandomState(42).randn(100, 768).astype(np.float64)
+    data = np.random.RandomState(42).randn(100, 768).astype(np.float64)
     reducer = umap.UMAP(
-        n_components=15, metric="cosine", min_dist=0.0,
-        n_neighbors=15, random_state=42,
+        n_components=15,
+        metric="cosine",
+        min_dist=0.0,
+        n_neighbors=15,
+        random_state=42,
     )
-    result = reducer.fit_transform(X)
+    result = reducer.fit_transform(data)
     assert result.shape == (100, 15)
 
 
 def test_hdbscan_labels_and_probabilities_shapes():
-    from hdbscan import HDBSCAN
-
     rng = np.random.RandomState(42)
-    X = rng.randn(50, 5).astype(np.float64)
+    data = rng.randn(50, 5).astype(np.float64)
     clusterer = HDBSCAN(min_cluster_size=5, min_samples=3)
-    labels = clusterer.fit_predict(X)
+    labels = clusterer.fit_predict(data)
     probs = clusterer.probabilities_
     assert labels.shape == (50,)
     assert probs.shape == (50,)
 
 
 def test_noise_gets_cluster_minus_one():
-    from hdbscan import HDBSCAN
-
     rng = np.random.RandomState(42)
-    X = rng.randn(20, 2).astype(np.float64)
-    X[:5] = np.random.RandomState(99).randn(5, 2) * 0.01
-    X[5:10] = np.random.RandomState(88).randn(5, 2) * 0.01 + 10.0
+    data = rng.randn(20, 2).astype(np.float64)
+    data[:5] = np.random.RandomState(99).randn(5, 2) * 0.01
+    data[5:10] = np.random.RandomState(88).randn(5, 2) * 0.01 + 10.0
     clusterer = HDBSCAN(min_cluster_size=3, min_samples=2)
-    labels = clusterer.fit_predict(X)
+    labels = clusterer.fit_predict(data)
     probs = clusterer.probabilities_
     for i in range(len(labels)):
         if labels[i] == -1:
@@ -300,8 +292,6 @@ def test_noise_gets_cluster_minus_one():
 
 
 def test_persist_cluster_assignments(pg_conn_str):
-    from lakehouse.pipeline.clustering import ensure_clustering_schema, persist_cluster_assignments
-
     run_id = "00000000-0000-0000-0000-000000000001"
 
     with psycopg.connect(pg_conn_str) as conn:
@@ -341,8 +331,6 @@ def test_persist_cluster_assignments(pg_conn_str):
 
 
 def test_select_representative_chunks_top_k():
-    from lakehouse.pipeline.clustering import select_representative_chunks
-
     chunks = [
         {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.5},
         {"chunk_key": "b", "cluster_id": 0, "cluster_pertenencia": 0.9},
@@ -359,8 +347,6 @@ def test_select_representative_chunks_top_k():
 
 
 def test_select_representative_chunks_tiebreaker():
-    from lakehouse.pipeline.clustering import select_representative_chunks
-
     chunks = [
         {"chunk_key": "z", "cluster_id": 0, "cluster_pertenencia": 0.9},
         {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.9},
@@ -371,8 +357,6 @@ def test_select_representative_chunks_tiebreaker():
 
 
 def test_select_representative_chunks_small_cluster():
-    from lakehouse.pipeline.clustering import select_representative_chunks
-
     chunks = [
         {"chunk_key": "x", "cluster_id": 1, "cluster_pertenencia": 0.8},
     ]
@@ -381,8 +365,6 @@ def test_select_representative_chunks_small_cluster():
 
 
 def test_select_representative_chunks_excludes_other_clusters():
-    from lakehouse.pipeline.clustering import select_representative_chunks
-
     chunks = [
         {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.9},
         {"chunk_key": "b", "cluster_id": 1, "cluster_pertenencia": 0.95},
@@ -393,8 +375,6 @@ def test_select_representative_chunks_excludes_other_clusters():
 
 
 def test_select_representative_chunks_excludes_noise():
-    from lakehouse.pipeline.clustering import select_representative_chunks
-
     chunks = [
         {"chunk_key": "n", "cluster_id": -1, "cluster_pertenencia": 0.0},
         {"chunk_key": "a", "cluster_id": 0, "cluster_pertenencia": 0.9},
@@ -404,32 +384,24 @@ def test_select_representative_chunks_excludes_noise():
 
 
 def test_validate_label_rejects_empty():
-    from lakehouse.pipeline.clustering import validate_label
-
     label, error = validate_label("")
     assert label is None
     assert error == "empty"
 
 
 def test_validate_label_rejects_multiline():
-    from lakehouse.pipeline.clustering import validate_label
-
     label, error = validate_label("linea1\nlinea2")
     assert label is None
     assert error == "multiline"
 
 
 def test_validate_label_rejects_too_many_words():
-    from lakehouse.pipeline.clustering import validate_label
-
     label, error = validate_label("una etiqueta con mas de cuatro palabras aqui")
     assert label is None
     assert error == "too_many_words"
 
 
 def test_validate_label_strips_prefixes():
-    from lakehouse.pipeline.clustering import validate_label
-
     label, _ = validate_label("Etiqueta: Salud Publica")
     assert label == "Salud Publica"
 
@@ -444,60 +416,44 @@ def test_validate_label_strips_prefixes():
 
 
 def test_validate_label_strips_quotes():
-    from lakehouse.pipeline.clustering import validate_label
-
     label, _ = validate_label('"Salud Publica"')
     assert label == "Salud Publica"
 
 
 def test_validate_label_normalizes_spaces():
-    from lakehouse.pipeline.clustering import validate_label
-
     label, _ = validate_label("  mucha   salud  publica  .")
     assert label == "mucha salud publica"
 
 
 def test_validate_label_collapses_single_newline_with_text():
-    from lakehouse.pipeline.clustering import validate_label
-
     label, _ = validate_label("texto\n")
     assert label == "texto"
 
 
 def test_validate_label_accepts_valid_four_words():
-    from lakehouse.pipeline.clustering import validate_label
-
     label, error = validate_label("Seguridad y Salud Publica")
     assert label == "Seguridad y Salud Publica"
     assert error is None
 
 
 def test_validate_label_accepts_single_word():
-    from lakehouse.pipeline.clustering import validate_label
-
     label, error = validate_label("Economia")
     assert label == "Economia"
     assert error is None
 
 
 def test_load_prompt_template_returns_content():
-    from lakehouse.pipeline.clustering import load_prompt_template
-
     template = load_prompt_template("v1")
     assert "{textos_formateados}" in template
     assert "REGLAS ESTRICTAS" in template
 
 
 def test_load_prompt_template_missing_version():
-    from lakehouse.pipeline.clustering import load_prompt_template
-
     with pytest.raises(FileNotFoundError):
         load_prompt_template("no_existe")
 
 
 def test_format_labeling_prompt_replaces_placeholder():
-    from lakehouse.pipeline.clustering import format_labeling_prompt
-
     template = "INST: {textos_formateados}"
     samples = [
         {"chunk_key": "a", "chunk_text": "texto uno"},
@@ -508,8 +464,6 @@ def test_format_labeling_prompt_replaces_placeholder():
 
 
 def test_format_labeling_prompt_truncates_long_text():
-    from lakehouse.pipeline.clustering import format_labeling_prompt
-
     template = "{textos_formateados}"
     samples = [{"chunk_key": "a", "chunk_text": "x" * 200}]
     result = format_labeling_prompt(template, samples, max_chars=10)
@@ -518,44 +472,35 @@ def test_format_labeling_prompt_truncates_long_text():
 
 
 def test_generate_label_returns_content(monkeypatch):
-    from lakehouse.pipeline import clustering
-
     fake_response = MagicMock()
     fake_response.json.return_value = {
         "choices": [{"message": {"content": "  Salud Publica  "}}],
     }
-    monkeypatch.setattr(clustering.httpx, "post", lambda *a, **k: fake_response)
+    monkeypatch.setattr(clustering.httpx, "post", lambda *_args, **_kwargs: fake_response)
 
     result = clustering.generate_label("prompt", "http://llm", "gemma4")
     assert result == "Salud Publica"
 
 
 def test_generate_label_raises_on_empty_response(monkeypatch):
-    from lakehouse.pipeline import clustering
-
     fake_response = MagicMock()
     fake_response.json.return_value = {"choices": [{"message": {"content": "   "}}]}
-    monkeypatch.setattr(clustering.httpx, "post", lambda *a, **k: fake_response)
+    monkeypatch.setattr(clustering.httpx, "post", lambda *_args, **_kwargs: fake_response)
 
     with pytest.raises(ValueError):
         clustering.generate_label("prompt", "http://llm", "gemma4")
 
 
 def test_generate_label_raises_on_http_error(monkeypatch):
-    from lakehouse.pipeline import clustering
-
     fake_response = MagicMock()
     fake_response.raise_for_status.side_effect = RuntimeError("500")
-    monkeypatch.setattr(clustering.httpx, "post", lambda *a, **k: fake_response)
+    monkeypatch.setattr(clustering.httpx, "post", lambda *_args, **_kwargs: fake_response)
 
     with pytest.raises(RuntimeError):
         clustering.generate_label("prompt", "http://llm", "gemma4")
 
 
 def test_label_clusters_completes_all(monkeypatch, pg_conn_str):
-    from lakehouse.config import Settings
-    from lakehouse.pipeline import clustering
-
     settings = Settings()
     settings.k_hdbscan_sampling = 2
     settings.cluster_label_max_retries = 1
@@ -570,14 +515,14 @@ def test_label_clusters_completes_all(monkeypatch, pg_conn_str):
         {"chunk_key": "n", "cluster_id": -1, "cluster_pertenencia": 0.0, "chunk_text": "t n"},
     ]
 
-    monkeypatch.setattr(clustering, "generate_label", lambda *a, **k: "Salud Publica")
+    monkeypatch.setattr(clustering, "generate_label", lambda *_args, **_kwargs: "Salud Publica")
 
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
     mock_conn.cursor.return_value = mock_cursor
     mock_cm = MagicMock()
     mock_cm.__enter__.return_value = mock_conn
-    monkeypatch.setattr(clustering.psycopg, "connect", lambda *a, **k: mock_cm)
+    monkeypatch.setattr(clustering.psycopg, "connect", lambda *_args, **_kwargs: mock_cm)
 
     completed, failed = clustering.label_clusters(pg_conn_str, "run-1", [0, 1], chunks, settings)
     assert completed == 2
@@ -586,9 +531,6 @@ def test_label_clusters_completes_all(monkeypatch, pg_conn_str):
 
 
 def test_label_clusters_marks_failed_when_invalid(monkeypatch, pg_conn_str):
-    from lakehouse.config import Settings
-    from lakehouse.pipeline import clustering
-
     settings = Settings()
     settings.k_hdbscan_sampling = 2
     settings.cluster_label_max_retries = 1
@@ -603,7 +545,7 @@ def test_label_clusters_marks_failed_when_invalid(monkeypatch, pg_conn_str):
     monkeypatch.setattr(
         clustering,
         "generate_label",
-        lambda *a, **k: "una etiqueta con mas de cuatro palabras aqui",
+        lambda *_args, **_kwargs: "una etiqueta con mas de cuatro palabras aqui",
     )
 
     mock_conn = MagicMock()
@@ -611,16 +553,18 @@ def test_label_clusters_marks_failed_when_invalid(monkeypatch, pg_conn_str):
     mock_conn.cursor.return_value = mock_cursor
     mock_cm = MagicMock()
     mock_cm.__enter__.return_value = mock_conn
-    monkeypatch.setattr(clustering.psycopg, "connect", lambda *a, **k: mock_cm)
+    monkeypatch.setattr(clustering.psycopg, "connect", lambda *_args, **_kwargs: mock_cm)
 
     completed, failed = clustering.label_clusters(pg_conn_str, "run-2", [0], chunks, settings)
     assert completed == 0
     assert failed == 1
 
 
-def _mock_pg_connect(monkeypatch, select_fetchone=None, insert_fetchone=None):
-    from lakehouse.pipeline import clustering
-
+def _mock_pg_connect(
+    monkeypatch,
+    select_fetchone=None,
+    insert_fetchone=None,
+) -> tuple[MagicMock, MagicMock]:
     mock_conn = MagicMock()
     mock_select = MagicMock()
     mock_select.fetchone.return_value = select_fetchone
@@ -632,11 +576,11 @@ def _mock_pg_connect(monkeypatch, select_fetchone=None, insert_fetchone=None):
 
     mock_cm = MagicMock()
     mock_cm.__enter__.return_value = mock_conn
-    monkeypatch.setattr(clustering.psycopg, "connect", lambda *a, **k: mock_cm)
+    monkeypatch.setattr(clustering.psycopg, "connect", lambda *_args, **_kwargs: mock_cm)
     return mock_conn, mock_cursor
 
 
-def _valid_embeddings(n=4, dim=768):
+def _valid_embeddings(n: int = 4, dim: int = 768) -> tuple[list[str], np.ndarray]:
     rng = np.random.RandomState(7)
     keys = [f"k{i}" for i in range(n)]
     arr = rng.randn(n, dim).astype(np.float64)
@@ -644,109 +588,79 @@ def _valid_embeddings(n=4, dim=768):
 
 
 def test_run_clustering_pipeline_aborts_with_fewer_than_4(monkeypatch):
-    from lakehouse.config import Settings
-    from lakehouse.pipeline import clustering
-
     keys, arr = _valid_embeddings(n=3)
-    monkeypatch.setattr(
-        clustering, "load_embeddings", lambda *a: (keys, arr, [])
-    )
+    monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
     _mock_pg_connect(monkeypatch)
 
-    result = clustering.run_clustering_pipeline(Settings())
+    result = run_clustering_pipeline(Settings())
     assert result is None
 
 
 def test_run_clustering_pipeline_skips_existing_run(monkeypatch):
-    from lakehouse.config import Settings
-    from lakehouse.pipeline import clustering
-
     keys, arr = _valid_embeddings(n=4)
-    monkeypatch.setattr(
-        clustering, "load_embeddings", lambda *a: (keys, arr, [])
-    )
+    monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
     _mock_pg_connect(monkeypatch, select_fetchone=("existing-run-1",))
 
-    result = clustering.run_clustering_pipeline(Settings())
+    result = run_clustering_pipeline(Settings())
     assert result == {"run_id": "existing-run-1", "skipped": True}
 
 
 def test_run_clustering_pipeline_success(monkeypatch):
-    from lakehouse.config import Settings
-    from lakehouse.pipeline import clustering
-
     keys, arr = _valid_embeddings(n=4)
-    monkeypatch.setattr(clustering, "load_embeddings", lambda *a: (keys, arr, []))
+    monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
 
-    mock_conn, mock_cursor = _mock_pg_connect(
-        monkeypatch, select_fetchone=None, insert_fetchone=("run-abc",)
-    )
+    mock_conn, _ = _mock_pg_connect(monkeypatch, select_fetchone=None, insert_fetchone=("run-abc",))
 
     labels = np.array([0, 0, 1, -1], dtype=np.int64)
     probs = np.array([0.9, 0.8, 0.7, 0.0], dtype=np.float64)
     monkeypatch.setattr(
-        clustering, "run_umap_clustering", lambda e, s: np.zeros((4, 15))
+        clustering, "run_umap_clustering", lambda _emb, _settings: np.zeros((4, 15))
     )
-    monkeypatch.setattr(clustering, "run_hdbscan", lambda u, s: (labels, probs))
-    monkeypatch.setattr(
-        clustering, "persist_cluster_assignments", lambda *a, **k: None
-    )
-    monkeypatch.setattr(clustering, "label_clusters", lambda *a, **k: (2, 0))
+    monkeypatch.setattr(clustering, "run_hdbscan", lambda _vecs, _settings: (labels, probs))
+    monkeypatch.setattr(clustering, "persist_cluster_assignments", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(clustering, "label_clusters", lambda *_args, **_kwargs: (2, 0))
 
-    result = clustering.run_clustering_pipeline(Settings())
+    result = run_clustering_pipeline(Settings())
     assert result == {"run_id": "run-abc", "clusters": 2, "noise": 1}
     assert mock_conn.commit.call_count >= 2
 
 
 def test_run_clustering_pipeline_marks_failed_on_error(monkeypatch):
-    from lakehouse.config import Settings
-    from lakehouse.pipeline import clustering
-
     keys, arr = _valid_embeddings(n=4)
-    monkeypatch.setattr(clustering, "load_embeddings", lambda *a: (keys, arr, []))
+    monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
 
-    mock_conn, mock_cursor = _mock_pg_connect(
+    _, mock_cursor = _mock_pg_connect(
         monkeypatch, select_fetchone=None, insert_fetchone=("run-fail",)
     )
 
-    def _boom(*a, **k):
+    def _boom(*args: object, **kwargs: object) -> None:
         raise RuntimeError("umap murio")
 
     monkeypatch.setattr(clustering, "run_umap_clustering", _boom)
 
     with pytest.raises(RuntimeError):
-        clustering.run_clustering_pipeline(Settings())
+        run_clustering_pipeline(Settings())
 
-    failed_calls = [
-        c for c in mock_cursor.execute.call_args_list
-        if "status = 'failed'" in c[0][0]
-    ]
+    failed_calls = [c for c in mock_cursor.execute.call_args_list if "status = 'failed'" in c[0][0]]
     assert len(failed_calls) == 1
 
 
 def test_run_clustering_pipeline_all_noise_no_labeling(monkeypatch):
-    from lakehouse.config import Settings
-    from lakehouse.pipeline import clustering
-
     keys, arr = _valid_embeddings(n=4)
-    monkeypatch.setattr(clustering, "load_embeddings", lambda *a: (keys, arr, []))
+    monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
 
-    mock_conn, mock_cursor = _mock_pg_connect(
-        monkeypatch, select_fetchone=None, insert_fetchone=("run-noise",)
-    )
+    _mock_pg_connect(monkeypatch, select_fetchone=None, insert_fetchone=("run-noise",))
 
     labels = np.full(4, -1, dtype=np.int64)
     probs = np.zeros(4, dtype=np.float64)
     monkeypatch.setattr(
-        clustering, "run_umap_clustering", lambda e, s: np.zeros((4, 15))
+        clustering, "run_umap_clustering", lambda _emb, _settings: np.zeros((4, 15))
     )
-    monkeypatch.setattr(clustering, "run_hdbscan", lambda u, s: (labels, probs))
-    monkeypatch.setattr(
-        clustering, "persist_cluster_assignments", lambda *a, **k: None
-    )
+    monkeypatch.setattr(clustering, "run_hdbscan", lambda _vecs, _settings: (labels, probs))
+    monkeypatch.setattr(clustering, "persist_cluster_assignments", lambda *_args, **_kwargs: None)
     labeled = MagicMock()
     monkeypatch.setattr(clustering, "label_clusters", labeled)
 
-    result = clustering.run_clustering_pipeline(Settings())
+    result = run_clustering_pipeline(Settings())
     assert result == {"run_id": "run-noise", "clusters": 0, "noise": 4}
     labeled.assert_not_called()

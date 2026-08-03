@@ -97,12 +97,14 @@ def validate_embeddings(
     valid_vecs: list[np.ndarray] = []
     rejected: list[tuple[str, str]] = []
 
-    for key, vec in zip(keys, embeddings):
-        if vec is None:
+    for key, embedding in zip(keys, embeddings):
+        if embedding is None:
             rejected.append((key, "null"))
             continue
-        if not isinstance(vec, np.ndarray):
-            vec = np.array(vec, dtype=np.float64)
+        if not isinstance(embedding, np.ndarray):
+            vec = np.array(embedding, dtype=np.float64)
+        else:
+            vec = embedding
         if vec.shape[0] != expected_dim:
             rejected.append((key, f"dimension:{vec.shape[0]}"))
             continue
@@ -118,7 +120,11 @@ def validate_embeddings(
         valid_keys.append(key)
         valid_vecs.append(vec)
 
-    arr = np.array(valid_vecs, dtype=np.float64) if valid_vecs else np.empty((0, expected_dim), dtype=np.float64)
+    arr = (
+        np.array(valid_vecs, dtype=np.float64)
+        if valid_vecs
+        else np.empty((0, expected_dim), dtype=np.float64)
+    )
     return valid_keys, arr, rejected
 
 
@@ -127,11 +133,14 @@ def compute_corpus_fingerprint(
     embeddings: np.ndarray,
     model: str,
 ) -> str:
-    data = json.dumps({
-        "keys": sorted(chunk_keys),
-        "embedding_hash": hashlib.sha256(embeddings.tobytes()).hexdigest(),
-        "model": model,
-    }, sort_keys=True)
+    data = json.dumps(
+        {
+            "keys": sorted(chunk_keys),
+            "embedding_hash": hashlib.sha256(embeddings.tobytes()).hexdigest(),
+            "model": model,
+        },
+        sort_keys=True,
+    )
     return hashlib.sha256(data.encode()).hexdigest()
 
 
@@ -164,9 +173,7 @@ def load_embeddings(pg_conn_str: str) -> tuple[list[str], np.ndarray, list[str]]
     null_keys: list[str] = []
 
     with psycopg.connect(pg_conn_str) as conn:
-        cur = conn.execute(
-            "SELECT chunk_key, embedding::text FROM gold.rag_corpus"
-        )
+        cur = conn.execute("SELECT chunk_key, embedding::text FROM gold.rag_corpus")
         for row in cur:
             vec = _parse_pgvector_to_list(row[1])
             if vec is None:
@@ -226,14 +233,17 @@ def persist_cluster_assignments(
         with cur.copy("COPY _cluster_assignments FROM STDIN") as copy:
             for chunk_key, cid, membership in assignments:
                 copy.write_row((chunk_key, cid, membership))
-        cur.execute("""
+        cur.execute(
+            """
             UPDATE gold.rag_corpus AS g
             SET cluster_id = a.cluster_id,
                 cluster_pertenencia = a.pertenencia,
                 clustering_run_id = %s
             FROM _cluster_assignments AS a
             WHERE g.chunk_key = a.chunk_key
-        """, (run_id,))
+        """,
+            (run_id,),
+        )
         conn.commit()
 
 
@@ -244,18 +254,20 @@ def select_representative_chunks(
 ) -> list[dict]:
     if cluster_id < 0:
         return []
-    cluster_chunks = [
-        c for c in chunks
-        if c.get("cluster_id") == cluster_id
-    ]
+    cluster_chunks = [c for c in chunks if c.get("cluster_id") == cluster_id]
     cluster_chunks.sort(key=lambda c: (-c.get("cluster_pertenencia", 0.0), c["chunk_key"]))
     return cluster_chunks[:k]
 
 
 _LABEL_RE = re.compile(r"\s+")
 _LABEL_PREFIXES = [
-    "etiqueta:", "tema:", "categoria:", "respuesta:",
-    "label:", "category:", "topic:",
+    "etiqueta:",
+    "tema:",
+    "categoria:",
+    "respuesta:",
+    "label:",
+    "category:",
+    "topic:",
 ]
 
 
@@ -265,7 +277,7 @@ def validate_label(raw_label: str) -> tuple[str | None, str | None]:
 
     label = raw_label.strip()
 
-    lines = [l for l in label.split("\n") if l.strip()]
+    lines = [line for line in label.split("\n") if line.strip()]
     if len(lines) > 1:
         return None, "multiline"
 
@@ -276,7 +288,7 @@ def validate_label(raw_label: str) -> tuple[str | None, str | None]:
     lower = label.lower()
     for prefix in _LABEL_PREFIXES:
         if lower.startswith(prefix):
-            label = label[len(prefix):].strip()
+            label = label[len(prefix) :].strip()
             break
 
     if not label:
@@ -356,13 +368,16 @@ def label_clusters(
             continue
 
         samples = select_representative_chunks(
-            chunks, cid, k=settings.k_hdbscan_sampling,
+            chunks,
+            cid,
+            k=settings.k_hdbscan_sampling,
         )
         if not samples:
             continue
 
         prompt = format_labeling_prompt(
-            prompt_template, samples,
+            prompt_template,
+            samples,
             max_chars=settings.cluster_label_max_chars_per_chunk,
         )
 
@@ -382,7 +397,7 @@ def label_clusters(
                 if label:
                     break
                 error_msg = validation_error
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 error_msg = str(e)
 
         with psycopg.connect(pg_conn_str) as conn:
@@ -390,7 +405,8 @@ def label_clusters(
             sample_keys = [s["chunk_key"] for s in samples]
 
             if label:
-                cur.execute("""
+                cur.execute(
+                    """
                     INSERT INTO gold.cluster_labels
                         (clustering_run_id, cluster_id, cluster_label, label_status,
                          sample_size, sample_chunk_keys, model_name, prompt_version,
@@ -403,11 +419,22 @@ def label_clusters(
                         sample_chunk_keys = EXCLUDED.sample_chunk_keys,
                         attempt_count = EXCLUDED.attempt_count,
                         updated_at = NOW()
-                """, (run_id, cid, label, len(samples), sample_keys,
-                      settings.llamacpp_model, settings.cluster_label_prompt_version, total_attempts))
+                """,
+                    (
+                        run_id,
+                        cid,
+                        label,
+                        len(samples),
+                        sample_keys,
+                        settings.llamacpp_model,
+                        settings.cluster_label_prompt_version,
+                        total_attempts,
+                    ),
+                )
                 completed += 1
             else:
-                cur.execute("""
+                cur.execute(
+                    """
                     INSERT INTO gold.cluster_labels
                         (clustering_run_id, cluster_id, label_status, error_message,
                          sample_size, sample_chunk_keys, model_name, prompt_version,
@@ -418,8 +445,18 @@ def label_clusters(
                         error_message = EXCLUDED.error_message,
                         attempt_count = EXCLUDED.attempt_count,
                         updated_at = NOW()
-                """, (run_id, cid, error_msg or "unknown", len(samples), sample_keys,
-                      settings.llamacpp_model, settings.cluster_label_prompt_version, total_attempts))
+                """,
+                    (
+                        run_id,
+                        cid,
+                        error_msg or "unknown",
+                        len(samples),
+                        sample_keys,
+                        settings.llamacpp_model,
+                        settings.cluster_label_prompt_version,
+                        total_attempts,
+                    ),
+                )
                 failed += 1
 
             conn.commit()
@@ -440,14 +477,16 @@ def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
     input_count = len(keys) + len(null_keys)
 
     valid_keys, valid_embeddings, rejected = validate_embeddings(
-        keys, [embeddings[i] for i in range(len(keys))],
+        keys,
+        [embeddings[i] for i in range(len(keys))],
         expected_dim=768,
     )
     rejected_count = len(rejected) + len(null_keys)
 
     if len(valid_keys) < 4:
-        logger.warning("clustering_abortado", motivo="menos de 4 embeddings validos",
-                       validos=len(valid_keys))
+        logger.warning(
+            "clustering_abortado", motivo="menos de 4 embeddings validos", validos=len(valid_keys)
+        )
         return None
 
     umap_params = {
@@ -474,17 +513,22 @@ def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
     }
 
     all_params = {**umap_params, **hdbscan_params, **labeling_params}
-    corpus_fp = compute_corpus_fingerprint(valid_keys, valid_embeddings, settings.ollama_embed_model)
+    corpus_fp = compute_corpus_fingerprint(
+        valid_keys, valid_embeddings, settings.ollama_embed_model
+    )
     params_hash = compute_parameters_hash(all_params)
 
     with psycopg.connect(pg_conn_str) as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT run_id FROM gold.clustering_runs
             WHERE status = 'completed'
               AND corpus_fingerprint = %s
               AND parameters_hash = %s
             LIMIT 1
-        """, (corpus_fp, params_hash))
+        """,
+            (corpus_fp, params_hash),
+        )
         existing = cur.fetchone()
         if existing and not force:
             logger.info("corrida_equivalente_existente", run_id=existing[0])
@@ -492,17 +536,27 @@ def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
 
     with psycopg.connect(pg_conn_str) as conn:
         cur = conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO gold.clustering_runs
                 (status, input_count, valid_count, rejected_count,
                  corpus_fingerprint, parameters_hash, embedding_model,
                  umap_parameters, hdbscan_parameters, labeling_parameters)
             VALUES ('running', %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING run_id
-        """, (input_count, len(valid_keys), rejected_count,
-              corpus_fp, params_hash, settings.ollama_embed_model,
-              json.dumps(umap_params), json.dumps(hdbscan_params),
-              json.dumps(labeling_params)))
+        """,
+            (
+                input_count,
+                len(valid_keys),
+                rejected_count,
+                corpus_fp,
+                params_hash,
+                settings.ollama_embed_model,
+                json.dumps(umap_params),
+                json.dumps(hdbscan_params),
+                json.dumps(labeling_params),
+            ),
+        )
         row = cur.fetchone()
         if row is None:
             raise RuntimeError("No se pudo crear el run de clusterizacion")
@@ -516,22 +570,24 @@ def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
 
         labels, probs = run_hdbscan(umap_vectors, settings)
 
-        unique_clusters = sorted(set(int(l) for l in labels if l >= 0))
+        unique_clusters = sorted({int(lb) for lb in labels if lb >= 0})
         noise_count = int((labels == -1).sum())
 
         assignments = [
-            (valid_keys[i], int(labels[i]), float(probs[i]))
-            for i in range(len(valid_keys))
+            (valid_keys[i], int(labels[i]), float(probs[i])) for i in range(len(valid_keys))
         ]
         persist_cluster_assignments(pg_conn_str, run_id, assignments)
 
         with psycopg.connect(pg_conn_str) as conn:
             cur = conn.cursor()
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE gold.clustering_runs
                 SET cluster_count = %s, noise_count = %s, status = 'completed'
                 WHERE run_id = %s
-            """, (len(unique_clusters), noise_count, run_id))
+            """,
+                (len(unique_clusters), noise_count, run_id),
+            )
             conn.commit()
 
         chunks = [
@@ -545,44 +601,56 @@ def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
 
         if unique_clusters:
             completed, failed = label_clusters(
-                pg_conn_str, run_id, unique_clusters, chunks, settings,
+                pg_conn_str,
+                run_id,
+                unique_clusters,
+                chunks,
+                settings,
             )
             final_status = "partial" if failed > 0 else "completed"
             with psycopg.connect(pg_conn_str) as conn:
                 cur = conn.cursor()
-                cur.execute("""
+                cur.execute(
+                    """
                     UPDATE gold.clustering_runs
                     SET labeled_cluster_count = %s, failed_label_count = %s,
                         status = %s, finished_at = NOW()
                     WHERE run_id = %s
-                """, (completed, failed, final_status, run_id))
+                """,
+                    (completed, failed, final_status, run_id),
+                )
                 conn.commit()
         else:
             with psycopg.connect(pg_conn_str) as conn:
                 cur = conn.cursor()
-                cur.execute("""
+                cur.execute(
+                    """
                     UPDATE gold.clustering_runs
                     SET finished_at = NOW()
                     WHERE run_id = %s
-                """, (run_id,))
+                """,
+                    (run_id,),
+                )
                 conn.commit()
 
-        logger.info("clusterizacion_completada", run_id=run_id,
-                    clusters=len(unique_clusters), noise=noise_count)
+        logger.info(
+            "clusterizacion_completada",
+            run_id=run_id,
+            clusters=len(unique_clusters),
+            noise=noise_count,
+        )
         return {"run_id": run_id, "clusters": len(unique_clusters), "noise": noise_count}
 
     except Exception as e:
         with psycopg.connect(pg_conn_str) as conn:
             cur = conn.cursor()
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE gold.clustering_runs
                 SET status = 'failed', error_message = %s, finished_at = NOW()
                 WHERE run_id = %s
-            """, (str(e)[:500], run_id))
+            """,
+                (str(e)[:500], run_id),
+            )
             conn.commit()
         raise
-
-
-
-
-

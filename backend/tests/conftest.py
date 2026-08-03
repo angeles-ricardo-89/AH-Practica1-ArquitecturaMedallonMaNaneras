@@ -14,7 +14,6 @@ def pg_conn_str() -> str:
     return f"postgresql://mananeras:mananeras@localhost:5433/{TEST_DB}"
 
 
-
 def pytest_configure(config) -> None:
     """Crea la base de datos de pruebas y la activa para todos los tests."""
     os.environ["POSTGRES_DB"] = TEST_DB

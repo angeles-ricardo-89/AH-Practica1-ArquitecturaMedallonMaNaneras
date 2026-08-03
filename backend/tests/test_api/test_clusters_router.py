@@ -105,15 +105,9 @@ def test_get_clusters_latest_returns_data(monkeypatch):
         assert data["points"][0]["x"] == pytest.approx(1.0)
     finally:
         with psycopg.connect(conn_str) as conn:
-            conn.execute(
-                "DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'cluster_point_%'"
-            )
-            conn.execute(
-                "DELETE FROM gold.cluster_labels WHERE clustering_run_id = %s", (run_id,)
-            )
-            conn.execute(
-                "DELETE FROM gold.clustering_runs WHERE run_id = %s", (run_id,)
-            )
+            conn.execute("DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'cluster_point_%'")
+            conn.execute("DELETE FROM gold.cluster_labels WHERE clustering_run_id = %s", (run_id,))
+            conn.execute("DELETE FROM gold.clustering_runs WHERE run_id = %s", (run_id,))
             conn.commit()
 
 
