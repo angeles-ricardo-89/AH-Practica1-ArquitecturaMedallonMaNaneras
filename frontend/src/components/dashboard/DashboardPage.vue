@@ -28,11 +28,27 @@ const selectedMessage = computed(() => {
 
 const selectedSources = computed(() => selectedMessage.value?.sources ?? [])
 
-const highlightedChunks = computed(() => {
-  if (!selectedSources.value.length) return []
-  return selectedSources.value
-    .map((s) => s.conference_id)
-    .filter(Boolean)
+const chartMode = computed(() => {
+  return dashboardStore.selectedResponseId ? 'filtered' : 'full'
+})
+
+const visiblePoints = computed(() => {
+  if (!dashboardStore.selectedResponseId) {
+    return embeddingsPoints.value
+  }
+  const pts: Embedding3DPoint[] = []
+  for (const src of selectedSources.value) {
+    if (src.embedding_3d && src.embedding_3d.length === 3) {
+      pts.push({
+        chunk_key: src.conference_id,
+        x: src.embedding_3d[0],
+        y: src.embedding_3d[1],
+        z: src.embedding_3d[2],
+        conference_date: src.conference_date,
+      })
+    }
+  }
+  return pts
 })
 
 async function fetchEmbeddings() {
@@ -94,8 +110,8 @@ onUnmounted(() => {
           </div>
           <Embeddings3D
             v-else
-            :points="embeddingsPoints"
-            :highlighted-chunks="highlightedChunks"
+            :points="visiblePoints"
+            :mode="chartMode"
             class="shrink-0"
           />
 
