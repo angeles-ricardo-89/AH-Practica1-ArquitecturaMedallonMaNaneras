@@ -12,7 +12,7 @@ import umap
 from hdbscan import HDBSCAN
 from sklearn.preprocessing import normalize
 
-from lakehouse.log_config import get_logger
+from lakehouse.log_config import ProgressReporter, get_logger
 
 logger = get_logger(__name__, layer="gold")
 
@@ -103,8 +103,9 @@ def validate_embeddings(
     valid_keys: list[str] = []
     valid_vecs: list[np.ndarray] = []
     rejected: list[tuple[str, str]] = []
-
+    report = ProgressReporter(total=len(keys), label="validacion_embeddings")
     for key, embedding in zip(keys, embeddings):
+        report.tick()
         if embedding is None:
             rejected.append((key, "null"))
             continue
@@ -132,6 +133,7 @@ def validate_embeddings(
         if valid_vecs
         else np.empty((0, expected_dim), dtype=np.float64)
     )
+    report.finish()
     return valid_keys, arr, rejected
 
 
@@ -337,7 +339,7 @@ def generate_label(
     prompt: str,
     base_url: str,
     model: str,
-    max_tokens: int = 100,
+    max_tokens: int = 4096,
     timeout: int = 30,
 ) -> str:
     response = httpx.post(
@@ -406,7 +408,22 @@ def label_clusters(
                 error_msg = validation_error
             except Exception as e:  # noqa: BLE001
                 error_msg = str(e)
-
+        if label:
+            logger.info(
+                "etiquetado_exitoso",
+                run_id=run_id,
+                cluster_id=cid,
+                label=label,
+                attempts=total_attempts,
+            )
+        if error_msg:
+            logger.warning(
+                "etiquetado_fallido",
+                run_id=run_id,
+                cluster_id=cid,
+                error=error_msg,
+                attempts=total_attempts,
+            )
         with psycopg.connect(pg_conn_str) as conn:
             cur = conn.cursor()
             sample_keys = [s["chunk_key"] for s in samples]
@@ -510,10 +527,15 @@ def run_clustering(settings, force: bool = False) -> dict | None:
     }
 
     all_params = {**umap_params, **hdbscan_params}
+
+    n_steps = 10
+    reporter = ProgressReporter(total=n_steps, label="clustering")
     corpus_fp = compute_corpus_fingerprint(
         valid_keys, valid_embeddings, settings.ollama_embed_model
     )
+    reporter.tick()  # Step 1: Compute corpus fingerprint
     params_hash = compute_parameters_hash(all_params)
+    reporter.tick()  # Step 2: Compute parameters hash
 
     with psycopg.connect(pg_conn_str) as conn:
         cur = conn.execute(
@@ -529,8 +551,9 @@ def run_clustering(settings, force: bool = False) -> dict | None:
         existing = cur.fetchone()
         if existing and not force:
             logger.info("corrida_equivalente_existente", run_id=existing[0])
+            reporter.finish()
             return {"run_id": existing[0], "skipped": True}
-
+    reporter.tick()  # Step 3: Check for existing run
     with psycopg.connect(pg_conn_str) as conn:
         cur = conn.cursor()
         cur.execute(
@@ -555,16 +578,20 @@ def run_clustering(settings, force: bool = False) -> dict | None:
         )
         row = cur.fetchone()
         if row is None:
+            reporter.finish()
             raise RuntimeError("No se pudo crear el run de clusterizacion")
         run_id = row[0]
         conn.commit()
-
+    reporter.tick()  # Step 4: Create clustering run record
     try:
         normalized = normalize(valid_embeddings, norm="l2")
+        reporter.tick()  # Step 5: Normalize embeddings
 
         umap_vectors = run_umap_clustering(normalized, settings)
+        reporter.tick()  # Step 6: Run UMAP clustering
 
         labels, probs = run_hdbscan(umap_vectors, settings)
+        reporter.tick()  # Step 7: Run HDBSCAN clustering
 
         unique_clusters = sorted({int(lb) for lb in labels if lb >= 0})
         noise_count = int((labels == -1).sum())
@@ -573,6 +600,7 @@ def run_clustering(settings, force: bool = False) -> dict | None:
             (valid_keys[i], int(labels[i]), float(probs[i])) for i in range(len(valid_keys))
         ]
         persist_cluster_assignments(pg_conn_str, run_id, assignments)
+        reporter.tick()  # Step 8: Persist cluster assignments
 
         with psycopg.connect(pg_conn_str) as conn:
             cur = conn.cursor()
@@ -593,9 +621,11 @@ def run_clustering(settings, force: bool = False) -> dict | None:
             clusters=len(unique_clusters),
             noise=noise_count,
         )
+        reporter.finish()
         return {"run_id": run_id, "clusters": len(unique_clusters), "noise": noise_count}
 
     except Exception as e:
+        reporter.finish()
         with psycopg.connect(pg_conn_str) as conn:
             cur = conn.cursor()
             cur.execute(

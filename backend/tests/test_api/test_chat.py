@@ -194,6 +194,7 @@ SEARCH_RESULTS_WITH_3D = [
         "url": "https://example.com/1",
         "pregunta_activa": "¿Cómo va la reforma?",
         "embedding_3d": [0.1, 0.2, 0.3],
+        "cluster_id": 3,
     },
     {
         "conference_date": "2024-10-02",
@@ -204,6 +205,7 @@ SEARCH_RESULTS_WITH_3D = [
         "url": "https://example.com/2",
         "pregunta_activa": "¿Cuál es el plan económico?",
         "embedding_3d": [0.2, 0.3, 0.4],
+        "cluster_id": 3,
     },
     {
         "conference_date": "2024-10-03",
@@ -214,6 +216,7 @@ SEARCH_RESULTS_WITH_3D = [
         "url": "https://example.com/3",
         "pregunta_activa": "¿Cómo va la campaña de salud?",
         "embedding_3d": [0.3, 0.4, 0.5],
+        "cluster_id": 1,
     },
     {
         "conference_date": "2024-10-04",
@@ -224,6 +227,7 @@ SEARCH_RESULTS_WITH_3D = [
         "url": "https://example.com/4",
         "pregunta_activa": "¿Cuándo es el evento?",
         "embedding_3d": [0.4, 0.5, 0.6],
+        "cluster_id": None,
     },
 ]
 
@@ -273,6 +277,32 @@ class TestChatWithNewFields:
         for source, result in zip(sources, SEARCH_RESULTS_WITH_3D):
             assert source["embedding_3d"] == result["embedding_3d"]
 
+    def test_chat_sources_include_cluster_id(self, mock_llamacpp) -> None:
+        _, mock_search, _, _ = mock_llamacpp
+        mock_search.return_value = SEARCH_RESULTS_WITH_3D
+        resp = client.post(
+            "/chat/",
+            json={"query": "reforma energética", "top_k": 4},
+        )
+        assert resp.status_code == 200
+        sources = resp.json()["sources"]
+        for source, result in zip(sources, SEARCH_RESULTS_WITH_3D):
+            assert source["cluster_id"] == result["cluster_id"]
+
+    def test_chat_sources_cluster_id_none_when_not_present(self, mock_llamacpp) -> None:
+        _, mock_search, _, _ = mock_llamacpp
+        mock_search.return_value = [
+            {k: v for k, v in entry.items() if k != "cluster_id"}
+            for entry in SEARCH_RESULTS_WITH_3D
+        ]
+        resp = client.post(
+            "/chat/",
+            json={"query": "reforma energética", "top_k": 4},
+        )
+        assert resp.status_code == 200
+        sources = resp.json()["sources"]
+        assert all(s["cluster_id"] is None for s in sources)
+
     def test_chat_all_high_similarity_when_fewer_than_4_sources(self, mock_llamacpp) -> None:
         _, mock_search, _, _ = mock_llamacpp
         mock_search.return_value = SEARCH_RESULTS_WITH_3D[:2]
@@ -303,6 +333,7 @@ class TestChatSourceDetails:
         assert source.similarity == 0.95
         assert source.conference_url == "https://example.com"
         assert source.pregunta_activa == "¿Cómo va la reforma?"
+        assert source.cluster_id is None
 
 
 class TestTokenEstimator:

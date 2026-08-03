@@ -17,6 +17,7 @@ class SourceChunk(BaseModel):
     pregunta_activa: str = Field(default="")
     qualitative_label: str = Field(default="Media")
     embedding_3d: list[float] | None = Field(default=None)
+    cluster_id: int | None = Field(default=None)
 
 
 class ChatResponse(BaseModel):

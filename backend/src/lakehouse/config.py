@@ -21,19 +21,19 @@ class Settings(BaseSettings):
     llamacpp_model: str = "gemma4"
 
     rag_top_k: int = 8
-    max_context_tokens: int = 8192
+    max_context_tokens: int = 10000
     max_ingest_pool: int = 1
     temporal_parser_temperature: float = 0.1
     temporal_parser_max_retries: int = 3
-    temporal_parser_max_tokens: int = 1200
+    temporal_parser_max_tokens: int = 2040
 
     umap_clustering_n_components: int = 15
-    umap_clustering_n_neighbors: int = 30
+    umap_clustering_n_neighbors: int = 50
     umap_clustering_min_dist: float = 0.0
     umap_clustering_metric: str = "cosine"
     umap_clustering_random_state: int = 42
 
-    hdbscan_min_cluster_size: int = 15
+    hdbscan_min_cluster_size: int = 50
     hdbscan_min_samples: int = 5
     hdbscan_metric: str = "euclidean"
     hdbscan_algorithm: str = "best"

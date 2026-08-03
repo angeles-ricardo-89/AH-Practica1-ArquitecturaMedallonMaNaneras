@@ -84,6 +84,8 @@ def _rows_to_results(rows: list) -> list[dict[str, Any]]:
             )
         else:
             embedding_3d = None
+        cluster_id_raw = row[8] if len(row) > 8 else None
+        cluster_id = int(cluster_id_raw) if cluster_id_raw is not None else None
         results.append(
             {
                 "conference_date": str(row[0]),
@@ -94,6 +96,7 @@ def _rows_to_results(rows: list) -> list[dict[str, Any]]:
                 "pregunta_activa": row[5] or "",
                 "similarity": float(row[6]),
                 "embedding_3d": embedding_3d,
+                "cluster_id": cluster_id,
             }
         )
     return results
@@ -118,7 +121,8 @@ def search_gold_corpus_from_vector(
                 f"""
                 SELECT conference_date, conference_id, participant, chunk_text, url, pregunta_activa,
                     1 - (embedding <=> %s::vector) AS similarity,
-                    embedding_3d
+                    embedding_3d,
+                    cluster_id
                 FROM gold.rag_corpus
                 WHERE LENGTH(chunk_text) >= {MIN_CHUNK_LENGTH}
                 ORDER BY embedding <=> %s::vector
@@ -176,7 +180,8 @@ def search_with_date_filter(
                 f"""
                 SELECT conference_date, conference_id, participant, chunk_text, url, pregunta_activa,
                     1 - (embedding <=> %s::vector) AS similarity,
-                    embedding_3d
+                    embedding_3d,
+                    cluster_id
                 FROM gold.rag_corpus
                 WHERE conference_date BETWEEN %s::date AND %s::date
                   AND LENGTH(chunk_text) >= {MIN_CHUNK_LENGTH}
@@ -217,6 +222,7 @@ def search_sources(query: str, top_k: int) -> list[SourceChunk]:
             conference_url=r["url"],
             pregunta_activa=r["pregunta_activa"],
             embedding_3d=r.get("embedding_3d"),
+            cluster_id=r.get("cluster_id"),
         )
         for r in results
     ]

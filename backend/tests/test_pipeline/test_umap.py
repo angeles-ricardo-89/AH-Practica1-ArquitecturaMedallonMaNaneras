@@ -297,16 +297,13 @@ class TestEnrichServiceCallsUmap:
             patch("lakehouse.pipeline.clustering.run_clustering") as mock_cluster,
             patch("lakehouse.pipeline.clustering.run_labeling") as mock_label,
         ):
-            mock_enrich.return_value = {"embedded": 2, "failed": 0, "total": 2}
-            mock_cluster.return_value = {"run_id": "r1", "clusters": 2, "noise": 1}
+            mock_enrich.return_value = {"embedded": 2, "failed_to_embed": 0, "total": 2}
             result = self._service().run(dry_run=False)
 
-        assert result["embedded"] == 2
+        assert result.embedded == 2
         mock_umap.assert_called_once_with("postgresql://u:p@h:5433/d")
-        mock_cluster.assert_called_once()
-        assert mock_cluster.call_args.kwargs["force"] is False
-        mock_label.assert_called_once()
-        assert mock_label.call_args.kwargs["run_id"] == "r1"
+        mock_cluster.assert_not_called()
+        mock_label.assert_not_called()
 
     def test_run_skips_umap_when_nothing_embedded(self) -> None:
         with (
@@ -316,10 +313,10 @@ class TestEnrichServiceCallsUmap:
             patch("lakehouse.pipeline.clustering.run_clustering") as mock_cluster,
             patch("lakehouse.pipeline.clustering.run_labeling") as mock_label,
         ):
-            mock_enrich.return_value = {"embedded": 0, "failed": 0, "total": 2}
+            mock_enrich.return_value = {"embedded": 0, "failed_to_embed": 0, "total": 2}
             result = self._service().run(dry_run=False)
 
-        assert result["embedded"] == 0
+        assert result.embedded == 0
         mock_umap.assert_not_called()
         mock_cluster.assert_not_called()
         mock_label.assert_not_called()
@@ -333,9 +330,13 @@ class TestEnrichServiceCallsUmap:
             patch("lakehouse.pipeline.clustering.run_labeling") as mock_label,
             patch("lakehouse.services.enrich_service.get_logger"),
         ):
-            mock_enrich.return_value = {"embedded": 2, "failed": 0, "total": 2}
+            mock_enrich.return_value = {"embedded": 2, "failed_to_embed": 0, "total": 2}
             mock_cluster.return_value = {"run_id": "run-1", "skipped": True}
-            self._service().run(dry_run=False)
+            self._service().run(
+                dry_run=False,
+                run_clustering=True,
+                run_semantic_cluster_labeling=True,
+            )
 
         mock_cluster.assert_called_once()
         mock_label.assert_called_once()
@@ -350,9 +351,13 @@ class TestEnrichServiceCallsUmap:
             patch("lakehouse.pipeline.clustering.run_labeling"),
             patch("lakehouse.services.enrich_service.get_logger") as mock_logger,
         ):
-            mock_enrich.return_value = {"embedded": 2, "failed": 0, "total": 2}
+            mock_enrich.return_value = {"embedded": 2, "failed_to_embed": 0, "total": 2}
             mock_cluster.return_value = {"run_id": "run-1", "clusters": 3, "noise": 1}
-            self._service().run(dry_run=False)
+            self._service().run(
+                dry_run=False,
+                run_clustering=True,
+                run_semantic_cluster_labeling=True,
+            )
 
         logger_instance = mock_logger.return_value
         infos = [c.args[0] for c in logger_instance.info.call_args_list]
@@ -370,10 +375,14 @@ class TestEnrichServiceCallsUmap:
             patch("lakehouse.pipeline.clustering.run_labeling") as mock_label,
             patch("lakehouse.services.enrich_service.get_logger") as mock_logger,
         ):
-            mock_enrich.return_value = {"embedded": 2, "failed": 0, "total": 2}
-            result = self._service().run(dry_run=False)
+            mock_enrich.return_value = {"embedded": 2, "failed_to_embed": 0, "total": 2}
+            result = self._service().run(
+                dry_run=False,
+                run_clustering=True,
+                run_semantic_cluster_labeling=True,
+            )
 
-        assert result["embedded"] == 2
+        assert result.embedded == 2
         mock_cluster.assert_called_once()
         mock_label.assert_called_once()
         assert mock_label.call_args.kwargs["run_id"] is None

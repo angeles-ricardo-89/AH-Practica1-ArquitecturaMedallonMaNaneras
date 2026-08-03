@@ -282,7 +282,7 @@ def enrich_interventions(
 
     if not windows:
         logger.info("No hay intervenciones para enriquecer")
-        return {"total": 0, "embedded": 0, "failed": 0}
+        return {"total": 0, "embedded": 0, "failed_to_embed": 0}
 
     logger.info("Iniciando enriquecimiento Gold", total_intervenciones=total, modelo=ollama_model)
 
@@ -385,7 +385,7 @@ def enrich_interventions(
             total=total,
         )
 
-    return {"total": total, "embedded": embedded, "failed": failed}
+    return {"total": total, "embedded": embedded, "failed_to_embed": failed}
 
 
 def _parse_pgvector_to_list(value: object) -> list[float]:

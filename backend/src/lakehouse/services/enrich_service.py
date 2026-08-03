@@ -11,7 +11,7 @@ from lakehouse.pipeline.enrichment import (
     enrich_interventions,
     ensure_gold_tables,
 )
-from lakehouse.schemas.gold import WindowRecord
+from lakehouse.schemas.gold import EnrichmentResult, WindowRecord
 from lakehouse.schemas.silver import InterventionRecord
 
 
@@ -57,9 +57,10 @@ class EnrichService:
         conference_date: str | None = None,
         clean: bool = False,
         workers: int = 1,
+        run_gold_enrichment: bool = True,
         run_clustering: bool = False,
         run_semantic_cluster_labeling: bool = False,
-    ) -> dict:
+    ) -> EnrichmentResult:
         rows = self._conn.execute(
             """
             SELECT i.conference_id, i.participant, i.text,
@@ -87,7 +88,7 @@ class EnrichService:
 
         if not interventions:
             self._logger.warning("No hay intervenciones en Silver para enriquecer")
-            return {"embedded": 0, "failed": 0, "total": 0}
+            return EnrichmentResult()
 
         by_conference: dict[str, list[InterventionRecord]] = defaultdict(list)
         for i in interventions:
@@ -106,7 +107,7 @@ class EnrichService:
 
         if not windows:
             self._logger.warning("No se construyeron ventanas desde Silver")
-            return {"embedded": 0, "failed": 0, "total": 0}
+            return EnrichmentResult()
 
         if clean:
             if dry_run:
@@ -119,34 +120,40 @@ class EnrichService:
                 "Simulacion: ventanas listas para Gold",
                 cantidad=len(windows),
             )
-            return {"embedded": 0, "failed": 0, "total": len(windows)}
+            return EnrichmentResult(total=len(windows))
 
         self._logger.info(
             "Iniciando enriquecimiento Gold",
             ventanas=len(windows),
             conference_date=conference_date,
         )
+
         ensure_gold_tables(self._pg_conn_str)
-        result = enrich_interventions(
-            windows=windows,
-            conference_date=None,
-            pg_conn_str=self._pg_conn_str,
-            ollama_base_url=self._settings.ollama_base_url,
-            ollama_model=self._settings.ollama_embed_model,
-            workers=workers,
-        )
-        if result.get("embedded", 0) > 0:
-            self._logger.info("Ejecutando UMAP 3D sobre embeddings")
-            from lakehouse.pipeline.enrichment import _compute_umap_3d  # noqa: PLC0415
 
-            _compute_umap_3d(self._pg_conn_str)
+        enrichment_result = EnrichmentResult(total=len(windows))
 
-        flags = run_clustering or run_semantic_cluster_labeling
-        do_cluster = run_clustering or (not flags and result.get("embedded", 0) > 0)
-        do_label = run_semantic_cluster_labeling or (not flags and result.get("embedded", 0) > 0)
+        if run_gold_enrichment:
+            self._logger.info("Ejecutando enriquecimiento Gold")
+            result = enrich_interventions(
+                windows=windows,
+                conference_date=conference_date,
+                pg_conn_str=self._pg_conn_str,
+                ollama_base_url=self._settings.ollama_base_url,
+                ollama_model=self._settings.ollama_embed_model,
+                workers=workers,
+            )
+
+            enrichment_result.embedded = result.get("embedded", 0)
+            enrichment_result.failed_to_embed = result.get("failed_to_embed", 0)
+
+            if result and result.get("embedded", 0) > 0:
+                self._logger.info("Ejecutando UMAP 3D sobre embeddings")
+                from lakehouse.pipeline.enrichment import _compute_umap_3d  # noqa: PLC0415
+
+                enrichment_result.mapped_3d = _compute_umap_3d(self._pg_conn_str)
 
         cluster_result: dict | None = None
-        if do_cluster:
+        if run_clustering:
             self._logger.info("Ejecutando clusterizacion semantica")
             try:
                 from lakehouse.pipeline.clustering import (  # noqa: PLC0415
@@ -166,11 +173,15 @@ class EnrichService:
                         clusters=cluster_result.get("clusters"),
                         noise=cluster_result.get("noise"),
                     )
+                if cluster_result:
+                    enrichment_result.clustered = cluster_result.get("clusters", 0)
+                    enrichment_result.noise = cluster_result.get("noise", 0)
+
             except Exception:
                 self._logger.exception("clusterizacion_fallida")
                 cluster_result = None
 
-        if do_label:
+        if run_semantic_cluster_labeling:
             self._logger.info("Ejecutando autoetiquetado semantico")
             try:
                 from lakehouse.pipeline.clustering import run_labeling  # noqa: PLC0415
@@ -186,6 +197,11 @@ class EnrichService:
                         completed=label_result.get("completed"),
                         failed=label_result.get("failed"),
                     )
+                    enrichment_result.clustered_with_labels = label_result.get("completed", 0)
+                    enrichment_result.failed_to_label = label_result.get("failed", 0)
             except Exception:
                 self._logger.exception("etiquetado_fallido")
-        return result
+        enrichment_result.failed = (
+            enrichment_result.failed_to_embed + enrichment_result.failed_to_label
+        )
+        return enrichment_result
