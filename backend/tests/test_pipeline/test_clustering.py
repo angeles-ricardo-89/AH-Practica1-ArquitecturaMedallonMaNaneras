@@ -256,3 +256,42 @@ def test_load_embeddings_empty_table(pg_conn_str):
     keys, embeddings, null_keys = load_embeddings(pg_conn_str)
     assert keys == []
     assert embeddings.shape[0] == 0
+
+
+def test_umap_clustering_output_dimension():
+    import umap
+
+    X = np.random.RandomState(42).randn(100, 768).astype(np.float64)
+    reducer = umap.UMAP(
+        n_components=15, metric="cosine", min_dist=0.0,
+        n_neighbors=15, random_state=42,
+    )
+    result = reducer.fit_transform(X)
+    assert result.shape == (100, 15)
+
+
+def test_hdbscan_labels_and_probabilities_shapes():
+    from hdbscan import HDBSCAN
+
+    rng = np.random.RandomState(42)
+    X = rng.randn(50, 5).astype(np.float64)
+    clusterer = HDBSCAN(min_cluster_size=5, min_samples=3)
+    labels = clusterer.fit_predict(X)
+    probs = clusterer.probabilities_
+    assert labels.shape == (50,)
+    assert probs.shape == (50,)
+
+
+def test_noise_gets_cluster_minus_one():
+    from hdbscan import HDBSCAN
+
+    rng = np.random.RandomState(42)
+    X = rng.randn(20, 2).astype(np.float64)
+    X[:5] = np.random.RandomState(99).randn(5, 2) * 0.01
+    X[5:10] = np.random.RandomState(88).randn(5, 2) * 0.01 + 10.0
+    clusterer = HDBSCAN(min_cluster_size=3, min_samples=2)
+    labels = clusterer.fit_predict(X)
+    probs = clusterer.probabilities_
+    for i in range(len(labels)):
+        if labels[i] == -1:
+            assert probs[i] == 0.0, f"Ruido debe tener pertenencia 0.0, obtuvo {probs[i]}"

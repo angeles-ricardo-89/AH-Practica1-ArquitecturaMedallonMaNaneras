@@ -183,4 +183,34 @@ def load_embeddings(pg_conn_str: str) -> tuple[list[str], np.ndarray, list[str]]
     return raw_keys, embeddings, null_keys
 
 
+def run_umap_clustering(embeddings: np.ndarray, settings) -> np.ndarray:
+    reducer = umap.UMAP(
+        n_components=settings.umap_clustering_n_components,
+        n_neighbors=min(settings.umap_clustering_n_neighbors, len(embeddings) - 1),
+        min_dist=settings.umap_clustering_min_dist,
+        metric=settings.umap_clustering_metric,
+        random_state=settings.umap_clustering_random_state,
+    )
+    return reducer.fit_transform(embeddings)
+
+
+def run_hdbscan(
+    umap_vectors: np.ndarray,
+    settings,
+) -> tuple[np.ndarray, np.ndarray]:
+    clusterer = HDBSCAN(
+        min_cluster_size=min(settings.hdbscan_min_cluster_size, len(umap_vectors) // 2),
+        min_samples=min(settings.hdbscan_min_samples, len(umap_vectors) - 1),
+        metric=settings.hdbscan_metric,
+        algorithm=settings.hdbscan_algorithm,
+        cluster_selection_method=settings.hdbscan_cluster_selection_method,
+        n_jobs=settings.hdbscan_n_jobs,
+    )
+    labels = clusterer.fit_predict(umap_vectors)
+    probs = clusterer.probabilities_.astype(np.float64)
+    probs[labels == -1] = 0.0
+    return labels, probs
+
+
+
 
