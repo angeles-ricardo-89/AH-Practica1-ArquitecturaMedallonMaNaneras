@@ -18,6 +18,7 @@ async function handleSubmit() {
   const query = input.value.trim()
   if (!query) return
   input.value = ''
+  dashboardStore.selectResponse(null)
   await store.sendMessage(query)
   await nextTick()
   if (messagesContainer.value) {
@@ -66,6 +67,7 @@ function isSelected(id: string) {
     <div
       ref="messagesContainer"
       class="flex-1 overflow-y-auto space-y-4 p-4"
+      @click.self="dashboardStore.selectResponse(null)"
     >
       <div v-if="store.messages.length === 0" class="text-center py-12">
         <p class="text-sm text-stone-400">Historial visible tipo conversación</p>
