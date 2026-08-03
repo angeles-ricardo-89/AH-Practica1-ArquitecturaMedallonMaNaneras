@@ -87,3 +87,38 @@ def ensure_clustering_schema(conn) -> None:
         )
     """)
     conn.commit()
+
+
+def validate_embeddings(
+    keys: list[str],
+    embeddings: list[np.ndarray | None],
+    expected_dim: int,
+) -> tuple[list[str], np.ndarray, list[tuple[str, str]]]:
+    valid_keys: list[str] = []
+    valid_vecs: list[np.ndarray] = []
+    rejected: list[tuple[str, str]] = []
+
+    for key, vec in zip(keys, embeddings):
+        if vec is None:
+            rejected.append((key, "null"))
+            continue
+        if not isinstance(vec, np.ndarray):
+            vec = np.array(vec, dtype=np.float64)
+        if vec.shape[0] != expected_dim:
+            rejected.append((key, f"dimension:{vec.shape[0]}"))
+            continue
+        if not np.isfinite(vec).all():
+            rejected.append((key, "non_finite"))
+            continue
+        if np.linalg.norm(vec) == 0:
+            rejected.append((key, "zero_norm"))
+            continue
+        if np.all(vec == 0):
+            rejected.append((key, "zero_vector"))
+            continue
+        valid_keys.append(key)
+        valid_vecs.append(vec)
+
+    arr = np.array(valid_vecs, dtype=np.float64) if valid_vecs else np.empty((0, expected_dim), dtype=np.float64)
+    return valid_keys, arr, rejected
+

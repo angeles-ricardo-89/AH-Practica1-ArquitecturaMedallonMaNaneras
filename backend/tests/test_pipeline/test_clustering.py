@@ -1,5 +1,7 @@
+import numpy as np
 import psycopg
 import pytest
+
 from lakehouse.pipeline.clustering import ensure_clustering_schema
 
 
@@ -62,3 +64,97 @@ def test_cluster_labels_no_negative_cluster_id(pg_conn_str):
             assert False, "Deberia haber fallado por CHECK"
         except psycopg.errors.CheckViolation:
             conn.rollback()
+
+
+def test_validate_embeddings_rejects_null():
+    from lakehouse.pipeline.clustering import validate_embeddings
+
+    keys, vecs, rejected = validate_embeddings(
+        keys=["k1", "k2"],
+        embeddings=[None, np.array([1.0, 2.0, 3.0], dtype=np.float64)],
+        expected_dim=3,
+    )
+    assert keys == ["k2"]
+    assert rejected[0][0] == "k1"
+    assert rejected[0][1] == "null"
+
+
+def test_validate_embeddings_rejects_nan():
+    from lakehouse.pipeline.clustering import validate_embeddings
+
+    keys, vecs, rejected = validate_embeddings(
+        keys=["k1"],
+        embeddings=[np.array([1.0, np.nan, 3.0], dtype=np.float64)],
+        expected_dim=3,
+    )
+    assert len(rejected) == 1
+    assert rejected[0][1] == "non_finite"
+
+
+def test_validate_embeddings_rejects_inf():
+    from lakehouse.pipeline.clustering import validate_embeddings
+
+    keys, vecs, rejected = validate_embeddings(
+        keys=["k1"],
+        embeddings=[np.array([1.0, np.inf, 3.0], dtype=np.float64)],
+        expected_dim=3,
+    )
+    assert len(rejected) == 1
+    assert rejected[0][1] == "non_finite"
+
+
+def test_validate_embeddings_rejects_wrong_dim():
+    from lakehouse.pipeline.clustering import validate_embeddings
+
+    keys, vecs, rejected = validate_embeddings(
+        keys=["k1"],
+        embeddings=[np.array([1.0, 2.0], dtype=np.float64)],
+        expected_dim=3,
+    )
+    assert len(rejected) == 1
+    assert "dimension" in rejected[0][1]
+
+
+def test_validate_embeddings_rejects_zero_norm():
+    from lakehouse.pipeline.clustering import validate_embeddings
+
+    keys, vecs, rejected = validate_embeddings(
+        keys=["k1"],
+        embeddings=[np.array([0.0, 0.0, 0.0], dtype=np.float64)],
+        expected_dim=3,
+    )
+    assert len(rejected) == 1
+    assert rejected[0][1] == "zero_norm"
+
+
+def test_validate_embeddings_accepts_valid():
+    from lakehouse.pipeline.clustering import validate_embeddings
+
+    keys, vecs, rejected = validate_embeddings(
+        keys=["k1", "k2"],
+        embeddings=[
+            np.array([1.0, 2.0, 3.0], dtype=np.float64),
+            np.array([4.0, 5.0, 6.0], dtype=np.float64),
+        ],
+        expected_dim=3,
+    )
+    assert keys == ["k1", "k2"]
+    assert len(rejected) == 0
+    assert vecs.shape == (2, 3)
+
+
+def test_normalize_l2_preserves_shape():
+    from sklearn.preprocessing import normalize
+
+    vecs = np.array([[3.0, 4.0, 0.0], [1.0, 1.0, 1.0]], dtype=np.float64)
+    result = normalize(vecs, norm="l2")
+    assert result.shape == vecs.shape
+
+
+def test_normalize_l2_unit_norm():
+    from sklearn.preprocessing import normalize
+
+    vecs = np.random.RandomState(42).randn(10, 768).astype(np.float64)
+    result = normalize(vecs, norm="l2")
+    norms = np.linalg.norm(result, axis=1)
+    assert np.allclose(norms, 1.0, atol=1e-6)
