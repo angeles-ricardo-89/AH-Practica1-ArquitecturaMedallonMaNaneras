@@ -616,3 +616,137 @@ def test_label_clusters_marks_failed_when_invalid(monkeypatch, pg_conn_str):
     completed, failed = clustering.label_clusters(pg_conn_str, "run-2", [0], chunks, settings)
     assert completed == 0
     assert failed == 1
+
+
+def _mock_pg_connect(monkeypatch, select_fetchone=None, insert_fetchone=None):
+    from lakehouse.pipeline import clustering
+
+    mock_conn = MagicMock()
+    mock_select = MagicMock()
+    mock_select.fetchone.return_value = select_fetchone
+    mock_conn.execute.return_value = mock_select
+
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = insert_fetchone
+    mock_conn.cursor.return_value = mock_cursor
+
+    mock_cm = MagicMock()
+    mock_cm.__enter__.return_value = mock_conn
+    monkeypatch.setattr(clustering.psycopg, "connect", lambda *a, **k: mock_cm)
+    return mock_conn, mock_cursor
+
+
+def _valid_embeddings(n=4, dim=768):
+    rng = np.random.RandomState(7)
+    keys = [f"k{i}" for i in range(n)]
+    arr = rng.randn(n, dim).astype(np.float64)
+    return keys, arr
+
+
+def test_run_clustering_pipeline_aborts_with_fewer_than_4(monkeypatch):
+    from lakehouse.config import Settings
+    from lakehouse.pipeline import clustering
+
+    keys, arr = _valid_embeddings(n=3)
+    monkeypatch.setattr(
+        clustering, "load_embeddings", lambda *a: (keys, arr, [])
+    )
+    _mock_pg_connect(monkeypatch)
+
+    result = clustering.run_clustering_pipeline(Settings())
+    assert result is None
+
+
+def test_run_clustering_pipeline_skips_existing_run(monkeypatch):
+    from lakehouse.config import Settings
+    from lakehouse.pipeline import clustering
+
+    keys, arr = _valid_embeddings(n=4)
+    monkeypatch.setattr(
+        clustering, "load_embeddings", lambda *a: (keys, arr, [])
+    )
+    _mock_pg_connect(monkeypatch, select_fetchone=("existing-run-1",))
+
+    result = clustering.run_clustering_pipeline(Settings())
+    assert result == {"run_id": "existing-run-1", "skipped": True}
+
+
+def test_run_clustering_pipeline_success(monkeypatch):
+    from lakehouse.config import Settings
+    from lakehouse.pipeline import clustering
+
+    keys, arr = _valid_embeddings(n=4)
+    monkeypatch.setattr(clustering, "load_embeddings", lambda *a: (keys, arr, []))
+
+    mock_conn, mock_cursor = _mock_pg_connect(
+        monkeypatch, select_fetchone=None, insert_fetchone=("run-abc",)
+    )
+
+    labels = np.array([0, 0, 1, -1], dtype=np.int64)
+    probs = np.array([0.9, 0.8, 0.7, 0.0], dtype=np.float64)
+    monkeypatch.setattr(
+        clustering, "run_umap_clustering", lambda e, s: np.zeros((4, 15))
+    )
+    monkeypatch.setattr(clustering, "run_hdbscan", lambda u, s: (labels, probs))
+    monkeypatch.setattr(
+        clustering, "persist_cluster_assignments", lambda *a, **k: None
+    )
+    monkeypatch.setattr(clustering, "label_clusters", lambda *a, **k: (2, 0))
+
+    result = clustering.run_clustering_pipeline(Settings())
+    assert result == {"run_id": "run-abc", "clusters": 2, "noise": 1}
+    assert mock_conn.commit.call_count >= 2
+
+
+def test_run_clustering_pipeline_marks_failed_on_error(monkeypatch):
+    from lakehouse.config import Settings
+    from lakehouse.pipeline import clustering
+
+    keys, arr = _valid_embeddings(n=4)
+    monkeypatch.setattr(clustering, "load_embeddings", lambda *a: (keys, arr, []))
+
+    mock_conn, mock_cursor = _mock_pg_connect(
+        monkeypatch, select_fetchone=None, insert_fetchone=("run-fail",)
+    )
+
+    def _boom(*a, **k):
+        raise RuntimeError("umap murio")
+
+    monkeypatch.setattr(clustering, "run_umap_clustering", _boom)
+
+    with pytest.raises(RuntimeError):
+        clustering.run_clustering_pipeline(Settings())
+
+    failed_calls = [
+        c for c in mock_cursor.execute.call_args_list
+        if "status = 'failed'" in c[0][0]
+    ]
+    assert len(failed_calls) == 1
+
+
+def test_run_clustering_pipeline_all_noise_no_labeling(monkeypatch):
+    from lakehouse.config import Settings
+    from lakehouse.pipeline import clustering
+
+    keys, arr = _valid_embeddings(n=4)
+    monkeypatch.setattr(clustering, "load_embeddings", lambda *a: (keys, arr, []))
+
+    mock_conn, mock_cursor = _mock_pg_connect(
+        monkeypatch, select_fetchone=None, insert_fetchone=("run-noise",)
+    )
+
+    labels = np.full(4, -1, dtype=np.int64)
+    probs = np.zeros(4, dtype=np.float64)
+    monkeypatch.setattr(
+        clustering, "run_umap_clustering", lambda e, s: np.zeros((4, 15))
+    )
+    monkeypatch.setattr(clustering, "run_hdbscan", lambda u, s: (labels, probs))
+    monkeypatch.setattr(
+        clustering, "persist_cluster_assignments", lambda *a, **k: None
+    )
+    labeled = MagicMock()
+    monkeypatch.setattr(clustering, "label_clusters", labeled)
+
+    result = clustering.run_clustering_pipeline(Settings())
+    assert result == {"run_id": "run-noise", "clusters": 0, "noise": 4}
+    labeled.assert_not_called()

@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -426,6 +425,162 @@ def label_clusters(
             conn.commit()
 
     return completed, failed
+
+
+def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
+    pg_conn_str = (
+        f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
+        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+    )
+
+    with psycopg.connect(pg_conn_str) as conn:
+        ensure_clustering_schema(conn)
+
+    keys, embeddings, null_keys = load_embeddings(pg_conn_str)
+    input_count = len(keys) + len(null_keys)
+
+    valid_keys, valid_embeddings, rejected = validate_embeddings(
+        keys, [embeddings[i] for i in range(len(keys))],
+        expected_dim=768,
+    )
+    rejected_count = len(rejected) + len(null_keys)
+
+    if len(valid_keys) < 4:
+        logger.warning("clustering_abortado", motivo="menos de 4 embeddings validos",
+                       validos=len(valid_keys))
+        return None
+
+    umap_params = {
+        "n_components": settings.umap_clustering_n_components,
+        "n_neighbors": settings.umap_clustering_n_neighbors,
+        "min_dist": settings.umap_clustering_min_dist,
+        "metric": settings.umap_clustering_metric,
+        "random_state": settings.umap_clustering_random_state,
+    }
+    hdbscan_params = {
+        "min_cluster_size": settings.hdbscan_min_cluster_size,
+        "min_samples": settings.hdbscan_min_samples,
+        "metric": settings.hdbscan_metric,
+        "algorithm": settings.hdbscan_algorithm,
+        "cluster_selection_method": settings.hdbscan_cluster_selection_method,
+        "n_jobs": settings.hdbscan_n_jobs,
+    }
+    labeling_params = {
+        "k_sampling": settings.k_hdbscan_sampling,
+        "max_chars_per_chunk": settings.cluster_label_max_chars_per_chunk,
+        "max_retries": settings.cluster_label_max_retries,
+        "prompt_version": settings.cluster_label_prompt_version,
+        "model": settings.llamacpp_model,
+    }
+
+    all_params = {**umap_params, **hdbscan_params, **labeling_params}
+    corpus_fp = compute_corpus_fingerprint(valid_keys, valid_embeddings, settings.ollama_embed_model)
+    params_hash = compute_parameters_hash(all_params)
+
+    with psycopg.connect(pg_conn_str) as conn:
+        cur = conn.execute("""
+            SELECT run_id FROM gold.clustering_runs
+            WHERE status = 'completed'
+              AND corpus_fingerprint = %s
+              AND parameters_hash = %s
+            LIMIT 1
+        """, (corpus_fp, params_hash))
+        existing = cur.fetchone()
+        if existing and not force:
+            logger.info("corrida_equivalente_existente", run_id=existing[0])
+            return {"run_id": existing[0], "skipped": True}
+
+    with psycopg.connect(pg_conn_str) as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO gold.clustering_runs
+                (status, input_count, valid_count, rejected_count,
+                 corpus_fingerprint, parameters_hash, embedding_model,
+                 umap_parameters, hdbscan_parameters, labeling_parameters)
+            VALUES ('running', %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING run_id
+        """, (input_count, len(valid_keys), rejected_count,
+              corpus_fp, params_hash, settings.ollama_embed_model,
+              json.dumps(umap_params), json.dumps(hdbscan_params),
+              json.dumps(labeling_params)))
+        row = cur.fetchone()
+        if row is None:
+            raise RuntimeError("No se pudo crear el run de clusterizacion")
+        run_id = row[0]
+        conn.commit()
+
+    try:
+        normalized = normalize(valid_embeddings, norm="l2")
+
+        umap_vectors = run_umap_clustering(normalized, settings)
+
+        labels, probs = run_hdbscan(umap_vectors, settings)
+
+        unique_clusters = sorted(set(int(l) for l in labels if l >= 0))
+        noise_count = int((labels == -1).sum())
+
+        assignments = [
+            (valid_keys[i], int(labels[i]), float(probs[i]))
+            for i in range(len(valid_keys))
+        ]
+        persist_cluster_assignments(pg_conn_str, run_id, assignments)
+
+        with psycopg.connect(pg_conn_str) as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE gold.clustering_runs
+                SET cluster_count = %s, noise_count = %s, status = 'completed'
+                WHERE run_id = %s
+            """, (len(unique_clusters), noise_count, run_id))
+            conn.commit()
+
+        chunks = [
+            {
+                "chunk_key": valid_keys[i],
+                "cluster_id": int(labels[i]),
+                "cluster_pertenencia": float(probs[i]),
+            }
+            for i in range(len(valid_keys))
+        ]
+
+        if unique_clusters:
+            completed, failed = label_clusters(
+                pg_conn_str, run_id, unique_clusters, chunks, settings,
+            )
+            final_status = "partial" if failed > 0 else "completed"
+            with psycopg.connect(pg_conn_str) as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    UPDATE gold.clustering_runs
+                    SET labeled_cluster_count = %s, failed_label_count = %s,
+                        status = %s, finished_at = NOW()
+                    WHERE run_id = %s
+                """, (completed, failed, final_status, run_id))
+                conn.commit()
+        else:
+            with psycopg.connect(pg_conn_str) as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    UPDATE gold.clustering_runs
+                    SET finished_at = NOW()
+                    WHERE run_id = %s
+                """, (run_id,))
+                conn.commit()
+
+        logger.info("clusterizacion_completada", run_id=run_id,
+                    clusters=len(unique_clusters), noise=noise_count)
+        return {"run_id": run_id, "clusters": len(unique_clusters), "noise": noise_count}
+
+    except Exception as e:
+        with psycopg.connect(pg_conn_str) as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE gold.clustering_runs
+                SET status = 'failed', error_message = %s, finished_at = NOW()
+                WHERE run_id = %s
+            """, (str(e)[:500], run_id))
+            conn.commit()
+        raise
 
 
 
