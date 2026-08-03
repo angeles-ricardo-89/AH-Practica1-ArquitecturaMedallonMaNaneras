@@ -204,3 +204,55 @@ def test_parameters_hash_changes_with_params():
     h1 = compute_parameters_hash({"x": 15})
     h2 = compute_parameters_hash({"x": 16})
     assert h1 != h2
+
+
+def test_load_embeddings_returns_keys_and_array(pg_conn_str):
+    from lakehouse.pipeline.clustering import ensure_clustering_schema, load_embeddings
+
+    rng = np.random.RandomState(42)
+    vec_a = rng.randn(768).tolist()
+    vec_b = rng.randn(768).tolist()
+
+    with psycopg.connect(pg_conn_str) as conn:
+        ensure_clustering_schema(conn)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO gold.rag_corpus (chunk_key, conference_id, conference_date,
+                                         participant, chunk_text, payload, embedding)
+            VALUES
+            ('ck_test_1', 'conf_1', '2025-01-01', 'p1', 'texto 1', 'payload 1',
+             %s::vector),
+            ('ck_test_2', 'conf_1', '2025-01-01', 'p1', 'texto 2', 'payload 2',
+             %s::vector),
+            ('ck_test_null', 'conf_1', '2025-01-01', 'p1', 'texto null', 'payload null',
+             NULL)
+            ON CONFLICT (chunk_key) DO NOTHING
+        """, (
+            "[" + ",".join(str(x) for x in vec_a) + "]",
+            "[" + ",".join(str(x) for x in vec_b) + "]",
+        ))
+        conn.commit()
+
+    try:
+        keys, embeddings, null_keys = load_embeddings(pg_conn_str)
+        assert len(keys) == 2
+        assert "ck_test_1" in keys
+        assert "ck_test_2" in keys
+        assert "ck_test_null" in null_keys
+        assert embeddings.shape == (2, 768)
+    finally:
+        with psycopg.connect(pg_conn_str) as conn:
+            conn.execute("DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'ck_test_%'")
+            conn.commit()
+
+
+def test_load_embeddings_empty_table(pg_conn_str):
+    from lakehouse.pipeline.clustering import load_embeddings
+
+    with psycopg.connect(pg_conn_str) as conn:
+        conn.execute("DELETE FROM gold.rag_corpus WHERE chunk_key LIKE 'ck_test_%'")
+        conn.commit()
+
+    keys, embeddings, null_keys = load_embeddings(pg_conn_str)
+    assert keys == []
+    assert embeddings.shape[0] == 0

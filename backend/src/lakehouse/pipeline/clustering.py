@@ -141,3 +141,46 @@ def compute_parameters_hash(params: dict) -> str:
     return hashlib.sha256(data.encode()).hexdigest()
 
 
+_EMBEDDING_RE = re.compile(r"\[([-\d., eE+]+)\]")
+
+
+def _parse_pgvector_to_list(pg_str: str | None) -> list[float] | None:
+    if pg_str is None:
+        return None
+    match = _EMBEDDING_RE.search(str(pg_str))
+    if not match:
+        return None
+    try:
+        raw = match.group(1)
+        if not raw.strip():
+            return None
+        return [float(x.strip()) for x in raw.split(",") if x.strip()]
+    except (ValueError, OverflowError):
+        return None
+
+
+def load_embeddings(pg_conn_str: str) -> tuple[list[str], np.ndarray, list[str]]:
+    raw_keys: list[str] = []
+    raw_vecs: list[np.ndarray] = []
+    null_keys: list[str] = []
+
+    with psycopg.connect(pg_conn_str) as conn:
+        cur = conn.execute(
+            "SELECT chunk_key, embedding::text FROM gold.rag_corpus"
+        )
+        for row in cur:
+            vec = _parse_pgvector_to_list(row[1])
+            if vec is None:
+                null_keys.append(row[0])
+                continue
+            raw_keys.append(row[0])
+            raw_vecs.append(np.array(vec, dtype=np.float64))
+
+    if raw_vecs:
+        embeddings = np.array(raw_vecs, dtype=np.float64)
+    else:
+        embeddings = np.empty((0, 0), dtype=np.float64)
+    return raw_keys, embeddings, null_keys
+
+
+
