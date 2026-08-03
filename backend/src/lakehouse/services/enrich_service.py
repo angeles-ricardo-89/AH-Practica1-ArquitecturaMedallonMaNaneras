@@ -138,4 +138,24 @@ class EnrichService:
             from lakehouse.pipeline.enrichment import _compute_umap_3d  # noqa: PLC0415
 
             _compute_umap_3d(self._pg_conn_str)
+
+            self._logger.info("Ejecutando clusterizacion semantica")
+            try:
+                from lakehouse.pipeline.clustering import run_clustering_pipeline  # noqa: PLC0415
+
+                cluster_result = run_clustering_pipeline(self._settings)
+                if cluster_result and cluster_result.get("skipped"):
+                    self._logger.info(
+                        "clusterizacion_omitida",
+                        run_id=cluster_result.get("run_id"),
+                    )
+                elif cluster_result:
+                    self._logger.info(
+                        "clusterizacion_completada",
+                        run_id=cluster_result.get("run_id"),
+                        clusters=cluster_result.get("clusters"),
+                        noise=cluster_result.get("noise"),
+                    )
+            except Exception:
+                self._logger.exception("clusterizacion_fallida")
         return result

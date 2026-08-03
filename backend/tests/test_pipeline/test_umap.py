@@ -294,21 +294,73 @@ class TestEnrichServiceCallsUmap:
             patch("lakehouse.services.enrich_service.ensure_gold_tables"),
             patch("lakehouse.services.enrich_service.enrich_interventions") as mock_enrich,
             patch("lakehouse.pipeline.enrichment._compute_umap_3d") as mock_umap,
+            patch("lakehouse.pipeline.clustering.run_clustering_pipeline") as mock_cluster,
         ):
             mock_enrich.return_value = {"embedded": 2, "failed": 0, "total": 2}
             result = self._service().run(dry_run=False)
 
         assert result["embedded"] == 2
         mock_umap.assert_called_once_with("postgresql://u:p@h:5433/d")
+        mock_cluster.assert_called_once()
 
     def test_run_skips_umap_when_nothing_embedded(self) -> None:
         with (
             patch("lakehouse.services.enrich_service.ensure_gold_tables"),
             patch("lakehouse.services.enrich_service.enrich_interventions") as mock_enrich,
             patch("lakehouse.pipeline.enrichment._compute_umap_3d") as mock_umap,
+            patch("lakehouse.pipeline.clustering.run_clustering_pipeline") as mock_cluster,
         ):
             mock_enrich.return_value = {"embedded": 0, "failed": 0, "total": 2}
             result = self._service().run(dry_run=False)
 
         assert result["embedded"] == 0
         mock_umap.assert_not_called()
+        mock_cluster.assert_not_called()
+
+    def test_run_logs_skipped_clustering(self) -> None:
+        with (
+            patch("lakehouse.services.enrich_service.ensure_gold_tables"),
+            patch("lakehouse.services.enrich_service.enrich_interventions") as mock_enrich,
+            patch("lakehouse.pipeline.enrichment._compute_umap_3d"),
+            patch("lakehouse.pipeline.clustering.run_clustering_pipeline") as mock_cluster,
+            patch("lakehouse.services.enrich_service.get_logger"),
+        ):
+            mock_enrich.return_value = {"embedded": 2, "failed": 0, "total": 2}
+            mock_cluster.return_value = {"run_id": "run-1", "skipped": True}
+            self._service().run(dry_run=False)
+
+        mock_cluster.assert_called_once()
+
+    def test_run_logs_completed_clustering(self) -> None:
+        with (
+            patch("lakehouse.services.enrich_service.ensure_gold_tables"),
+            patch("lakehouse.services.enrich_service.enrich_interventions") as mock_enrich,
+            patch("lakehouse.pipeline.enrichment._compute_umap_3d"),
+            patch("lakehouse.pipeline.clustering.run_clustering_pipeline") as mock_cluster,
+            patch("lakehouse.services.enrich_service.get_logger") as mock_logger,
+        ):
+            mock_enrich.return_value = {"embedded": 2, "failed": 0, "total": 2}
+            mock_cluster.return_value = {"run_id": "run-1", "clusters": 3, "noise": 1}
+            self._service().run(dry_run=False)
+
+        logger_instance = mock_logger.return_value
+        infos = [c.args[0] for c in logger_instance.info.call_args_list]
+        assert "clusterizacion_completada" in infos
+
+    def test_run_swallows_clustering_failure(self) -> None:
+        with (
+            patch("lakehouse.services.enrich_service.ensure_gold_tables"),
+            patch("lakehouse.services.enrich_service.enrich_interventions") as mock_enrich,
+            patch("lakehouse.pipeline.enrichment._compute_umap_3d"),
+            patch(
+                "lakehouse.pipeline.clustering.run_clustering_pipeline",
+                side_effect=RuntimeError("db down"),
+            ) as mock_cluster,
+            patch("lakehouse.services.enrich_service.get_logger") as mock_logger,
+        ):
+            mock_enrich.return_value = {"embedded": 2, "failed": 0, "total": 2}
+            result = self._service().run(dry_run=False)
+
+        assert result["embedded"] == 2
+        mock_cluster.assert_called_once()
+        mock_logger.return_value.exception.assert_called_once()
