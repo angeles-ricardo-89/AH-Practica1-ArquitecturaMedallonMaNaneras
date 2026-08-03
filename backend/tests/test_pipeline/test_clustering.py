@@ -158,3 +158,49 @@ def test_normalize_l2_unit_norm():
     result = normalize(vecs, norm="l2")
     norms = np.linalg.norm(result, axis=1)
     assert np.allclose(norms, 1.0, atol=1e-6)
+
+
+def test_corpus_fingerprint_deterministic():
+    from lakehouse.pipeline.clustering import compute_corpus_fingerprint
+
+    keys = ["key_a", "key_b", "key_c"]
+    emb = np.random.RandomState(42).randn(3, 768).astype(np.float64)
+    fp1 = compute_corpus_fingerprint(keys, emb, "embeddinggemma")
+    fp2 = compute_corpus_fingerprint(keys, emb, "embeddinggemma")
+    assert fp1 == fp2
+
+
+def test_corpus_fingerprint_changes_with_data():
+    from lakehouse.pipeline.clustering import compute_corpus_fingerprint
+
+    keys = ["k1", "k2"]
+    emb1 = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
+    emb2 = np.array([[1.0, 2.0], [3.0, 5.0]], dtype=np.float64)
+    fp1 = compute_corpus_fingerprint(keys, emb1, "model")
+    fp2 = compute_corpus_fingerprint(keys, emb2, "model")
+    assert fp1 != fp2
+
+
+def test_corpus_fingerprint_different_key_order_same_hash():
+    from lakehouse.pipeline.clustering import compute_corpus_fingerprint
+
+    emb = np.array([[1.0], [2.0], [3.0]], dtype=np.float64)
+    fp1 = compute_corpus_fingerprint(["c", "a", "b"], emb, "model")
+    fp2 = compute_corpus_fingerprint(["a", "b", "c"], emb, "model")
+    assert fp1 == fp2
+
+
+def test_parameters_hash_deterministic():
+    from lakehouse.pipeline.clustering import compute_parameters_hash
+
+    params1 = {"umap_n_components": 15, "hdbscan_min_cluster_size": 10}
+    params2 = {"umap_n_components": 15, "hdbscan_min_cluster_size": 10}
+    assert compute_parameters_hash(params1) == compute_parameters_hash(params2)
+
+
+def test_parameters_hash_changes_with_params():
+    from lakehouse.pipeline.clustering import compute_parameters_hash
+
+    h1 = compute_parameters_hash({"x": 15})
+    h2 = compute_parameters_hash({"x": 16})
+    assert h1 != h2

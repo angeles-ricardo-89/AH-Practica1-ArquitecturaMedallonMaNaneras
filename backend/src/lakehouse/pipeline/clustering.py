@@ -122,3 +122,22 @@ def validate_embeddings(
     arr = np.array(valid_vecs, dtype=np.float64) if valid_vecs else np.empty((0, expected_dim), dtype=np.float64)
     return valid_keys, arr, rejected
 
+
+def compute_corpus_fingerprint(
+    chunk_keys: list[str],
+    embeddings: np.ndarray,
+    model: str,
+) -> str:
+    data = json.dumps({
+        "keys": sorted(chunk_keys),
+        "embedding_hash": hashlib.sha256(embeddings.tobytes()).hexdigest(),
+        "model": model,
+    }, sort_keys=True)
+    return hashlib.sha256(data.encode()).hexdigest()
+
+
+def compute_parameters_hash(params: dict) -> str:
+    data = json.dumps(params, sort_keys=True)
+    return hashlib.sha256(data.encode()).hexdigest()
+
+
