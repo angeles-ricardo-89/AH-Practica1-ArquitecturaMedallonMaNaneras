@@ -19,6 +19,34 @@ const dashboardStore = useDashboardStore()
 const embeddingsPoints = ref<Embedding3DPoint[]>([])
 const embeddingsError = ref<string | null>(null)
 const chatAreaRef = ref<HTMLElement>()
+const inspectorRef = ref<HTMLElement>()
+const embeddingsHeight = ref(240)
+const isResizing = ref(false)
+
+function startResize(_e: MouseEvent) {
+  isResizing.value = true
+  document.body.style.cursor = 'ns-resize'
+  document.body.style.userSelect = 'none'
+  window.addEventListener('mousemove', onResize)
+  window.addEventListener('mouseup', stopResize)
+}
+
+function onResize(e: MouseEvent) {
+  if (!isResizing.value || !inspectorRef.value) return
+  const rect = inspectorRef.value.getBoundingClientRect()
+  const topOffset = e.clientY - rect.top
+  const minH = 150
+  const maxH = rect.height - 150 - 24 // 24 = resizer height + gaps
+  embeddingsHeight.value = Math.max(minH, Math.min(maxH, topOffset))
+}
+
+function stopResize() {
+  isResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  window.removeEventListener('mousemove', onResize)
+  window.removeEventListener('mouseup', stopResize)
+}
 
 const selectedMessage = computed(() => {
   if (!dashboardStore.selectedResponseId) return null
@@ -111,19 +139,44 @@ onUnmounted(() => {
         </div>
 
         <!-- Columna derecha: Inspector -->
-        <div class="flex-[0.7] min-w-[280px] flex flex-col gap-4 overflow-hidden">
-          <div v-if="embeddingsError" class="bg-white border border-stone-200 rounded-2xl p-4 shrink-0">
+        <div ref="inspectorRef" class="flex-[0.7] min-w-[280px] flex flex-col gap-2 overflow-hidden">
+          <!-- Embeddings 3D -->
+          <div
+            v-if="embeddingsError"
+            class="bg-white border border-stone-200 rounded-2xl p-4 shrink-0"
+            :style="{ height: embeddingsHeight + 'px' }"
+          >
             <h3 class="text-sm font-bold text-stone-950 mb-1">Embeddings 3D</h3>
             <p class="text-xs text-stone-500">sin datos</p>
           </div>
-          <Embeddings3D
+          <div
             v-else
-            :points="embeddingsPoints"
-            :active-chunk-keys="activeChunkKeys"
-            class="shrink-0"
-          />
+            class="shrink-0 overflow-hidden"
+            :style="{ height: embeddingsHeight + 'px' }"
+          >
+            <Embeddings3D
+              :points="embeddingsPoints"
+              :active-chunk-keys="activeChunkKeys"
+              class="h-full"
+            />
+          </div>
 
-          <div v-if="!selectedMessage" class="bg-white border border-stone-200 rounded-2xl p-4 flex-1 min-h-0 overflow-hidden">
+          <!-- Slider / Resizer -->
+          <div
+            class="h-4 shrink-0 flex items-center justify-center cursor-ns-resize group"
+            @mousedown.prevent="startResize"
+          >
+            <div
+              class="w-12 h-1 rounded-full transition-colors"
+              :class="isResizing ? 'bg-red-700' : 'bg-stone-300 group-hover:bg-stone-400'"
+            />
+          </div>
+
+          <!-- Fuentes usadas -->
+          <div
+            v-if="!selectedMessage"
+            class="bg-white border border-stone-200 rounded-2xl p-4 flex-1 min-h-0 overflow-hidden"
+          >
             <h3 class="text-sm font-bold text-stone-950 mb-1">Fuentes usadas</h3>
             <p class="text-xs text-stone-500">
               Selecciona una respuesta del chat para ver fuentes usadas.
