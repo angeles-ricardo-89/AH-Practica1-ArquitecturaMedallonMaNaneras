@@ -696,13 +696,13 @@ def run_labeling(settings, run_id: str | None = None) -> dict | None:
         final_status = "partial" if failed_count > 0 else "completed"
         cur = conn.cursor()
         cur.execute(
-            f"""
+            """
             UPDATE gold.clustering_runs
             SET labeled_cluster_count = %s, failed_label_count = %s,
-                status = '{final_status}', finished_at = NOW()
+                status = %s, finished_at = NOW()
             WHERE run_id = %s
             """,
-            (labeled_count, failed_count, target_run_id),
+            (labeled_count, failed_count, final_status, target_run_id),
         )
         conn.commit()
 

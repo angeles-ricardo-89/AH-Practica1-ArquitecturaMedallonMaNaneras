@@ -853,6 +853,7 @@ def test_run_labeling_updates_status_partial(monkeypatch):
         c
         for cursor in captured["cursors"]
         for c in cursor.execute.call_args_list
-        if "status = 'partial'" in c[0][0]
+        if "SET labeled_cluster_count" in c[0][0]
     ]
     assert len(update_calls) == 1
+    assert update_calls[0][0][1][2] == "partial"
