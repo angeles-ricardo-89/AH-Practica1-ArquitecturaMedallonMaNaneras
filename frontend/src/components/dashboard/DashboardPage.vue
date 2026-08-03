@@ -49,6 +49,7 @@ async function fetchEmbeddings() {
 onMounted(() => {
   obsStore.startPolling()
   fetchEmbeddings()
+  dashboardStore.fetchClusters()
 })
 
 onUnmounted(() => {
