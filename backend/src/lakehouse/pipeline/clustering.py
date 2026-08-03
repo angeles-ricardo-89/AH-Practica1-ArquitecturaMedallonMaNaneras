@@ -17,6 +17,13 @@ from lakehouse.log_config import get_logger
 logger = get_logger(__name__, layer="gold")
 
 
+def _build_pg_conn_str(settings) -> str:
+    return (
+        f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
+        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+    )
+
+
 def ensure_clustering_schema(conn) -> None:
     cur = conn.cursor()
     cur.execute("""
@@ -330,7 +337,7 @@ def generate_label(
     prompt: str,
     base_url: str,
     model: str,
-    max_tokens: int = 20,
+    max_tokens: int = 100,
     timeout: int = 30,
 ) -> str:
     response = httpx.post(
@@ -464,11 +471,8 @@ def label_clusters(
     return completed, failed
 
 
-def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
-    pg_conn_str = (
-        f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
-        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-    )
+def run_clustering(settings, force: bool = False) -> dict | None:
+    pg_conn_str = _build_pg_conn_str(settings)
 
     with psycopg.connect(pg_conn_str) as conn:
         ensure_clustering_schema(conn)
@@ -504,15 +508,8 @@ def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
         "cluster_selection_method": settings.hdbscan_cluster_selection_method,
         "n_jobs": settings.hdbscan_n_jobs,
     }
-    labeling_params = {
-        "k_sampling": settings.k_hdbscan_sampling,
-        "max_chars_per_chunk": settings.cluster_label_max_chars_per_chunk,
-        "max_retries": settings.cluster_label_max_retries,
-        "prompt_version": settings.cluster_label_prompt_version,
-        "model": settings.llamacpp_model,
-    }
 
-    all_params = {**umap_params, **hdbscan_params, **labeling_params}
+    all_params = {**umap_params, **hdbscan_params}
     corpus_fp = compute_corpus_fingerprint(
         valid_keys, valid_embeddings, settings.ollama_embed_model
     )
@@ -541,8 +538,8 @@ def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
             INSERT INTO gold.clustering_runs
                 (status, input_count, valid_count, rejected_count,
                  corpus_fingerprint, parameters_hash, embedding_model,
-                 umap_parameters, hdbscan_parameters, labeling_parameters)
-            VALUES ('running', %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 umap_parameters, hdbscan_parameters)
+            VALUES ('running', %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING run_id
         """,
             (
@@ -554,7 +551,6 @@ def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
                 settings.ollama_embed_model,
                 json.dumps(umap_params),
                 json.dumps(hdbscan_params),
-                json.dumps(labeling_params),
             ),
         )
         row = cur.fetchone()
@@ -583,55 +579,13 @@ def run_clustering_pipeline(settings, force: bool = False) -> dict | None:
             cur.execute(
                 """
                 UPDATE gold.clustering_runs
-                SET cluster_count = %s, noise_count = %s, status = 'completed'
+                SET cluster_count = %s, noise_count = %s, status = 'completed',
+                    finished_at = NOW()
                 WHERE run_id = %s
             """,
                 (len(unique_clusters), noise_count, run_id),
             )
             conn.commit()
-
-        chunks = [
-            {
-                "chunk_key": valid_keys[i],
-                "cluster_id": int(labels[i]),
-                "cluster_pertenencia": float(probs[i]),
-            }
-            for i in range(len(valid_keys))
-        ]
-
-        if unique_clusters:
-            completed, failed = label_clusters(
-                pg_conn_str,
-                run_id,
-                unique_clusters,
-                chunks,
-                settings,
-            )
-            final_status = "partial" if failed > 0 else "completed"
-            with psycopg.connect(pg_conn_str) as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    UPDATE gold.clustering_runs
-                    SET labeled_cluster_count = %s, failed_label_count = %s,
-                        status = %s, finished_at = NOW()
-                    WHERE run_id = %s
-                """,
-                    (completed, failed, final_status, run_id),
-                )
-                conn.commit()
-        else:
-            with psycopg.connect(pg_conn_str) as conn:
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    UPDATE gold.clustering_runs
-                    SET finished_at = NOW()
-                    WHERE run_id = %s
-                """,
-                    (run_id,),
-                )
-                conn.commit()
 
         logger.info(
             "clusterizacion_completada",

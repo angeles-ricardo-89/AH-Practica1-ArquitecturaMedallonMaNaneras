@@ -17,7 +17,7 @@ from lakehouse.pipeline.clustering import (
     load_embeddings,
     load_prompt_template,
     persist_cluster_assignments,
-    run_clustering_pipeline,
+    run_clustering,
     select_representative_chunks,
     validate_embeddings,
     validate_label,
@@ -587,25 +587,25 @@ def _valid_embeddings(n: int = 4, dim: int = 768) -> tuple[list[str], np.ndarray
     return keys, arr
 
 
-def test_run_clustering_pipeline_aborts_with_fewer_than_4(monkeypatch):
+def test_run_clustering_aborts_with_fewer_than_4(monkeypatch):
     keys, arr = _valid_embeddings(n=3)
     monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
     _mock_pg_connect(monkeypatch)
 
-    result = run_clustering_pipeline(Settings())
+    result = run_clustering(Settings())
     assert result is None
 
 
-def test_run_clustering_pipeline_skips_existing_run(monkeypatch):
+def test_run_clustering_skips_existing_run(monkeypatch):
     keys, arr = _valid_embeddings(n=4)
     monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
     _mock_pg_connect(monkeypatch, select_fetchone=("existing-run-1",))
 
-    result = run_clustering_pipeline(Settings())
+    result = run_clustering(Settings())
     assert result == {"run_id": "existing-run-1", "skipped": True}
 
 
-def test_run_clustering_pipeline_success(monkeypatch):
+def test_run_clustering_success(monkeypatch):
     keys, arr = _valid_embeddings(n=4)
     monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
 
@@ -618,14 +618,13 @@ def test_run_clustering_pipeline_success(monkeypatch):
     )
     monkeypatch.setattr(clustering, "run_hdbscan", lambda _vecs, _settings: (labels, probs))
     monkeypatch.setattr(clustering, "persist_cluster_assignments", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(clustering, "label_clusters", lambda *_args, **_kwargs: (2, 0))
 
-    result = run_clustering_pipeline(Settings())
+    result = run_clustering(Settings())
     assert result == {"run_id": "run-abc", "clusters": 2, "noise": 1}
     assert mock_conn.commit.call_count >= 2
 
 
-def test_run_clustering_pipeline_marks_failed_on_error(monkeypatch):
+def test_run_clustering_marks_failed_on_error(monkeypatch):
     keys, arr = _valid_embeddings(n=4)
     monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
 
@@ -639,13 +638,13 @@ def test_run_clustering_pipeline_marks_failed_on_error(monkeypatch):
     monkeypatch.setattr(clustering, "run_umap_clustering", _boom)
 
     with pytest.raises(RuntimeError):
-        run_clustering_pipeline(Settings())
+        run_clustering(Settings())
 
     failed_calls = [c for c in mock_cursor.execute.call_args_list if "status = 'failed'" in c[0][0]]
     assert len(failed_calls) == 1
 
 
-def test_run_clustering_pipeline_all_noise_no_labeling(monkeypatch):
+def test_run_clustering_all_noise_no_labeling(monkeypatch):
     keys, arr = _valid_embeddings(n=4)
     monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
 
@@ -661,6 +660,27 @@ def test_run_clustering_pipeline_all_noise_no_labeling(monkeypatch):
     labeled = MagicMock()
     monkeypatch.setattr(clustering, "label_clusters", labeled)
 
-    result = run_clustering_pipeline(Settings())
+    result = run_clustering(Settings())
     assert result == {"run_id": "run-noise", "clusters": 0, "noise": 4}
+    labeled.assert_not_called()
+
+
+def test_run_clustering_does_not_label(monkeypatch):
+    keys, arr = _valid_embeddings(n=4)
+    monkeypatch.setattr(clustering, "load_embeddings", lambda *_args: (keys, arr, []))
+
+    _mock_pg_connect(monkeypatch, select_fetchone=None, insert_fetchone=("run-1",))
+
+    labels = np.array([0, 0, 1, -1], dtype=np.int64)
+    probs = np.array([0.9, 0.8, 0.7, 0.0], dtype=np.float64)
+    monkeypatch.setattr(
+        clustering, "run_umap_clustering", lambda _emb, _settings: np.zeros((4, 15))
+    )
+    monkeypatch.setattr(clustering, "run_hdbscan", lambda _vecs, _settings: (labels, probs))
+    monkeypatch.setattr(clustering, "persist_cluster_assignments", lambda *_args, **_kwargs: None)
+    labeled = MagicMock()
+    monkeypatch.setattr(clustering, "label_clusters", labeled)
+
+    result = run_clustering(Settings())
+    assert result["clusters"] == 2
     labeled.assert_not_called()
