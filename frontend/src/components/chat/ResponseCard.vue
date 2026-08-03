@@ -53,6 +53,7 @@ function toggleDetail(e: Event) {
       :class="isSelected
         ? 'border-red-900 ring-1 ring-red-900'
         : 'border-stone-200 hover:border-stone-300'"
+      @click.stop="handleClick"
     >
       <div v-if="isSelected" class="mb-2">
         <span class="text-xs font-bold text-red-900">Respuesta seleccionada</span>
