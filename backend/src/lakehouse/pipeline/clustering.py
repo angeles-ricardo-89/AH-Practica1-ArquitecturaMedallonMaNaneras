@@ -203,7 +203,7 @@ def run_hdbscan(
         metric=settings.hdbscan_metric,
         algorithm=settings.hdbscan_algorithm,
         cluster_selection_method=settings.hdbscan_cluster_selection_method,
-        n_jobs=settings.hdbscan_n_jobs,
+        core_dist_n_jobs=settings.hdbscan_n_jobs,
     )
     labels = clusterer.fit_predict(umap_vectors)
     probs = clusterer.probabilities_.astype(np.float64)

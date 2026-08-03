@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     hdbscan_min_cluster_size: int = 15
     hdbscan_min_samples: int = 5
     hdbscan_metric: str = "euclidean"
-    hdbscan_algorithm: str = "auto"
+    hdbscan_algorithm: str = "best"
     hdbscan_cluster_selection_method: str = "eom"
     hdbscan_n_jobs: int = -1
 
