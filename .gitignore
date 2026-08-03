@@ -55,5 +55,5 @@ backend/logs/*
 backend/.coverage
 backend/test.db
 ducklake_files.duckdb
-
+backend/data/lakehouse/ducklake_files.duckdb
 
