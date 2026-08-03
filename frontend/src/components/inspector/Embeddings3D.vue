@@ -175,6 +175,11 @@ function updateChart() {
       },
       itemStyle: { borderWidth: 0 },
       emphasis: { itemStyle: { color: '#7F1D1D' } },
+      animation: true,
+      animationDuration: 600,
+      animationDurationUpdate: 600,
+      animationEasing: 'cubicInOut',
+      animationEasingUpdate: 'cubicInOut',
     }],
   })
 }
