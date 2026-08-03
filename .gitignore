@@ -54,4 +54,6 @@ backend/logs/*
 # Test artifacts
 backend/.coverage
 backend/test.db
+ducklake_files.duckdb
+
 
