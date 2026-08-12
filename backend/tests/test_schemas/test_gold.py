@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from lakehouse.schemas.gold import RagCorpusRecord
+from lakehouse.schemas.gold import EnrichmentResult, RagCorpusRecord
 
 
 class TestRagCorpusRecord:
@@ -41,3 +41,45 @@ class TestRagCorpusRecord:
             url="https://example.com",
         )
         assert r.embedding is None
+
+
+class TestEnrichmentResult:
+    def test_defaults_all_zero(self):
+        r = EnrichmentResult()
+        assert r.total == 0
+        assert r.failed == 0
+        assert r.embedded == 0
+        assert r.failed_to_embed == 0
+        assert r.mapped_3d == 0
+        assert r.failed_to_map == 0
+        assert r.clustered == 0
+        assert r.noise == 0
+        assert r.clusters == 0
+        assert r.clustered_with_labels == 0
+        assert r.failed_to_label == 0
+
+    def test_populates_all_fields(self):
+        r = EnrichmentResult(
+            total=8,
+            failed=2,
+            embedded=6,
+            failed_to_embed=2,
+            mapped_3d=6,
+            failed_to_map=0,
+            clustered=6,
+            noise=1,
+            clusters=3,
+            clustered_with_labels=2,
+            failed_to_label=1,
+        )
+        assert r.total == 8
+        assert r.failed == 2
+        assert r.mapped_3d == 6
+        assert r.clusters == 3
+        assert r.clustered_with_labels == 2
+        assert r.failed_to_label == 1
+        assert r.model_dump()["mapped_3d"] == 6
+
+    def test_rejects_non_int(self):
+        with pytest.raises(ValidationError):
+            EnrichmentResult(total="ocho")

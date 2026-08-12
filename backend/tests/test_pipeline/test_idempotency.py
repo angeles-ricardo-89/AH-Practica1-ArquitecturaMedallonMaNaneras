@@ -283,7 +283,7 @@ class TestGoldIdempotency:
 
         assert first["total"] == 2
         assert first["embedded"] == 2
-        assert first["failed"] == 0
+        assert first["failed_to_embed"] == 0
 
         insert_sql = mock_cursor.execute.call_args_list[0][0][0]
         assert "ON CONFLICT" in insert_sql.upper()

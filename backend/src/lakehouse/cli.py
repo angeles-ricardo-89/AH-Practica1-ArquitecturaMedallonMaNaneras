@@ -205,6 +205,14 @@ def enrich(
     conference_date: str | None = typer.Option(None, "--date", help="Conference date"),
     clean: bool = typer.Option(default=False, help="Drop gold tables before enriching"),
     workers: int = typer.Option(default=1, help="Parallel Ollama embedding workers"),
+    run_clustering: bool = typer.Option(
+        default=False,
+        help="Fuerza re-clusterizacion semantica (UMAP+HDBSCAN) sobre el corpus",
+    ),
+    run_semantic_cluster_labeling: bool = typer.Option(
+        default=False,
+        help="Ejecuta autoetiquetado LLM sobre clusters existentes de la ultima corrida",
+    ),
 ) -> None:
     settings = Settings()
     pg_conn_str = _get_pg_conn_str(settings)
@@ -227,8 +235,20 @@ def enrich(
     )
     try:
         with install_graceful_interrupt():
+            run_gold_enrichment = not run_clustering and not run_semantic_cluster_labeling
+            if run_gold_enrichment:
+                run_clustering = True
+            if run_clustering:
+                run_semantic_cluster_labeling = True
+
             result = service.run(
-                dry_run=dry_run, conference_date=conference_date, clean=clean, workers=workers
+                dry_run=dry_run,
+                conference_date=conference_date,
+                clean=clean,
+                workers=workers,
+                run_gold_enrichment=run_gold_enrichment,
+                run_clustering=run_clustering,
+                run_semantic_cluster_labeling=run_semantic_cluster_labeling,
             )
     except Exception as e:
         if not dry_run:
@@ -240,12 +260,12 @@ def enrich(
         "gold",
         started_at,
         dry_run,
-        records_in=result.get("total", 0),
-        records_out=result.get("embedded", 0),
+        records_in=result.total,
+        records_out=result.embedded,
     )
     typer.echo(
-        f"Enriquecimiento completado: {result['embedded']} incrustados, "
-        f"{result['failed']} fallidos de {result['total']} totales"
+        f"Enriquecimiento completado: {result.embedded} incrustados, {result.failed_to_embed} fallidos, {result.mapped_3d} mapeados 3D, {result.failed_to_map} fallidos, {result.clustered} clusterizados, {result.noise} ruido, {result.clusters} clusters, {result.clustered_with_labels} clusterizados con etiquetas, {result.failed_to_label} fallidos, "
+        f"{result.failed} fallidos de {result.total} totales"
     )
 
 

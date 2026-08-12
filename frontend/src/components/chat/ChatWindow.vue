@@ -18,6 +18,7 @@ async function handleSubmit() {
   const query = input.value.trim()
   if (!query) return
   input.value = ''
+  dashboardStore.selectResponse(null)
   await store.sendMessage(query)
   await nextTick()
   if (messagesContainer.value) {
@@ -31,6 +32,15 @@ function selectResponse(id: string) {
 
 function isSelected(id: string) {
   return dashboardStore.selectedResponseId === id
+}
+
+function handleContainerClick(e: MouseEvent) {
+  // Solo deseleccionar si el click NO fue dentro de una tarjeta asistente
+  // (la tarjeta asistente tiene clase cursor-pointer y usa @click.stop)
+  const target = e.target as HTMLElement
+  if (!target.closest('.cursor-pointer')) {
+    dashboardStore.selectResponse(null)
+  }
 }
 </script>
 
@@ -66,6 +76,7 @@ function isSelected(id: string) {
     <div
       ref="messagesContainer"
       class="flex-1 overflow-y-auto space-y-4 p-4"
+      @click="handleContainerClick"
     >
       <div v-if="store.messages.length === 0" class="text-center py-12">
         <p class="text-sm text-stone-400">Historial visible tipo conversación</p>

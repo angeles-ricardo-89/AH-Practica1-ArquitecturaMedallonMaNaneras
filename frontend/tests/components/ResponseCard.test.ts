@@ -67,7 +67,7 @@ describe('ResponseCard', () => {
     const wrapper = mount(ResponseCard, {
       props: { message: baseMessage, isSelected: false },
     })
-    await wrapper.trigger('click')
+    await wrapper.find('.cursor-pointer').trigger('click')
     expect(wrapper.emitted('select')).toBeTruthy()
     expect(wrapper.emitted('select')![0]).toEqual(['msg_1'])
   })

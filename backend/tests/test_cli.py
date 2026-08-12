@@ -10,6 +10,7 @@ from lakehouse.cli import _write_pipeline_run, app
 from lakehouse.config import Settings
 from lakehouse.db.observability_conn import ensure_observability_tables
 from lakehouse.pipeline.interrupt import interrupt_state
+from lakehouse.schemas.gold import EnrichmentResult
 
 runner = CliRunner()
 
@@ -125,11 +126,17 @@ class TestPipelineEnrich:
     @patch("lakehouse.cli.get_connection")
     def test_enrich_dry_run(self, mock_conn, mock_svc_cls):
         mock_svc = mock_svc_cls.return_value
-        mock_svc.run.return_value = {"embedded": 0, "failed": 0, "total": 0}
+        mock_svc.run.return_value = EnrichmentResult(embedded=0, failed=0, total=0)
         result = runner.invoke(app, ["pipeline", "enrich", "--dry-run"])
         assert result.exit_code == 0
         mock_svc.run.assert_called_once_with(
-            dry_run=True, conference_date=None, clean=False, workers=1
+            dry_run=True,
+            conference_date=None,
+            clean=False,
+            workers=1,
+            run_gold_enrichment=True,
+            run_clustering=True,
+            run_semantic_cluster_labeling=True,
         )
 
     @patch("lakehouse.cli.EnrichService")
@@ -138,11 +145,17 @@ class TestPipelineEnrich:
     @patch("lakehouse.cli.get_connection")
     def test_enrich_no_dry_run(self, mock_conn, mock_ensure, mock_write, mock_svc_cls):
         mock_svc = mock_svc_cls.return_value
-        mock_svc.run.return_value = {"embedded": 1, "failed": 0, "total": 1}
+        mock_svc.run.return_value = EnrichmentResult(embedded=1, failed=0, total=1)
         result = runner.invoke(app, ["pipeline", "enrich"])
         assert result.exit_code == 0
         mock_svc.run.assert_called_once_with(
-            dry_run=False, conference_date=None, clean=False, workers=1
+            dry_run=False,
+            conference_date=None,
+            clean=False,
+            workers=1,
+            run_gold_enrichment=True,
+            run_clustering=True,
+            run_semantic_cluster_labeling=True,
         )
         mock_ensure.assert_called_once()
         assert mock_write.call_count == 2
@@ -153,11 +166,17 @@ class TestPipelineEnrich:
     @patch("lakehouse.cli.get_connection")
     def test_enrich_clean(self, mock_conn, mock_ensure, mock_write, mock_svc_cls):
         mock_svc = mock_svc_cls.return_value
-        mock_svc.run.return_value = {"embedded": 1, "failed": 0, "total": 1}
+        mock_svc.run.return_value = EnrichmentResult(embedded=1, failed=0, total=1)
         result = runner.invoke(app, ["pipeline", "enrich", "--clean"])
         assert result.exit_code == 0
         mock_svc.run.assert_called_once_with(
-            dry_run=False, conference_date=None, clean=True, workers=1
+            dry_run=False,
+            conference_date=None,
+            clean=True,
+            workers=1,
+            run_gold_enrichment=True,
+            run_clustering=True,
+            run_semantic_cluster_labeling=True,
         )
         assert mock_write.call_count == 2
 
@@ -167,13 +186,79 @@ class TestPipelineEnrich:
     @patch("lakehouse.cli.get_connection")
     def test_enrich_with_workers(self, mock_conn, mock_ensure, mock_write, mock_svc_cls):
         mock_svc = mock_svc_cls.return_value
-        mock_svc.run.return_value = {"embedded": 1, "failed": 0, "total": 1}
+        mock_svc.run.return_value = EnrichmentResult(embedded=1, failed=0, total=1)
         result = runner.invoke(app, ["pipeline", "enrich", "--workers", "4"])
         assert result.exit_code == 0
         mock_svc.run.assert_called_once_with(
-            dry_run=False, conference_date=None, clean=False, workers=4
+            dry_run=False,
+            conference_date=None,
+            clean=False,
+            workers=4,
+            run_gold_enrichment=True,
+            run_clustering=True,
+            run_semantic_cluster_labeling=True,
         )
         assert mock_write.call_count == 2
+
+    @patch("lakehouse.cli.EnrichService")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli.get_connection")
+    def test_enrich_run_clustering_flag(self, mock_conn, mock_ensure, mock_write, mock_svc_cls):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = EnrichmentResult(embedded=0, failed=0, total=0)
+        result = runner.invoke(app, ["pipeline", "enrich", "--run-clustering"])
+        assert result.exit_code == 0
+        mock_svc.run.assert_called_once_with(
+            dry_run=False,
+            conference_date=None,
+            clean=False,
+            workers=1,
+            run_gold_enrichment=False,
+            run_clustering=True,
+            run_semantic_cluster_labeling=True,
+        )
+
+    @patch("lakehouse.cli.EnrichService")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli.get_connection")
+    def test_enrich_run_labeling_flag(self, mock_conn, mock_ensure, mock_write, mock_svc_cls):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = EnrichmentResult(embedded=0, failed=0, total=0)
+        result = runner.invoke(app, ["pipeline", "enrich", "--run-semantic-cluster-labeling"])
+        assert result.exit_code == 0
+        mock_svc.run.assert_called_once_with(
+            dry_run=False,
+            conference_date=None,
+            clean=False,
+            workers=1,
+            run_gold_enrichment=False,
+            run_clustering=False,
+            run_semantic_cluster_labeling=True,
+        )
+
+    @patch("lakehouse.cli.EnrichService")
+    @patch("lakehouse.cli._write_pipeline_run")
+    @patch("lakehouse.cli.ensure_observability_tables")
+    @patch("lakehouse.cli.get_connection")
+    def test_enrich_both_flags(self, mock_conn, mock_ensure, mock_write, mock_svc_cls):
+        mock_svc = mock_svc_cls.return_value
+        mock_svc.run.return_value = EnrichmentResult(embedded=0, failed=0, total=0)
+        result = runner.invoke(
+            app,
+            ["pipeline", "enrich", "--run-clustering", "--run-semantic-cluster-labeling"],
+        )
+        assert result.exit_code == 0
+        mock_svc.run.assert_called_once_with(
+            dry_run=False,
+            conference_date=None,
+            clean=False,
+            workers=1,
+            run_gold_enrichment=False,
+            run_clustering=True,
+            run_semantic_cluster_labeling=True,
+        )
 
 
 class TestWritePipelineRun:
@@ -373,7 +458,7 @@ class TestPipelineRunTracking:
     @patch("lakehouse.cli.get_connection")
     def test_enrich_writes_running_then_ok(self, mock_conn, mock_svc_cls, mock_write, mock_ensure):
         mock_svc = mock_svc_cls.return_value
-        mock_svc.run.return_value = {"embedded": 7, "failed": 1, "total": 8}
+        mock_svc.run.return_value = EnrichmentResult(embedded=7, failed=1, total=8)
         result = runner.invoke(app, ["pipeline", "enrich"])
         assert result.exit_code == 0
         assert mock_write.call_count == 2
@@ -394,7 +479,7 @@ class TestPipelineRunTracking:
     ):
         mock_ensure.side_effect = RuntimeError("pg down")
         mock_svc = mock_svc_cls.return_value
-        mock_svc.run.return_value = {"embedded": 7, "failed": 1, "total": 8}
+        mock_svc.run.return_value = EnrichmentResult(embedded=7, failed=1, total=8)
         result = runner.invoke(app, ["pipeline", "enrich"])
         assert result.exit_code == 0
         assert "Enriquecimiento completado" in result.output
@@ -505,7 +590,7 @@ class TestPipelineRunTracking:
         self, mock_interrupt, mock_conn, mock_svc_cls, mock_write, mock_ensure
     ):
         mock_svc = mock_svc_cls.return_value
-        mock_svc.run.return_value = {"embedded": 2, "failed": 1, "total": 3}
+        mock_svc.run.return_value = EnrichmentResult(embedded=2, failed=1, total=3)
         result = runner.invoke(app, ["pipeline", "enrich"])
         assert result.exit_code == 130
         assert mock_write.call_count == 2

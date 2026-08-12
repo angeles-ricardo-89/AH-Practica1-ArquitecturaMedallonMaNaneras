@@ -391,7 +391,7 @@ class TestEnrichInterventions:
 
         assert result["total"] == 1
         assert result["embedded"] == 0
-        assert result["failed"] == 1
+        assert result["failed_to_embed"] == 1
         mock_embed.assert_not_called()
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
@@ -423,7 +423,7 @@ class TestEnrichInterventions:
 
         assert result["total"] == 1
         assert result["embedded"] == 1
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
@@ -483,7 +483,7 @@ class TestEnrichInterventions:
 
         assert result["total"] == 1
         assert result["embedded"] == 1
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
 
         execute_args = mock_cursor.execute.call_args_list
         insert_call = None
@@ -526,7 +526,7 @@ class TestEnrichInterventions:
 
         assert result["total"] == 0
         assert result["embedded"] == 0
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
         mock_embed.assert_not_called()
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
@@ -559,7 +559,7 @@ class TestEnrichInterventions:
 
         assert result["total"] == 3
         assert result["embedded"] == 2
-        assert result["failed"] == 1
+        assert result["failed_to_embed"] == 1
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
@@ -598,7 +598,7 @@ class TestEnrichInterventions:
 
         assert result["total"] == 1
         assert result["embedded"] == 1
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
 
 
 class TestBuildEmbeddingText:
@@ -787,7 +787,7 @@ class TestEnrichInterventionsParallel:
 
         assert result["total"] == 3
         assert result["embedded"] == 3
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
         assert main_thread_id not in seen_threads
         assert len(seen_threads) > 1
 
@@ -817,7 +817,7 @@ class TestEnrichInterventionsParallel:
 
         assert result["total"] == 5
         assert result["embedded"] == 5
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
         assert mock_embed.call_count == 5
         insert_count = sum(
             1
@@ -858,7 +858,7 @@ class TestEnrichInterventionsParallel:
 
         assert result["total"] == 3
         assert result["embedded"] == 2
-        assert result["failed"] == 1
+        assert result["failed_to_embed"] == 1
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
@@ -885,7 +885,7 @@ class TestEnrichInterventionsParallel:
         )
 
         assert result["embedded"] == 1
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
     @patch("lakehouse.pipeline.enrichment.psycopg.connect")
@@ -915,7 +915,7 @@ class TestEnrichInterventionsParallel:
         )
 
         assert result["embedded"] == 0
-        assert result["failed"] == 1
+        assert result["failed_to_embed"] == 1
         assert mock_embed.call_count == 0
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
@@ -948,7 +948,7 @@ class TestEnrichInterventionsParallel:
         )
 
         assert result["embedded"] == 2
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
 
 
 class TestEnrichInterrupt:
@@ -987,7 +987,7 @@ class TestEnrichInterrupt:
 
         assert result["total"] == 2
         assert result["embedded"] == 1
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
         assert mock_embed.call_count == 1
 
     @patch("lakehouse.pipeline.enrichment.embed_text")
@@ -1015,7 +1015,7 @@ class TestEnrichInterrupt:
 
         assert result["total"] == 2
         assert result["embedded"] == 1
-        assert result["failed"] == 0
+        assert result["failed_to_embed"] == 0
         assert mock_embed.call_count == 1
 
 

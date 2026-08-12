@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { ChatMessage } from '../../stores/chat'
+import { renderMarkdown } from '../../utils/markdown'
 
 const props = defineProps<{
   message: ChatMessage
@@ -33,7 +34,6 @@ function toggleDetail(e: Event) {
   <div
     class="w-full"
     :class="message.role === 'user' ? 'flex justify-end' : 'flex justify-start'"
-    @click="handleClick"
   >
     <!-- User message -->
     <div
@@ -53,12 +53,16 @@ function toggleDetail(e: Event) {
       :class="isSelected
         ? 'border-red-900 ring-1 ring-red-900'
         : 'border-stone-200 hover:border-stone-300'"
+      @click.stop="handleClick"
     >
       <div v-if="isSelected" class="mb-2">
         <span class="text-xs font-bold text-red-900">Respuesta seleccionada</span>
       </div>
 
-      <p class="text-sm text-stone-800 whitespace-pre-wrap leading-relaxed">{{ message.content }}</p>
+      <div
+        class="markdown-body text-sm text-stone-800 leading-relaxed"
+        v-html="renderMarkdown(message.content)"
+      />
 
       <!-- Chips de métricas -->
       <div v-if="metrics" class="flex flex-wrap gap-2 mt-3">
@@ -107,3 +111,81 @@ function toggleDetail(e: Event) {
     </div>
   </div>
 </template>
+
+<style scoped>
+:deep(.markdown-body p) {
+  margin-bottom: 0.5em;
+}
+:deep(.markdown-body p:last-child) {
+  margin-bottom: 0;
+}
+:deep(.markdown-body ul),
+:deep(.markdown-body ol) {
+  margin-left: 1.25em;
+  margin-bottom: 0.5em;
+  list-style-position: outside;
+}
+:deep(.markdown-body ul) {
+  list-style-type: disc;
+}
+:deep(.markdown-body ol) {
+  list-style-type: decimal;
+}
+:deep(.markdown-body li) {
+  margin-bottom: 0.25em;
+}
+:deep(.markdown-body strong) {
+  font-weight: 700;
+  color: #1c1917;
+}
+:deep(.markdown-body em) {
+  font-style: italic;
+}
+:deep(.markdown-body h1),
+:deep(.markdown-body h2),
+:deep(.markdown-body h3) {
+  font-weight: 700;
+  margin-top: 0.75em;
+  margin-bottom: 0.5em;
+  color: #1c1917;
+}
+:deep(.markdown-body h1) {
+  font-size: 1.125rem;
+}
+:deep(.markdown-body h2) {
+  font-size: 1rem;
+}
+:deep(.markdown-body h3) {
+  font-size: 0.875rem;
+}
+:deep(.markdown-body code) {
+  background-color: #f5f5f4;
+  padding: 0.125em 0.375em;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875em;
+}
+:deep(.markdown-body pre) {
+  background-color: #f5f5f4;
+  padding: 0.75em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 0.5em;
+}
+:deep(.markdown-body pre code) {
+  background-color: transparent;
+  padding: 0;
+  font-size: 0.8em;
+}
+:deep(.markdown-body a) {
+  color: #2563eb;
+  text-decoration: underline;
+}
+:deep(.markdown-body blockquote) {
+  border-left: 3px solid #d6d3d1;
+  padding-left: 0.75em;
+  margin-left: 0;
+  color: #78716c;
+  font-style: italic;
+}
+</style>

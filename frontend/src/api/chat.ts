@@ -10,6 +10,7 @@ export interface SourceChunk {
   pregunta_activa: string
   qualitative_label: string
   embedding_3d: number[] | null
+  cluster_id: number | null
 }
 
 export interface ChatResponse {

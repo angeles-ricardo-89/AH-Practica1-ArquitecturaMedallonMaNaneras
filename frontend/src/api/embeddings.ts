@@ -6,6 +6,7 @@ export interface Embedding3DPoint {
   y: number
   z: number
   conference_date: string
+  cluster_id?: number
 }
 
 export interface Embedding3DResponse {

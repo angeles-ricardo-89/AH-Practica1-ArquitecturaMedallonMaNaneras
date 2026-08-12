@@ -76,6 +76,28 @@ class TestSourceChunkNewFields:
         assert s.embedding_3d == [1.0, 2.0, 3.0]
         assert s.qualitative_label == "Media"
 
+    def test_with_cluster_id(self):
+        s = SourceChunk(
+            conference_date="2024-10-01",
+            conference_id="abc123",
+            participant="PRESIDENTA",
+            chunk_text="El dia de hoy...",
+            similarity=0.95,
+            conference_url="https://example.com",
+            cluster_id=3,
+        )
+        assert s.cluster_id == 3
+
+    def test_cluster_id_defaults_none(self):
+        s = SourceChunk(
+            conference_date="2024-10-01",
+            conference_id="abc123",
+            participant="PRESIDENTA",
+            chunk_text="El dia de hoy...",
+            similarity=0.95,
+        )
+        assert s.cluster_id is None
+
     def test_valid_labels(self):
         for label in ("Alta", "Media", "Baja"):
             s = SourceChunk(

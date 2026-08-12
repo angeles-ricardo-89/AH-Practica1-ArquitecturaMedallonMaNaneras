@@ -88,6 +88,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             conference_url=r["url"],
             pregunta_activa=r["pregunta_activa"],
             embedding_3d=r.get("embedding_3d"),
+            cluster_id=r.get("cluster_id"),
         )
         for r in results
     ]

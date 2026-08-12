@@ -18,6 +18,35 @@ const dashboardStore = useDashboardStore()
 
 const embeddingsPoints = ref<Embedding3DPoint[]>([])
 const embeddingsError = ref<string | null>(null)
+const chatAreaRef = ref<HTMLElement>()
+const inspectorRef = ref<HTMLElement>()
+const embeddingsHeight = ref(240)
+const isResizing = ref(false)
+
+function startResize(_e: MouseEvent) {
+  isResizing.value = true
+  document.body.style.cursor = 'ns-resize'
+  document.body.style.userSelect = 'none'
+  window.addEventListener('mousemove', onResize)
+  window.addEventListener('mouseup', stopResize)
+}
+
+function onResize(e: MouseEvent) {
+  if (!isResizing.value || !inspectorRef.value) return
+  const rect = inspectorRef.value.getBoundingClientRect()
+  const topOffset = e.clientY - rect.top
+  const minH = 150
+  const maxH = rect.height - 150 - 24 // 24 = resizer height + gaps
+  embeddingsHeight.value = Math.max(minH, Math.min(maxH, topOffset))
+}
+
+function stopResize() {
+  isResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  window.removeEventListener('mousemove', onResize)
+  window.removeEventListener('mouseup', stopResize)
+}
 
 const selectedMessage = computed(() => {
   if (!dashboardStore.selectedResponseId) return null
@@ -28,11 +57,32 @@ const selectedMessage = computed(() => {
 
 const selectedSources = computed(() => selectedMessage.value?.sources ?? [])
 
-const highlightedChunks = computed(() => {
-  if (!selectedSources.value.length) return []
-  return selectedSources.value
-    .map((s) => s.conference_id)
-    .filter(Boolean)
+function handleOutsideClick(e: MouseEvent) {
+  if (!chatAreaRef.value?.contains(e.target as Node)) {
+    dashboardStore.selectResponse(null)
+  }
+}
+
+const posToChunkKey = computed(() => {
+  const map = new Map<string, string>()
+  for (const p of embeddingsPoints.value) {
+    const key = `${p.x.toFixed(6)}_${p.y.toFixed(6)}_${p.z.toFixed(6)}`
+    map.set(key, p.chunk_key)
+  }
+  return map
+})
+
+const activeChunkKeys = computed(() => {
+  if (!dashboardStore.selectedResponseId) return new Set<string>()
+  const set = new Set<string>()
+  for (const src of selectedSources.value) {
+    if (src.embedding_3d && src.embedding_3d.length === 3) {
+      const key = `${src.embedding_3d[0].toFixed(6)}_${src.embedding_3d[1].toFixed(6)}_${src.embedding_3d[2].toFixed(6)}`
+      const ck = posToChunkKey.value.get(key)
+      if (ck) set.add(ck)
+    }
+  }
+  return set
 })
 
 async function fetchEmbeddings() {
@@ -49,16 +99,19 @@ async function fetchEmbeddings() {
 onMounted(() => {
   obsStore.startPolling()
   fetchEmbeddings()
+  dashboardStore.fetchClusters()
+  document.addEventListener('click', handleOutsideClick)
 })
 
 onUnmounted(() => {
   obsStore.stopPolling()
+  document.removeEventListener('click', handleOutsideClick)
 })
 </script>
 
 <template>
   <div class="h-screen bg-stone-50 p-6 flex flex-col">
-    <div class="max-w-[1440px] mx-auto w-full flex flex-col gap-5 h-full">
+    <div class="w-full flex flex-col gap-5 h-full">
       <!-- Header -->
       <AppHeader />
 
@@ -81,24 +134,49 @@ onUnmounted(() => {
         </div>
 
         <!-- Columna central: Chat RAG -->
-        <div class="flex-1 min-w-0 overflow-hidden">
+        <div ref="chatAreaRef" class="flex-[1] min-w-0 overflow-hidden">
           <ChatWindow class="h-full" />
         </div>
 
         <!-- Columna derecha: Inspector -->
-        <div class="w-[282px] shrink-0 flex flex-col gap-4 overflow-hidden">
-          <div v-if="embeddingsError" class="bg-white border border-stone-200 rounded-2xl p-4 shrink-0">
+        <div ref="inspectorRef" class="flex-[0.7] min-w-[280px] flex flex-col gap-2 overflow-hidden">
+          <!-- Embeddings 3D -->
+          <div
+            v-if="embeddingsError"
+            class="bg-white border border-stone-200 rounded-2xl p-4 shrink-0"
+            :style="{ height: embeddingsHeight + 'px' }"
+          >
             <h3 class="text-sm font-bold text-stone-950 mb-1">Embeddings 3D</h3>
             <p class="text-xs text-stone-500">sin datos</p>
           </div>
-          <Embeddings3D
+          <div
             v-else
-            :points="embeddingsPoints"
-            :highlighted-chunks="highlightedChunks"
-            class="shrink-0"
-          />
+            class="shrink-0 overflow-hidden"
+            :style="{ height: embeddingsHeight + 'px' }"
+          >
+            <Embeddings3D
+              :points="embeddingsPoints"
+              :active-chunk-keys="activeChunkKeys"
+              class="h-full"
+            />
+          </div>
 
-          <div v-if="!selectedMessage" class="bg-white border border-stone-200 rounded-2xl p-4 flex-1 min-h-0 overflow-hidden">
+          <!-- Slider / Resizer -->
+          <div
+            class="h-4 shrink-0 flex items-center justify-center cursor-ns-resize group"
+            @mousedown.prevent="startResize"
+          >
+            <div
+              class="w-12 h-1 rounded-full transition-colors"
+              :class="isResizing ? 'bg-red-700' : 'bg-stone-300 group-hover:bg-stone-400'"
+            />
+          </div>
+
+          <!-- Fuentes usadas -->
+          <div
+            v-if="!selectedMessage"
+            class="bg-white border border-stone-200 rounded-2xl p-4 flex-1 min-h-0 overflow-hidden"
+          >
             <h3 class="text-sm font-bold text-stone-950 mb-1">Fuentes usadas</h3>
             <p class="text-xs text-stone-500">
               Selecciona una respuesta del chat para ver fuentes usadas.

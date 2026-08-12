@@ -223,6 +223,7 @@ class TestSearchSources:
                 "url": "https://u",
                 "pregunta_activa": "q",
                 "similarity": 0.9,
+                "cluster_id": 2,
             }
         ]
 
@@ -232,6 +233,7 @@ class TestSearchSources:
         assert chunks[0].conference_id == "c1"
         assert chunks[0].conference_url == "https://u"
         assert chunks[0].pregunta_activa == "q"
+        assert chunks[0].cluster_id == 2
         mock_search.assert_called_once_with("reforma", 5)
 
 
@@ -243,7 +245,7 @@ class TestSearchGoldCorpusFromVector:
         mock_connect.return_value.__enter__.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
         mock_cursor.fetchall.return_value = [
-            ("2024-10-01", "c1", "P", "texto", "https://u", "q", 0.95),
+            ("2024-10-01", "c1", "P", "texto", "https://u", "q", 0.95, None, 3),
         ]
 
         results = search_gold_corpus_from_vector([0.1] * 768, top_k=5)
@@ -251,6 +253,7 @@ class TestSearchGoldCorpusFromVector:
         assert len(results) == 1
         assert results[0]["conference_id"] == "c1"
         assert results[0]["similarity"] == 0.95
+        assert results[0]["cluster_id"] == 3
         sql, _params = mock_cursor.execute.call_args.args
         assert "ORDER BY embedding <=> %s::vector" in sql
         assert "LENGTH(chunk_text) >= 50" in sql
