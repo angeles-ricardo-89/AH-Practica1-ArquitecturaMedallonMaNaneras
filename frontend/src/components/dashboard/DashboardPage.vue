@@ -58,7 +58,9 @@ const selectedMessage = computed(() => {
 const selectedSources = computed(() => selectedMessage.value?.sources ?? [])
 
 function handleOutsideClick(e: MouseEvent) {
-  if (!chatAreaRef.value?.contains(e.target as Node)) {
+  const t = e.target as Node
+  const isInInspector = inspectorRef.value?.contains(t) ?? false
+  if (!chatAreaRef.value?.contains(t) && !isInInspector) {
     dashboardStore.selectResponse(null)
   }
 }
