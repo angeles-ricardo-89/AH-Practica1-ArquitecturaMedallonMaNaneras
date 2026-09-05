@@ -1,9 +1,37 @@
 # AGENTS.md — Lakehouse Mañaneras
-## PROPOSITO
 
-Este archivo define las reglas perpetuas de gobernanza, calidad y comportamiento para cualquier agente
-(humano o IA) que interactue con este repositorio. Todo `git commit` y toda ejecucion de feature debe
-respetar estos gates.
+Reglas perpetuas de gobernanza, calidad y comportamiento para cualquier agente (humano o IA).
+Todo `git commit` y toda ejecucion de feature debe respetar los gates de abajo.
+
+- **PRD (fuente de verdad):** `docs/prd/arquitectura_medallon_y_embbeding_CSP.md`
+- **Estado/checkpoints:** `IMPLEMENTATION_PLAN.md` (leer primero si entras sin contexto)
+
+---
+
+## MAPA DEL REPO
+
+| Ruta | Que es |
+|------|--------|
+| `backend/` | Backend Python 3.13 (uv). Paquete instalable `lakehouse` en `backend/src/lakehouse` (`[tool.uv] package=true`). CLI Typer: `cli.py` / `__main__.py`. API FastAPI: `main.py`. Routers en `api/routers/`. Pipeline bronze→silver→gold en `pipeline/`. Mas `services/`, `db/`, `schemas/`, `prompts/`. |
+| `frontend/` | Vue 3 + Pinia + Tailwind CSS 4 + ECharts/echarts-gl (pnpm). `src/api` (fetch contra `/api` via proxy Vite), `src/stores` (pinia), componentes por dominio: `dashboard/`, `pipeline/`, `chat/`, `inspector/`, `search/`, `shared/`. |
+| `evaluacion/` | Evaluador externo del diplomado (paquete `evaluador`). NO es producto; ejecutar solo con `make evaluacion`. Corre aislado con su propio DuckDB temporal. |
+| `data/` y `backend/data/lakehouse/` | Capas medallon (bronze/silver/gold). Artefactos generados, gitignored. El DuckDB real se crea en `backend/data/lakehouse/` al correr desde `backend/`; `data/lakehouse/` en raiz es solo scaffold con `.gitkeep`. |
+| `docs/superpowers/{specs,plans}` | Specs y planes de feature (Gate S). |
+| `governance/GATE-S-SPEC-QUALITY.md` | Criterios completos del Gate S. |
+
+Docker Compose levanta: `postgres` pgvector (expuesto `5433:5432`), `backend` (NO expuesto al host), `frontend` (`5174:5173`, corre `pnpm dev`). DB por defecto `mananeras/mananeras/mananeras`.
+
+---
+
+## ENTORNO LOCAL — GOTCHAS QUE UN AGENTE NO ADIVINA
+
+- **Los tests de backend NO son hermeticos**: requieren Postgres+pgvector vivo en `localhost:5433`.
+  `backend/tests/conftest.py` crea/usa la DB `mananeras_test` y aborta (`SystemExit`) si no hay postgres.
+  Levanta antes: `docker compose up -d postgres`.
+- **`.env` se lee relativo al CWD** (pydantic-settings `env_file=".env"`). Por eso los targets del Makefile hacen `cd backend`. El `.env` de raiz esta gitignored (copiar `.env.template`). Ojo: el template dice `nomic-embed-text`, pero el modelo de embed real es `embeddinggemma` (default de `config.py` y del `.env` actual): no copies el template a ciegas.
+- **Ollama (embeddings) y llamacpp (chat) corren en el host**, nunca en docker. En docker se alcanzan via `host.docker.internal:11434` y `host.docker.internal:9200/v1`; en local `localhost:11434` / `localhost:9200/v1`. Sin ellos: `pipeline enrich` reintenta y deja registros sin embedding; `/chat` devuelve 503.
+- **Frontend dev**: Vite proxya `/api` → `http://backend:8000` (`vite.config.ts`). Ese hostname solo resuelve dentro de la red de compose. Para ver la UI usa docker (`http://localhost:5174`); un `pnpm dev` en el host no llegara a la API salvo que definas un alias `backend`.
+- El host expone **solo** postgres (5433) y frontend (5174); el backend de compose no tiene puerto publicado.
 
 ---
 
@@ -11,8 +39,7 @@ respetar estos gates.
 
 ### Gate S: Calidad de Especificacion (antes de crear features)
 
-Activacion: siempre que se solicite una feature nueva, un cambio de arquitectura o un refactor
-mayor al pipeline de datos.
+Activacion: feature nueva, cambio de arquitectura o refactor mayor del pipeline.
 
 ```
 [BLOQUEO] → si no existe spec en docs/superpowers/specs/
@@ -20,55 +47,46 @@ mayor al pipeline de datos.
 [BLOQUEO] → si hay TBD/TODO/placeholders sin resolver
 ```
 
-Reglas:
-1. `/superpowers:brainstorming` es MANDATORIO. No se salta jamas.
-2. `/superpowers:writing-plans` es MANDATORIO tras brainstorming aprobado.
-3. NINGUN plan se aprueba automaticamente. El usuario debe revisarlo explicitamente.
-4. Ver GATE-S-SPEC-QUALITY.md en `governance/` para criterios completos.
+1. `/superpowers:brainstorming` es MANDATORIO; `/superpowers:writing-plans` tras brainstorming aprobado.
+2. Ningun plan se aprueba solo: el usuario debe revisarlo explicitamente.
+3. Criterios completos: `governance/GATE-S-SPEC-QUALITY.md`.
 
-### Gate Q: Calidad de Implementacion (durante desarrollo)
-
-Activacion: en cada commit, en cada checkpoint del plan de implementacion.
+### Gate Q: Calidad de Implementacion (cada commit / checkpoint)
 
 ```
-[BLOQUEO] → si tests < 90% coverage en modulo modificado
-[BLOQUEO] → si ruff check o typecheck (ty/pyright) reportan errores
+[BLOQUEO] → si tests < 90% coverage en el modulo modificado (pyproject ya fuerza --cov-fail-under=90)
+[BLOQUEO] → si ruff check o typecheck (ty) reportan errores
 [BLOQUEO] → si hay prints/debugger/console.log no intencionales
 [BLOQUEO] → si existen TODOs sin referencia a un issue/checkpoint del plan
 ```
 
-Reglas:
-1. `ruff check --fix && ruff format` antes de stage.
-2. `ty` (typecheck estricto) antes de commit en backend.
+1. `ruff check --fix && ruff format` antes de stage (backend).
+2. `ty check` (typecheck estricto) antes de commit en backend.
 3. `pnpm typecheck` antes de commit en frontend.
-4. Todo checkpoint del plan DEBE pasar evidencia verificable (ver `IMPLEMENTATION_PLAN.md`).
+4. Todo checkpoint del plan debe pasar con evidencia verificable (ver `IMPLEMENTATION_PLAN.md`).
 
 ### Gate QA: QA Obsesivo (antes de merge/cierre de feature)
 
-Activacion: al completar un modulo del plan de implementacion.
-
 ```
-[BLOQUEO] → si no se probaron casos borde explicitamente listados en la spec
+[BLOQUEO] → si no se probaron los casos borde listados en la spec
 [BLOQUEO] → si el LLM-as-a-Judge (evaluate-rag) no alcanza ≥ 90% fidelidad
-[BLOQUEO] → si idempotencia no se verifica (filas_nuevas=0, duplicados=0 en reejecucion)
+[BLOQUEO] → si la idempotencia no se verifica (filas_nuevas=0, duplicados=0 en reejecucion)
 ```
 
 ---
 
-## SKILLS MANDATORIAS
+## SKILLS MANDATORIAS (cargar y seguir; no son opcionales)
 
-Todo agente debe cargar y seguir estas skills. No son opcionales.
+### De Proceso (Meta)
 
-### Skills de Proceso (Meta)
-
-| Skill | Archivo | Cuando usarla |
-|-------|---------|---------------|
+| Skill | Archivo | Cuando |
+|-------|---------|--------|
 | Socratic Method | `.opencode/skills/meta/socratic-method/SKILL.md` | Antes de cualquier decision de diseno |
 | Spec Review Loop | `.opencode/skills/meta/spec-review-loop/SKILL.md` | Despues de escribir una spec |
 | Brainstorming | Superpowers | Antes de crear features |
 | Writing Plans | Superpowers | Tras brainstorming aprobado |
 
-### Skills Tecnicas
+### Tecnicas
 
 | Skill | Archivo | Dominio |
 |-------|---------|---------|
@@ -77,10 +95,11 @@ Todo agente debe cargar y seguir estas skills. No son opcionales.
 | Vue 3 + Pinia + Tailwind | `.opencode/skills/tech/vue3_pinia_tailwind.md` | Frontend |
 | DuckDB + pgvector | `.opencode/skills/tech/duckdb_pgvector.md` | Datos, Vectores |
 | Testing + QA | `.opencode/skills/tech/testing_qa.md` | Calidad |
-| ECharts 3D Vue | .opencode/skills/tech/echarts_3d_vue.md | Visualización 3D |
+| ECharts 3D Vue | `.opencode/skills/tech/echarts_3d_vue.md` | Visualizacion 3D |
 | UMAP + HDBSCAN Clustering | `.opencode/skills/tech/umap_hdbscan_clustering.md` | Clustering semantico |
 | LLM Auto-Labeling | `.opencode/skills/tech/llm_auto_labeling.md` | Etiquetado automatico |
-### Skills de Dominio
+
+### De Dominio
 
 | Skill | Archivo | Responsabilidad |
 |-------|---------|-----------------|
@@ -90,40 +109,60 @@ Todo agente debe cargar y seguir estas skills. No son opcionales.
 | Payload Vectorial Limpio | `.opencode/skills/domain/payload_vectorial_limpio.md` | Formato texto para Ollama |
 | Observabilidad Pull | `.opencode/skills/domain/observabilidad_pull.md` | Logs, semaforos, dashboard |
 
+Cada Domain Skill referencia la Tech Skill que usa: sigue las referencias cruzadas.
+
 ---
 
 ## REGLAS DE CONVIVENCIA CON EL CODIGO
 
-- **Prohibido pyenv/pip/poetry.** Solo `uv` para gestion de dependencias Python 3.13.
+- **Prohibido pyenv/pip/poetry.** Solo `uv` para dependencias Python 3.13.
 - **Prohibido npm/yarn.** Solo `pnpm` para frontend.
 - **Prohibido IDs aleatorios (UUID4, Snowflake).** Solo hashes concatenados deterministas.
 - **Prohibido modificar archivos de skill sin actualizar AGENTS.md.**
-- **Cero prints de debug en produccion.** Usar `logging` con niveles configurados por `APP_ENV`.
-- **Todo endpoint debe documentarse.** Usar `summary` y `description` en decoradores FastAPI.
-- **Commits atomicos.** Un commit = un proposito claro. Mensajes en espanol imperativo: "agrega ingesta bronze", "corrige race condition en merge".
+- **Cero prints de debug en produccion.** Usar `logging` con niveles por `APP_ENV`.
+- **Todo endpoint documentado.** Usar `summary` y `description` en decoradores FastAPI.
+- **Commits atomicos**, mensaje en espanol imperativo: "agrega ingesta bronze", "corrige race condition en merge".
 
 ---
 
-## REFERENCIA RAPIDA DE COMANDOS
+## COMANDOS
 
 ```bash
-# Backend (desde backend/)
-uv run ruff check --fix && uv run ruff format
-uv run ty check
-uv run pytest -xvs --cov=src --cov-report=term-missing
+# Postgres + pgvector (PREREQUISITO de los tests backend y del pipeline)
+docker compose up -d postgres
+
+# Backend (desde backend/; Makefile hace el cd por ti)
+make lint            # ruff check
+make lint-fix        # ruff check --fix + ruff format
+make typecheck-backend   # ty check
+make test-backend    # pytest --cov=src ... --cov-fail-under=90 (necesita postgres arriba)
+uv run pytest tests/test_pipeline/test_ingestion.py   # test suelto; addopts ya aplican coverage
+
+# Pipeline por etapas (Makefile en raiz). ARGS se pasan tal cual:
+make pipeline-ingest ARGS="--dry-run"   # bronze (scrapea gob.mx)
+make pipeline-parse                     # silver
+make pipeline-enrich                    # gold: embeddings + clustering (requiere Ollama)
+make pipeline-full
+
+# Evaluacion RAG (backend): python -m lakehouse evaluate-rag
 
 # Frontend (desde frontend/)
 pnpm lint
-pnpm typecheck
-pnpm test:unit
+pnpm typecheck      # vue-tsc --noEmit
+pnpm test:unit      # vitest run (no necesita backend)
+pnpm build          # vue-tsc --noEmit && vite build
 
-# Evaluacion RAG (desde backend/)
-python -m lakehouse evaluate-rag
-
-# Docker
+# Todo el stack en docker (UI en http://localhost:5174)
 docker compose up -d --build
 docker compose logs -f
+
+# Evaluador del diplomado (no es producto)
+make evaluacion
 ```
+
+Notas:
+- `backend/pyproject.toml` ya fija `addopts = "-xvs --cov=src ... --cov-fail-under=90"` y `testpaths=["tests"]`: un `uv run pytest` pelado basta para correr todo con el gate de coverage.
+- Typecheck estricto: `ty` (no pyright; `opencode.json` lo deshabilita y usa el LSP de `ty`).
 
 ---
 
@@ -140,20 +179,15 @@ docker compose logs -f
     ↓
 [Usuario APRUEBA plan explicitamente]
     ↓
-[Implementacion por checkpoints]
-    ↓ (en cada checkpoint)
-[Gate Q] → ruff + ty + pytest (≥90% coverage)
+[Implementacion por checkpoints]  → en cada uno [Gate Q] → ruff + ty + pytest (≥90%)
     ↓
 [Gate QA] → casos borde + evaluate-rag + idempotencia
-    ↓
-[Checkpoint completado → siguiente checkpoint]
 ```
 
 ---
 
 ## NOTAS PARA EL AGENTE
 
-- Si entras a este repositorio sin instrucciones previas, lee primero `IMPLEMENTATION_PLAN.md` para conocer el estado actual.
-- Cada Domain Skill referencia a la Tech Skill que utiliza. Sigue las referencias cruzadas.
+- Sin contexto previo, lee primero `IMPLEMENTATION_PLAN.md` para conocer el estado actual y seguir los checkpoints en orden.
 - Si encuentras una violacion de gate, REPORTALA. No la ignores.
-- El PRD maestro esta en `docs/prd/arquitectura_medallon_y_embbeding_CSP.md`. Es la fuente de verdad del producto.
+- Los specs/plans tienen precedencia numerica de fecha en `docs/superpowers/`; el mas reciente refleja el trabajo en curso.
