@@ -42,6 +42,26 @@ def test_no_hsts_csp_in_local() -> None:
     assert "content-security-policy" not in r.headers
 
 
+def test_docs_disabled_in_production() -> None:
+    client = TestClient(create_app(Settings(app_env="production")))
+    assert client.get("/docs").status_code == 404
+    assert client.get("/redoc").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
+
+
+def test_docs_available_in_local() -> None:
+    client = TestClient(create_app(Settings()))
+    assert client.get("/docs").status_code == 200
+
+
+def test_cors_exact_origin() -> None:
+    client = TestClient(create_app(Settings(cors_allowed_origins=["https://app.example"])))
+    ok = client.get("/health", headers={"Origin": "https://app.example"})
+    assert ok.headers.get("access-control-allow-origin") == "https://app.example"
+    bad = client.get("/health", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in bad.headers
+
+
 def test_hash_and_verify_password() -> None:
     hashed = hash_password("secreto-123")
     assert hashed != "secreto-123"

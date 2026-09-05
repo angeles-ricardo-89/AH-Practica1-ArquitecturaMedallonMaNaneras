@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from lakehouse.api.deps import get_current_user
@@ -45,6 +46,14 @@ def create_app(settings: Settings) -> FastAPI:
         **docs_kwargs,
     )
     app.add_middleware(SecurityHeadersMiddleware, production=settings.app_env == "production")
+    if settings.cors_allowed_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_allowed_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     protected = [Depends(get_current_user)]
 

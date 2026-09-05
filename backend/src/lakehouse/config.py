@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     login_rate_limit: int = 5
     chat_rate_limit: int = 10
     daily_rate_limit: int = 100
+    cors_allowed_origins: list[str] = []
 
     @property
     def cookie_secure(self) -> bool:
