@@ -142,3 +142,18 @@ def test_valid_secret_is_used() -> None:
     settings = Settings(app_env="production", jwt_secret=secret, csrf_secret=secret)
     assert resolve_jwt_secret(settings) == secret
     assert resolve_csrf_secret(settings) == secret
+
+
+def test_runtime_error_does_not_leak_internals() -> None:
+    app_ = create_app(Settings())
+
+    @app_.get("/_boom")
+    def _boom() -> None:
+        raise RuntimeError("SECRET_INTERNAL_DETAIL")
+
+    client = TestClient(app_, raise_server_exceptions=False)
+    r = client.get("/_boom")
+    assert r.status_code == 503
+    assert "SECRET_INTERNAL_DETAIL" not in r.text
+    assert r.json() == {"detail": "Internal server error"}
+    assert r.headers.get("x-content-type-options") == "nosniff"

@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -69,9 +70,10 @@ def create_app(settings: Settings) -> FastAPI:
 
     @app.exception_handler(RuntimeError)
     async def runtime_error_handler(request: Request, exc: RuntimeError) -> JSONResponse:
+        logging.getLogger("lakehouse").exception("RuntimeError no controlado", exc_info=exc)
         return JSONResponse(
             status_code=503,
-            content={"detail": str(exc)},
+            content={"detail": "Internal server error"},
         )
 
     return app
