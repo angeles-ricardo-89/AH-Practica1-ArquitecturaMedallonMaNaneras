@@ -62,6 +62,33 @@ def test_cors_exact_origin() -> None:
     assert "access-control-allow-origin" not in bad.headers
 
 
+def test_cors_fail_closed_by_default() -> None:
+    client = TestClient(create_app(Settings()))
+    r = client.get("/health", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in r.headers
+
+
+def test_cors_preflight_exact_origin() -> None:
+    client = TestClient(create_app(Settings(cors_allowed_origins=["https://app.example"])))
+    allowed = client.options(
+        "/health",
+        headers={
+            "Origin": "https://app.example",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert allowed.status_code == 200
+    assert allowed.headers.get("access-control-allow-origin") == "https://app.example"
+    denied = client.options(
+        "/health",
+        headers={
+            "Origin": "https://evil.example",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert "access-control-allow-origin" not in denied.headers
+
+
 def test_hash_and_verify_password() -> None:
     hashed = hash_password("secreto-123")
     assert hashed != "secreto-123"
