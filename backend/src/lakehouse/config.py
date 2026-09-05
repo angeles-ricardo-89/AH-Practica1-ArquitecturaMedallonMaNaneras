@@ -46,4 +46,31 @@ class Settings(BaseSettings):
     cluster_label_max_retries: int = 2
     cluster_label_prompt_version: str = "v1"
 
+    jwt_secret: str = ""
+    csrf_secret: str = ""
+    jwt_expire_minutes: int = 60
+    jwt_issuer: str = "lakehouse-mananeras"
+    jwt_audience: str = "lakehouse-api"
+    auth_cookie_name: str = "access_token"
+    csrf_header_name: str = "X-CSRF-Token"
+    demo_user_1_username: str = ""
+    demo_user_1_password: str = ""
+    demo_user_2_username: str = ""
+    demo_user_2_password: str = ""
+
+    login_rate_limit: int = 5
+    chat_rate_limit: int = 10
+    daily_rate_limit: int = 100
+
+    @property
+    def cookie_secure(self) -> bool:
+        return self.app_env == "production"
+
+    def demo_users(self) -> list[tuple[str, str]]:
+        pairs = [
+            (self.demo_user_1_username, self.demo_user_1_password),
+            (self.demo_user_2_username, self.demo_user_2_password),
+        ]
+        return [(u, p) for u, p in pairs if u and p]
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

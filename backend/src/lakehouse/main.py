@@ -1,14 +1,33 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from lakehouse.api.routers import chat, clusters, config, embeddings, health, observability, search
+from lakehouse.api.deps import get_current_user
+from lakehouse.api.routers import (
+    auth,
+    chat,
+    clusters,
+    config,
+    conversations,
+    embeddings,
+    health,
+    observability,
+    search,
+)
+from lakehouse.config import Settings
+from lakehouse.services.demo_users import ensure_demo_users
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    settings = Settings()
+    conn_str = (
+        f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
+        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+    )
+    ensure_demo_users(conn_str, settings.demo_users())
     yield
 
 
@@ -19,13 +38,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+protected = [Depends(get_current_user)]
+
 app.include_router(health.router)
-app.include_router(search.router)
-app.include_router(chat.router)
-app.include_router(observability.router)
-app.include_router(config.router)
-app.include_router(embeddings.router)
-app.include_router(clusters.router)
+app.include_router(auth.router)
+app.include_router(search.router, dependencies=protected)
+app.include_router(chat.router, dependencies=protected)
+app.include_router(observability.router, dependencies=protected)
+app.include_router(config.router, dependencies=protected)
+app.include_router(embeddings.router, dependencies=protected)
+app.include_router(clusters.router, dependencies=protected)
+app.include_router(conversations.router, dependencies=protected)
 
 
 @app.exception_handler(RuntimeError)

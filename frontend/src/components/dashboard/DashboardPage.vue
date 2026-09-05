@@ -3,10 +3,11 @@ import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useObservabilityStore } from '../../stores/observability'
 import { useChatStore } from '../../stores/chat'
 import { useDashboardStore } from '../../stores/dashboard'
+import { useConversationStore } from '../../stores/conversations'
 import { getEmbeddings3D } from '../../api/embeddings'
+import { getConversation } from '../../api/conversations'
 import type { Embedding3DPoint } from '../../api/embeddings'
 import AppHeader from '../shared/AppHeader.vue'
-import PipelineTimeline from '../pipeline/PipelineTimeline.vue'
 import EvidenceModal from '../pipeline/EvidenceModal.vue'
 import ChatWindow from '../chat/ChatWindow.vue'
 import Embeddings3D from '../inspector/Embeddings3D.vue'
@@ -15,6 +16,7 @@ import SourcesList from '../inspector/SourcesList.vue'
 const obsStore = useObservabilityStore()
 const chatStore = useChatStore()
 const dashboardStore = useDashboardStore()
+const conversationStore = useConversationStore()
 
 const embeddingsPoints = ref<Embedding3DPoint[]>([])
 const embeddingsError = ref<string | null>(null)
@@ -98,11 +100,39 @@ async function fetchEmbeddings() {
   }
 }
 
+async function createConversation() {
+  const id = await conversationStore.create('Nueva conversación')
+  if (id) {
+    conversationStore.activeId = id
+  }
+}
+
+async function openConversation(id: string) {
+  conversationStore.activeId = id
+  chatStore.clearMessages()
+  try {
+    const detail = await getConversation(id)
+    for (const m of detail.messages) {
+      chatStore.addMessage({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content,
+      })
+    }
+  } catch (err) {
+    console.error('Error cargando conversación:', err)
+  }
+}
+
+async function removeConversation(id: string) {
+  await conversationStore.remove(id)
+}
+
 onMounted(() => {
   obsStore.startPolling()
   fetchEmbeddings()
   dashboardStore.fetchClusters()
   document.addEventListener('click', handleOutsideClick)
+  conversationStore.load()
 })
 
 onUnmounted(() => {
@@ -112,25 +142,55 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-screen bg-stone-50 p-6 flex flex-col">
+  <div class="h-full bg-stone-50 p-6 flex flex-col">
     <div class="w-full flex flex-col gap-5 h-full">
       <!-- Header -->
       <AppHeader />
 
       <!-- Main 3-column layout -->
       <div class="flex gap-5 flex-1 min-h-0 overflow-hidden">
-        <!-- Columna izquierda: Pipeline -->
+        <!-- Columna izquierda: Conversaciones -->
         <div class="w-[300px] shrink-0 overflow-y-auto">
-          <div class="bg-white border border-stone-200 rounded-2xl p-4 min-h-full">
-            <PipelineTimeline
-              v-if="obsStore.layers?.layers && obsStore.layers.layers.length > 0"
-              :layers="obsStore.layers.layers"
-            />
-            <div v-else-if="obsStore.layersError" class="text-xs text-red-600">
-              Error: {{ obsStore.layersError }}
+          <div class="bg-white border border-stone-200 rounded-2xl p-4 min-h-full flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-sm font-bold text-stone-950">Conversaciones</h2>
+                <p class="text-[11px] text-stone-400">Memoria aislada por conversación</p>
+              </div>
+              <button
+                class="bg-red-900 hover:bg-red-800 text-white text-xs px-2.5 py-1.5 rounded-lg transition-colors"
+                title="Crear conversación"
+                @click="createConversation"
+              >
+                +
+              </button>
             </div>
-            <div v-else class="text-xs text-stone-400">
-              Sin datos del pipeline
+
+            <ul class="flex-1 overflow-y-auto space-y-1">
+              <li v-for="c in conversationStore.conversations" :key="c.id">
+                <div
+                  class="group flex items-center gap-1 rounded-lg px-2 py-1.5 cursor-pointer"
+                  :class="c.id === conversationStore.activeId ? 'bg-red-900 text-white' : 'hover:bg-stone-100 text-stone-700'"
+                  @click="openConversation(c.id)"
+                >
+                  <span class="flex-1 min-w-0 truncate text-xs">{{ c.title || 'Sin título' }}</span>
+                  <button
+                    class="text-[10px] px-1 rounded hover:opacity-70"
+                    :class="c.id === conversationStore.activeId ? 'text-white' : 'text-stone-400'"
+                    title="Borrar conversación"
+                    @click.stop="removeConversation(c.id)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </li>
+              <li v-if="conversationStore.conversations.length === 0" class="text-[11px] text-stone-400 px-2 py-2">
+                Sin conversaciones. Crea una para comenzar.
+              </li>
+            </ul>
+
+            <div v-if="conversationStore.error" class="text-[10px] text-red-600">
+              {{ conversationStore.error }}
             </div>
           </div>
         </div>

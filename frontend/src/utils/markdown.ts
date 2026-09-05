@@ -1,4 +1,5 @@
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 marked.setOptions({
   gfm: true,
@@ -8,5 +9,6 @@ marked.setOptions({
 })
 
 export function renderMarkdown(text: string): string {
-  return marked.parse(text, { async: false }) as string
+  const raw = marked.parse(text, { async: false }) as string
+  return DOMPurify.sanitize(raw)
 }

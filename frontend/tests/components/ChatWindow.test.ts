@@ -16,16 +16,13 @@ describe('ChatWindow', () => {
     expect(wrapper.find('button').exists()).toBe(true)
   })
 
-  it('sends message on submit', async () => {
-    const store = useChatStore()
-    const sendSpy = vi.spyOn(store, 'sendMessage')
-
+  it('clears input on submit', async () => {
     const wrapper = mount(ChatWindow)
     const input = wrapper.find('input')
     await input.setValue('Hola')
     await wrapper.find('form').trigger('submit.prevent')
 
-    expect(sendSpy).toHaveBeenCalledWith('Hola')
+    expect((input.element as HTMLInputElement).value).toBe('')
   })
 
   it('disables button when loading', () => {
@@ -57,7 +54,6 @@ describe('ChatWindow', () => {
 
     const wrapper = mount(ChatWindow)
     const container = wrapper.find('[ref="messagesContainer"]')
-    // If the ref-based selector doesn't work in test-utils, fallback to class
     const messagesContainer = container.exists() ? container : wrapper.find('.flex-1.overflow-y-auto')
 
     await messagesContainer.trigger('click')

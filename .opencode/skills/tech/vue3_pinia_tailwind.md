@@ -125,7 +125,7 @@ import { searchAPI } from "@/api/search";
 export const useChatStore = defineStore("chat", () => {
   const messages = ref<ChatMessage[]>([]);
   const currentTokens = ref(0);
-  const maxContextTokens = ref(8192);
+  const maxContextTokens = ref(10000);
   const isStreaming = ref(false);
 
   const tokenUsagePercent = computed(() => {

@@ -242,7 +242,7 @@ class TestChatWithNewFields:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["model_used"] == "gemma4"
+        assert data["model_used"] == "gemma-4-12b"
         assert isinstance(data["latency_ms"], float)
         assert data["latency_ms"] > 0
         assert data["token_usage"]["total"] == 150 + 50

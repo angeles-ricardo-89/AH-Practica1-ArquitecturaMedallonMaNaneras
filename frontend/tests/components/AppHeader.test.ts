@@ -60,7 +60,9 @@ describe('AppHeader', () => {
     const spy = vi.spyOn(store, 'manualRefresh')
 
     const wrapper = mount(AppHeader)
-    await wrapper.find('button').trigger('click')
+    const refreshButton = wrapper.findAll('button').find((b) => b.text().includes('Refresh'))
+    expect(refreshButton).toBeTruthy()
+    await refreshButton!.trigger('click')
     expect(spy).toHaveBeenCalled()
   })
 })

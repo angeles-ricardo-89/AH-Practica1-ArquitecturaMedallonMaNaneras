@@ -113,7 +113,7 @@ class DLQRejectRecord(BaseModel):
 **Proposito:** Modelos analiticos, extraccion LLM asincrona y RAG Corpus.
 
 **Reglas:**
-- Extraccion de entidades (periodista, medio) via `gemma4` asincrono.
+- Extraccion de entidades (periodista, medio) via `gemma-4-12b` asincrono.
 - Payload vectorial limpio sin IDs tecnicos (ver `payload_vectorial_limpio.md`).
 - Embeddings generados via Ollama y almacenados en pgvector.
 - Indices: B-Tree para fecha/participante, HNSW para vector coseno.
@@ -143,7 +143,7 @@ from openai import AsyncOpenAI
 async def extraer_entidades(
     text: str,
     client: AsyncOpenAI,
-    model: str = "gemma4",
+    model: str = "gemma-4-12b",
 ) -> dict[str, str]:
     prompt = (
         "Extrae del siguiente texto el nombre del periodista y el medio de comunicacion. "
@@ -170,6 +170,20 @@ async def extraer_entidades(
               ↓
            FastAPI (busqueda semantica) + Vue (chat RAG)
 ```
+
+## Pipeline Ejecutable y Verificable en Docker
+
+El PRD 3.0 (seccion 11.1) exige que el pipeline medallon corra dentro de un contenedor y se verifique con un solo comando.
+
+- Docker Compose debe orquestar un servicio/perfil `pipeline` que ejecute Bronze -> Silver -> Gold -> clustering -> etiquetado con el MISMO codigo de pipeline.
+- Ollama y llama.cpp pueden quedar como runtimes locales del host (GPU/pesos), pero como dependencias explicitas con health checks; no pasos manuales ocultos.
+- Debe existir un comando unico de verificacion (ej. `make docker-verify`) que use una muestra Bronze congelada y compruebe que las capas producen salidas validas.
+- Debe existir un comando documentado para ejecutar el pipeline completo contra el corpus real.
+- La demostracion local del agente no realiza llamadas a Gemini ni a otros servicios externos.
+
+**Verificacion:**
+- [ ] `make docker-verify` produce evidencia verificable de Bronze, Silver y Gold (CA-D02, CA-D03).
+- [ ] Una instalacion limpia levanta la aplicacion con instrucciones reproducibles (CA-D01).
 
 ## Tiempo de Reconstruccion (CA-08)
 

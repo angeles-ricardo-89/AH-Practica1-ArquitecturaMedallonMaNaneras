@@ -1,5 +1,10 @@
 # Domain Skill: Memoria RAG y Limite de Tokens
 
+> **Alcance:** esta skill gobierna SOLO la ventana de contexto (truncado FIFO de tokens) en el
+> prompt del chat RAG. NO gobierna la persistencia de conversaciones, el aislamiento entre
+> usuarios ni la retencion de 30 dias: eso es responsabilidad de `memoria_conversacional.md`.
+> Nota: valor canonico `MAX_CONTEXT_TOKENS = 10000` (confirmado por el usuario). Debe exponerse por una API autenticada.
+
 ## Proposito
 
 Definir las reglas de gestion de la ventana de contexto (MAX_CONTEXT_TOKENS) tanto en el backend
@@ -20,7 +25,7 @@ puede procesar y que el usuario tenga visibilidad del consumo.
 
 ```python
 # backend/src/lakehouse/config.py
-MAX_CONTEXT_TOKENS: int = 8192  # Configurable via .env
+MAX_CONTEXT_TOKENS: int = 10000  # Configurable via .env
 ```
 
 ### Estimacion de Tokens (Backend)
@@ -40,7 +45,7 @@ def build_chat_context(
     user_query: str,
     retrieved_chunks: list[str],
     conversation_history: list[dict[str, str]],
-    max_tokens: int = 8192,
+    max_tokens: int = 10000,
 ) -> str:
     """Construye el prompt del sistema respetando MAX_CONTEXT_TOKENS."""
     system_prompt = (
@@ -140,7 +145,7 @@ class TokenUsage(BaseModel):
 
 ## Checklist de Verificacion
 
-- [ ] MAX_CONTEXT_TOKENS configurable via .env (default 8192).
+- [ ] MAX_CONTEXT_TOKENS configurable via .env (default 10000).
 - [ ] `estimate_tokens()` produce estimaciones consistentes.
 - [ ] `build_chat_context()` nunca excede MAX_CONTEXT_TOKENS.
 - [ ] TokenBar en UI cambia de verde → amarillo → rojo correctamente.

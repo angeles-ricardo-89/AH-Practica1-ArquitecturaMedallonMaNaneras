@@ -13,6 +13,7 @@
     "test:unit:watch": "vitest"
   },
   "dependencies": {
+    "dompurify": "^3.4.14",
     "echarts": "^6.1.0",
     "echarts-gl": "^2.1.0",
     "marked": "^18.0.7",
