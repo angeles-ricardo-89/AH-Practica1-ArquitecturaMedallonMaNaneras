@@ -2,13 +2,17 @@
 import { ref, nextTick, computed } from 'vue'
 import { useChatStore, MAX_CONTEXT_TOKENS } from '../../stores/chat'
 import { useDashboardStore } from '../../stores/dashboard'
+import { useConversationStore } from '../../stores/conversations'
+import { sendAgentMessage, createConversation } from '../../api/conversations'
 import ResponseCard from './ResponseCard.vue'
 import TokenBar from './TokenBar.vue'
 
 const store = useChatStore()
 const dashboardStore = useDashboardStore()
+const conversationStore = useConversationStore()
 const input = ref('')
 const messagesContainer = ref<HTMLElement>()
+const localError = ref('')
 
 const assistantMessages = computed(() =>
   store.messages.filter((m) => m.role === 'assistant'),
@@ -16,10 +20,61 @@ const assistantMessages = computed(() =>
 
 async function handleSubmit() {
   const query = input.value.trim()
-  if (!query) return
+  if (!query || store.isLoading) return
   input.value = ''
   dashboardStore.selectResponse(null)
-  await store.sendMessage(query)
+  localError.value = ''
+
+  let conversationId = conversationStore.activeId
+  if (!conversationId) {
+    const title = query.length > 30 ? query.slice(0, 30) + '…' : query
+    try {
+      conversationId = await createConversation(title)
+      if (!conversationId) {
+        localError.value = 'No se pudo crear la conversación'
+        return
+      }
+      conversationStore.activeId = conversationId
+      await conversationStore.load()
+    } catch (err) {
+      localError.value = err instanceof Error ? err.message : 'No se pudo crear la conversación'
+      return
+    }
+  }
+
+  store.addMessage({ role: 'user', content: query })
+  store.setLoading(true)
+
+  try {
+    const response = await sendAgentMessage(conversationId, query)
+    const numSources = response.sources?.length ?? 0
+    const avgSim =
+      numSources > 0
+        ? response.sources.reduce((s, src) => s + src.similarity, 0) / numSources
+        : 0
+    store.addMessage({
+      role: 'assistant',
+      content: response.answer,
+      sources: response.sources,
+      traces: response.tool_executions,
+      metrics: {
+        similarity: avgSim,
+        numSources,
+        coverage: numSources > 0 ? 100 : 0,
+        latency: response.latency_ms,
+        tokens: response.token_usage?.total ?? 0,
+        model: response.model_used,
+      },
+    })
+    store.setTokenUsage(response.token_usage)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error desconocido'
+    localError.value = message
+    store.addMessage({ role: 'assistant', content: `Error: ${message}` })
+  } finally {
+    store.setLoading(false)
+  }
+
   await nextTick()
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
@@ -35,8 +90,6 @@ function isSelected(id: string) {
 }
 
 function handleContainerClick(e: MouseEvent) {
-  // Solo deseleccionar si el click NO fue dentro de una tarjeta asistente
-  // (la tarjeta asistente tiene clase cursor-pointer y usa @click.stop)
   const target = e.target as HTMLElement
   if (!target.closest('.cursor-pointer')) {
     dashboardStore.selectResponse(null)
@@ -54,7 +107,7 @@ function handleContainerClick(e: MouseEvent) {
           Preguntas sobre conferencias matutinas; click en una respuesta para ver fuentes.
         </p>
       </div>
-      <div v-if="store.tokenUsage?.total_tokens" class="flex items-center gap-2">
+      <div v-if="store.tokenUsage?.total" class="flex items-center gap-2">
         <span class="text-[10px] text-stone-400 bg-stone-50 px-2 py-0.5 rounded-full border border-stone-200">
           {{ assistantMessages.length > 0 ? assistantMessages[assistantMessages.length - 1].metrics?.numSources ?? 0 : 0 }} fuentes
         </span>
@@ -62,13 +115,13 @@ function handleContainerClick(e: MouseEvent) {
           latency {{ assistantMessages.length > 0 ? assistantMessages[assistantMessages.length - 1].metrics?.latency ?? 0 : 0 }}ms
         </span>
         <span class="text-[10px] text-stone-400 bg-stone-50 px-2 py-0.5 rounded-full border border-stone-200">
-          tokens {{ store.tokenUsage.total_tokens ?? 0 }}k
+          tokens {{ store.tokenUsage.total ?? 0 }}k
         </span>
       </div>
     </div>
 
     <TokenBar
-      :used="store.tokenUsage?.total_tokens ?? 0"
+      :used="store.tokenUsage?.total ?? 0"
       :max="MAX_CONTEXT_TOKENS"
     />
 
@@ -78,7 +131,12 @@ function handleContainerClick(e: MouseEvent) {
       class="flex-1 overflow-y-auto space-y-4 p-4"
       @click="handleContainerClick"
     >
-      <div v-if="store.messages.length === 0" class="text-center py-12">
+      <div v-if="store.messages.length === 0 && !conversationStore.activeId" class="text-center py-12">
+        <p class="text-sm text-stone-400">Selecciona o crea una conversación para comenzar</p>
+        <p class="text-xs text-stone-300 mt-1">O escribe directamente para crear una nueva</p>
+      </div>
+
+      <div v-else-if="store.messages.length === 0" class="text-center py-12">
         <p class="text-sm text-stone-400">Historial visible tipo conversación</p>
         <p class="text-xs text-stone-300 mt-1">Escribe una pregunta para comenzar</p>
       </div>
@@ -97,9 +155,9 @@ function handleContainerClick(e: MouseEvent) {
         </div>
       </div>
 
-      <div v-if="store.error" class="flex justify-start">
+      <div v-if="store.error || localError" class="flex justify-start">
         <div class="bg-red-50 border border-red-200 rounded-2xl px-4 py-2">
-          <span class="text-xs text-red-700">{{ store.error }}</span>
+          <span class="text-xs text-red-700">{{ store.error || localError }}</span>
         </div>
       </div>
     </div>

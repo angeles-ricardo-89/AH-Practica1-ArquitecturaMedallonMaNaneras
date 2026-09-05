@@ -1,5 +1,5 @@
 # Skill: LLM Auto-Labeling
-**Domain**: Semantic cluster labeling using local LLM (llamacpp/gemma4).
+**Domain**: Semantic cluster labeling using local LLM (llamacpp/gemma-4-12b).
 **Tech**: httpx, llamacpp OpenAI-compatible API, text templates.
 
 ## Overview

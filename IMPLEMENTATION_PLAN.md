@@ -5,8 +5,8 @@
 - **Version:** 0.1.0
 - **PRD:** `docs/prd/arquitectura_medallon_y_embbeding_CSP.md`
 - **Fecha de creacion:** 2026-07-26
-- **Estado actual:** Planeacion aprobada, pendiente de ejecucion
-- **Ultimo checkpoint completado:** CP-14 (Idempotencia End-to-End)
+- **Estado actual:** PRD 3.0 aprobado (agente/memoria/auth); plan 2026-09-05 en implementacion
+- **Ultimo checkpoint completado:** T9 (Interfaz de conversaciones integrada en dashboard)
 
 ## Reglas de Reanudacion
 
@@ -415,6 +415,123 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 ---
 
+### FASE 6: Agente, Memoria y Autenticacion (PRD 3.0)
+
+#### T1: Verdad del proyecto
+
+**Objetivo:** Corregir inconsistencias de configuracion y fijar linea base canónica.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- `max_context_tokens = 10000` y `llamacpp_model = "gemma-4-12b"` alineados en backend/frontend/.env.template.
+- Contrato `token_usage` unificado (`total`, no `total_tokens`).
+- `make test-backend && make lint && make typecheck-backend && make typecheck-frontend` verde.
+
+---
+
+#### T2: Migraciones y repositorios de datos
+
+**Objetivo:** Esquema de autenticacion y memoria conversacional en PostgreSQL.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- Migracion `002_auth_memory.sql` aplica tablas `app_user`, `conversation`, `message`, `tool_execution`.
+- Test de migracion idempotente y reversible con cascada verificada.
+- `uv run pytest tests/test_db/test_migrations.py --cov=src --cov-fail-under=90` verde.
+
+---
+
+#### T3: Autenticacion, cookies y CSRF
+
+**Objetivo:** JWT por cookie HttpOnly + token CSRF firmado + 2 usuarios demo.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- `test_login_valido_fija_cookie_httponly`, `test_endpoint_protegido_sin_cookie_401`, `test_csrf_requerido_en_mutacion` verdes.
+- Guard global protege todo salvo `GET /health` y login.
+
+---
+
+#### T4: Aislamiento y memoria conversacional
+
+**Objetivo:** Endpoints CRUD de conversaciones con aislamiento por usuario y retencion 30d.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- Matriz 2x2 (2 usuarios x 2 conversaciones) verificada: usuario A no lee conversacion de B.
+- `test_borrado_cascada` elimina mensajes y traces al borrar conversacion.
+
+---
+
+#### T5: Rate limits
+
+**Objetivo:** Limites atómicos en PostgreSQL para login y chat.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- Ventanas atómicas `INSERT ... ON CONFLICT DO UPDATE`.
+- `test_login_5_por_minuto`, `test_chat_10_por_minuto`, `test_cuota_diaria_100` verdes.
+
+---
+
+#### T6: Implementacion individual de cada tool
+
+**Objetivo:** 3 tools de solo lectura con prefiltro SQL y validacion de rangos.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- `buscar_declaraciones`, `explorar_temas`, `consultar_cluster` probadas individualmente.
+- `uv run pytest tests/test_agent/test_tools.py --cov=src --cov-fail-under=90` verde.
+
+---
+
+#### T7: Planificador y ejecutor agéntico
+
+**Objetivo:** Plan JSON validado + ejecutor seguro, max 2 tools por turno.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- `test_plan_valido_se_ejecuta`, `test_plan_nombre_no_permitido_rechazado`, `test_max_dos_tools` verdes.
+- Fallback trazable a `buscar_declaraciones` ante fallo.
+
+---
+
+#### T8: Sintesis, evidencia y negativa
+
+**Objetivo:** Sintetizador con umbral de negativa, traza de tools y evidencia.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- `test_negativa_sin_evidencia`, `test_respuesta_con_evidencias_y_traza` verdes.
+- Negativa correcta cuando no hay evidencia suficiente.
+
+---
+
+#### T9: Interfaz de login y conversaciones
+
+**Objetivo:** Dashboard integrado con memoria conversacional, chat RAG con fuentes/ embeddings 3D/ metadata, indicadores de medallón en header.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- Columna izquierda: lista de conversaciones con boton `+`, click para cambiar, borrar con `✕`.
+- Chat central: conserva ResponseCard, TokenBar, click para fuentes, embeddings 3D filtrados, metadata (latency/tokens/model/similitud/fuentes/cobertura).
+- Auto-creacion de conversacion al escribir sin seleccionar ninguna (titulo = primer mensaje truncado).
+- Header: indicadores Bronze/Silver/Gold con SVG de medallas, flechas de flujo, chips de estado armónicos.
+- Eliminada pestaña "Investigar" — todo en el dashboard principal.
+- `pnpm typecheck` y `pnpm test:unit` verdes (46 tests).
+- Smoke test en navegador: login → dashboard → conversacion → turno del agente con tokens > 0.
+
+---
+
 ## Resumen de Checkpoints
 
 | CP | Fase | Nombre | Estado |
@@ -435,4 +552,13 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 | CP-13 | QA | Evaluacion RAG (LLM-as-a-Judge) | [x] |
 | CP-14 | QA | Idempotencia End-to-End | [x] |
 | CP-15 | Cierre | Docker Full Stack + DoD | [x] |
-| CP-16 | Cierre | Interrupcion Graceful de Pipelines | [ ] |
+| CP-16 | Cierre | Interrupcion Graceful de Pipelines | [x] |
+| T1 | Agente/Memoria/Auth | Verdad del proyecto | [x] |
+| T2 | Agente/Memoria/Auth | Migraciones y repositorios | [x] |
+| T3 | Agente/Memoria/Auth | Autenticacion, cookies y CSRF | [x] |
+| T4 | Agente/Memoria/Auth | Aislamiento y memoria conversacional | [x] |
+| T5 | Agente/Memoria/Auth | Rate limits | [x] |
+| T6 | Agente/Memoria/Auth | Implementacion individual de cada tool | [x] |
+| T7 | Agente/Memoria/Auth | Planificador y ejecutor agéntico | [x] |
+| T8 | Agente/Memoria/Auth | Sintesis, evidencia y negativa | [x] |
+| T9 | Agente/Memoria/Auth | Interfaz de login y conversaciones | [x] |

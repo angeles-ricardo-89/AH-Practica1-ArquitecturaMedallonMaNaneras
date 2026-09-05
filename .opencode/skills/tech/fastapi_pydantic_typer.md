@@ -7,6 +7,10 @@ Definir los patrones de diseno para la API REST (FastAPI), validacion de datos (
 ## Referencias
 
 - Python + uv + Ruff: `../tech/python_uv_ruff.md`
+- Autenticacion JWT/cookies/CSRF y rate limits: `../tech/autenticacion_jwt.md`
+- Agente y turno conversacional: `../domain/agente_investigacion.md`
+- Memoria conversacional: `../domain/memoria_conversacional.md`
+- Nota: los valores de config de ejemplo (modelos, tokens) pueden divergir del `config.py` actual; se unifican en P0.1.
 
 ## FastAPI — Patrones de Inyeccion y Routers
 
@@ -111,11 +115,11 @@ class Settings(BaseSettings):
     ducklake_catalog: str = "postgres"
     ducklake_data_path: str = "/data/lakehouse/ducklake_files.duckdb"
     ollama_base_url: str = "http://localhost:11434"
-    ollama_embed_model: str = "nomic-embed-text"
+    ollama_embed_model: str = "embeddinggemma"
     llamacpp_base_url: str = "http://localhost:9200/v1"
-    llamacpp_model: str = "gemma4"
+    llamacpp_model: str = "gemma-4-12b"
     rag_top_k: int = 8
-    max_context_tokens: int = 8192
+    max_context_tokens: int = 10000
 
     @property
     def postgres_dsn(self) -> str:
@@ -182,7 +186,7 @@ def ingest(dry_run: bool = typer.Option(False, help="Simular sin escribir")) -> 
 
 @app.command()
 def evaluate_rag() -> None:
-    """Ejecuta la evaluacion RAG con gemma4 como juez."""
+    """Ejecuta la evaluacion RAG con gemma-4-12b como juez."""
     run_evaluation()
 ```
 

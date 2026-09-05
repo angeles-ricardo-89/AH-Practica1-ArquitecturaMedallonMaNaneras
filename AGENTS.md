@@ -65,6 +65,26 @@ Activacion: feature nueva, cambio de arquitectura o refactor mayor del pipeline.
 3. `pnpm typecheck` antes de commit en frontend.
 4. Todo checkpoint del plan debe pasar con evidencia verificable (ver `IMPLEMENTATION_PLAN.md`).
 
+### Gate I: Integracion y E2E reales (features de auth/memoria/agente/UI)
+
+Los tests unitarios no prueban que la aplicacion funcione. Toda feature que toque
+autenticacion, memoria, el agente o la UI exige evidencia real:
+
+```
+[BLOQUEO] → si no hay tests de integracion que ejerciten el flujo real (HTTP real + Postgres real)
+            y solo simulen entidades EXTERNAS (Ollama/llamacpp/Gemini) en su frontera HTTP.
+            Prohibido mockear servicios internos (run_agent_turn, tools, routers) en integracion.
+[BLOQUEO] → si una feature toco auth/memoria/agente/UI y `make e2e` no esta verde contra un
+            stack vivo (backend + Postgres real + llamacpp + Ollama). E2E = sin mocks en absoluto.
+[BLOQUEO] → si el frontend no se verifico con un smoke en navegador real (login → dashboard →
+            conversacion → turno del agente) sobre el stack de docker.
+```
+
+- Integracion: `backend/tests/test_api/test_agent_integration.py` y equivalentes; corren en la suite normal.
+- E2E sin mocks: `uv run pytest tests/e2e -m e2e` contra un backend vivo (ver `make e2e`).
+- Aprende del historial real: bugs que los unitarios no vieron (umbral de negativa descalibrado,
+  `content` vacio por razonamiento de llamacpp, dependencia ausente en el contenedor de UI).
+
 ### Gate QA: QA Obsesivo (antes de merge/cierre de feature)
 
 ```
@@ -98,6 +118,10 @@ Activacion: feature nueva, cambio de arquitectura o refactor mayor del pipeline.
 | ECharts 3D Vue | `.opencode/skills/tech/echarts_3d_vue.md` | Visualizacion 3D |
 | UMAP + HDBSCAN Clustering | `.opencode/skills/tech/umap_hdbscan_clustering.md` | Clustering semantico |
 | LLM Auto-Labeling | `.opencode/skills/tech/llm_auto_labeling.md` | Etiquetado automatico |
+| Autenticacion JWT | `.opencode/skills/tech/autenticacion_jwt.md` | Cookie HttpOnly, CSRF, Argon2, usuarios demo |
+| Terraform GCP | `.opencode/skills/tech/terraform_gcp.md` | IaC Cloud Run, Neon, Secret Manager, Gemini |
+| Config Runtime GCP | `.opencode/skills/tech/config_runtime_gcp.md` | Cloud Run runtime, Neon TLS, modelos Gemini |
+| Costo Infraestructura GCP | `.opencode/skills/tech/costo_infraestructura_gcp.md` | Herramienta determinista de costo (~$0) |
 
 ### De Dominio
 
@@ -106,6 +130,8 @@ Activacion: feature nueva, cambio de arquitectura o refactor mayor del pipeline.
 | Idempotencia y Merge | `.opencode/skills/domain/idempotencia_y_merge.md` | Claves naturales, MERGE INTO |
 | Arquitectura Medallon | `.opencode/skills/domain/arquitectura_medallon.md` | Flujo Bronze→Silver→Gold |
 | Memoria RAG Tokens | `.opencode/skills/domain/memoria_rag_tokens.md` | Ventana de contexto |
+| Memoria Conversacional | `.opencode/skills/domain/memoria_conversacional.md` | Aislamiento, retencion 30d, borrado |
+| Agente de Investigacion | `.opencode/skills/domain/agente_investigacion.md` | Plan JSON, 3 tools solo lectura, negativa |
 | Payload Vectorial Limpio | `.opencode/skills/domain/payload_vectorial_limpio.md` | Formato texto para Ollama |
 | Observabilidad Pull | `.opencode/skills/domain/observabilidad_pull.md` | Logs, semaforos, dashboard |
 

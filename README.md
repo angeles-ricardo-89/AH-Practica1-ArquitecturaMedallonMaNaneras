@@ -10,11 +10,20 @@ de Mexico.
 
 
 
-[![Backend Tests](https://img.shields.io/badge/backend%20tests-380%20passed-brightgreen)]()
-[![Frontend Tests](https://img.shields.io/badge/frontend%20tests-39%20passed-brightgreen)]()
-[![Coverage](https://img.shields.io/badge/coverage-90.29%25-brightgreen)]()
+[![Backend Tests](https://img.shields.io/badge/backend%20tests-534%20passed-brightgreen)]()
+[![Frontend Tests](https://img.shields.io/badge/frontend%20tests-43%20passed-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-97.27%25-brightgreen)]()
 [![Python](https://img.shields.io/badge/python-3.13-blue)]()
 [![Estado](https://img.shields.io/badge/estado-operativo-brightgreen)]()
+
+---
+
+## PRD 3.0 (planificado)
+
+La evolución del producto hacia un **agente de investigación** acotado (autenticación,
+memoria conversacional aislada y tres tools de solo lectura) está especificada en
+[`docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md`](docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md),
+que se agrega al PRD 2.0 como antecedente. **Estado: planificado** — todavía no implementado.
 
 ---
 
@@ -108,7 +117,7 @@ verificables a las fuentes originales.
 | API REST                 | Completo        | 6 routers, 380 tests                           |
 | Chat RAG                 | Completo        | Respuestas con fuentes y citas                 |
 | Dashboard frontend       | Completo        | Semaforo, timeline, chat, embeddings 3D        |
-| Evaluacion RAG           | Completo        | LLM-as-a-Judge con golden dataset              |
+| Evaluacion RAG           | Pendiente       | LLM-as-a-Judge implementado; resultados con marcadores, regenerar |
 | Idempotencia             | Completo        | Verificado en las 3 capas                      |
 | Interrupcion graceful    | Completo        | CP-16 completado                               |
 | Prueba offline RAG       | No verificado   | Requiere configuracion de red adicional        |
@@ -125,7 +134,7 @@ flowchart LR
     SILVER -->|ventanas + Ollama embeddings| GOLD["Gold<br/>PostgreSQL + pgvector<br/>gold.rag_corpus<br/>indice HNSW"]
     GOLD -->|busqueda coseno| BACKEND["Backend<br/>FastAPI :8000<br/>search / chat / observability"]
     BACKEND --> FRONTEND["Frontend<br/>Vue 3 :5174<br/>Dashboard + Chat RAG"]
-    BACKEND -->|generacion| LLM["llamacpp :9200<br/>Gemma4-26B"]
+    BACKEND -->|generacion| LLM["llamacpp :9200<br/>gemma-4-12b"]
     BACKEND -->|embeddings| OLLAMA["Ollama :11434<br/>embeddinggemma"]
 ```
 
@@ -139,7 +148,7 @@ flowchart LR
 | Gold             | PostgreSQL + pgvector    | 5433   | Chunks con embeddings e indice HNSW      |
 | Backend API      | FastAPI + Typer          | 8000   | REST API y CLI de pipeline               |
 | Frontend         | Vue 3 + Pinia + Tailwind | 5174   | Dashboard, chat RAG, embeddings 3D       |
-| LLM (generacion) | llamacpp                 | 9200   | Gemma4-26B Q4_K_M (responde chat RAG)    |
+| LLM (generacion) | llamacpp                 | 9200   | gemma-4-12b Q4_K_M (responde chat RAG)    |
 | Embeddings       | Ollama                   | 11434  | embeddinggemma (gemma3, 768 dimensiones) |
 
 ---
@@ -288,8 +297,8 @@ sequenceDiagram
 7. Se construye el contexto con `ContextBuilder`:
    - System prompt instruye al modelo a responder solo con las fuentes
    - Fuentes agrupadas por conferencia, con fecha y participante
-   - Si el contexto excede `MAX_CONTEXT_TOKENS` (8192), se trunca
-8. Se envia el prompt a llamacpp (`POST /v1/chat/completions`) con el modelo Gemma4-26B
+   - Si el contexto excede `MAX_CONTEXT_TOKENS` (10000), se trunca
+8. Se envia el prompt a llamacpp (`POST /v1/chat/completions`) con el modelo gemma-4-12b
 9. La respuesta se devuelve junto con:
    - `sources`: lista de chunks con fecha, participante, texto, similitud, URL, label cualitativo
    - `token_usage`: tokens de prompt y completion
@@ -306,7 +315,7 @@ sequenceDiagram
 - Si los chunks recuperados tienen baja similitud (porque el tema no esta en el corpus),
   el sistema igualmente los envia al LLM. El system prompt instruye:
   `"Si no encuentras informacion en las fuentes, indica que no tienes informacion al respecto."`
-- El LLM (Gemma4-26B) responde indicando que no tiene informacion en las fuentes,
+- El LLM (gemma-4-12b) responde indicando que no tiene informacion en las fuentes,
   como se verifico con la pregunta trampa sobre invasion extraterrestre.
 
 ```mermaid
@@ -318,7 +327,7 @@ sequenceDiagram
     participant O as Ollama (embed)
     participant PG as pgvector
     participant CB as ContextBuilder
-    participant LLM as llamacpp (Gemma4)
+    participant LLM as llamacpp (gemma-4-12b)
 
     U->>F: Escribe pregunta
     F->>B: POST /chat/ {query, top_k}
@@ -350,7 +359,7 @@ sequenceDiagram
 | Base de datos local | DuckDB 1.2+                    | Bronze y Silver                                        |
 | Base vectorial      | PostgreSQL 17 + pgvector       | Gold (embeddings + indice HNSW)                        |
 | Embeddings          | Ollama (embeddinggemma/gemma3) | Generacion de vectores de 768 dimensiones              |
-| LLM generacion      | llamacpp (Gemma4-26B Q4_K_M)   | Respuestas del chat RAG                                |
+| LLM generacion      | llamacpp (gemma-4-12b Q4_K_M)   | Respuestas del chat RAG                                |
 | Reduccion 3D        | UMAP-learn 0.5+                | Visualizacion de embeddings                            |
 | Frontend            | Vue 3.5 + TypeScript 5.7       | SPA con dashboard y chat                               |
 | Estado              | Pinia 3                        | Stores reactivos                                       |
@@ -393,7 +402,7 @@ sequenceDiagram
 │   │   ├── pipeline/                # Ingesta, parsing, enrichment, scraper, DLQ, evaluate_rag, interrupt
 │   │   ├── schemas/                 # Modelos Pydantic (bronze, silver, gold, search, chat, observability)
 │   │   └── services/                # Logica de negocio (IngestService, ParseService, EnrichService, RAG, etc.)
-│   ├── tests/                       # Suite de tests (380 tests, 90.29% coverage)
+│   ├── tests/                       # Suite de tests (534 tests, 97.27% coverage)
 │   ├── data/                        # DuckDB y golden dataset
 │   └── logs/                        # Logs de pipeline
 │
@@ -449,7 +458,7 @@ sequenceDiagram
 | Ollama             | Servicio corriendo en localhost:11434               |
 | llamacpp           | Servidor con endpoint OpenAI-compatible en :9200    |
 | Modelo embeddings  | `embeddinggemma` (768 dims) descargado en Ollama     |
-| Modelo LLM         | Gemma4-26B (Q4_K_M) cargado en llamacpp             |
+| Modelo LLM         | gemma-4-12b (Q4_K_M) cargado en llamacpp             |
 | Memoria            | ~16 GB RAM (modelos de embeddings y LLM son locales) |
 | Puerto 5433        | PostgreSQL + pgvector                                |
 | Puerto 8000        | Backend FastAPI                                      |
@@ -493,9 +502,9 @@ funcionan para desarrollo local con Docker Compose.
 | `OLLAMA_BASE_URL`          | Si          | `http://localhost:11434`                                      | URL base de Ollama                             |
 | `OLLAMA_EMBED_MODEL`       | No          | `embeddinggemma`                                              | Modelo de embeddings en Ollama                 |
 | `LLAMACPP_BASE_URL`        | Si          | `http://localhost:9200/v1`                                    | URL base de llamacpp (API OpenAI-compatible)    |
-| `LLAMACPP_MODEL`           | No          | `gemma4`                                                      | Nombre del modelo en llamacpp                  |
+| `LLAMACPP_MODEL`           | No          | `gemma-4-12b`                                                 | Nombre del modelo en llamacpp                  |
 | `RAG_TOP_K`                | No          | `8`                                                           | Chunks a recuperar por consulta                |
-| `MAX_CONTEXT_TOKENS`       | No          | `8192`                                                        | Limite de tokens para la ventana de contexto   |
+| `MAX_CONTEXT_TOKENS`       | No          | `10000`                                                        | Limite de tokens para la ventana de contexto   |
 | `MAX_INGEST_POOL`          | No          | `1`                                                           | Workers paralelos de ingesta                   |
 | `TEMPORAL_PARSER_TEMPERATURE` | No       | `0.1`                                                         | Temperatura del parser temporal                |
 | `TEMPORAL_PARSER_MAX_RETRIES` | No       | `3`                                                           | Reintentos del parser temporal                 |
@@ -509,9 +518,8 @@ funcionan para desarrollo local con Docker Compose.
 
 ### LLM de generacion
 
-- **Nombre en llamacpp:** `gemma4` → `models/Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf`
-- **Tamano:** ~16.8 GB en disco, ~25.2B parametros
-- **Contexto maximo:** 250,112 tokens (limitado a `MAX_CONTEXT_TOKENS` = 8192 en el proyecto)
+- **Nombre en llamacpp:** `gemma-4-12b`
+- **Contexto maximo:** 250,112 tokens (limitado a `MAX_CONTEXT_TOKENS` = 10000 en el proyecto)
 
 ---
 
@@ -647,7 +655,7 @@ rm -f backend/data/lakehouse/*.duckdb.wal
 | 8 | Filtro temporal                   | ✅     | TemporalParser LLM-based                      | Busquedas por rango de fechas                    | Pregunta con fecha en chat                             |
 | 9 | Rechazo fuera de corpus           | ✅     | System prompt + sin fuentes relevantes         | Pregunta extraterrestre → "No tengo informacion" | Preguntar tema fuera del corpus                        |
 | 10| Citas / fuentes                   | ✅     | Sources en ChatResponse con URL y fragmento    | 8 fuentes por respuesta, con similitud           | Ver panel de fuentes en frontend                       |
-| 11| Tests                             | ✅     | 380 backend (90.29%), 39 frontend              | pytest + vitest pasan                            | `make test`                                           |
+| 11| Tests                             | ✅     | 534 backend (97.27%), 43 frontend              | pytest + vitest pasan                            | `make test`                                           |
 | 12| Dashboard                         | ✅     | Semaforo, timeline, logs, embeddings 3D        | Interfaz funcional en :5174                      | `docker compose up -d`, abrir :5174                   |
 
 ---
@@ -939,7 +947,7 @@ el 2026-08-02, accediendo a `http://localhost:5174`.
 El sistema implementa las siguientes estrategias que garantizan que las respuestas
 del chat se generan exclusivamente desde el corpus local:
 
-1. **LLM local:** Gemma4-26B se ejecuta via llamacpp en `localhost:9200`. No es un
+1. **LLM local:** gemma-4-12b se ejecuta via llamacpp en `localhost:9200`. No es un
    API externa. El modelo no tiene acceso a herramientas de busqueda web.
 2. **Embeddings locales:** Ollama en `localhost:11434` genera embeddings sin conexion externa.
 3. **System prompt restrictivo:** `backend/src/lakehouse/api/routers/chat.py:22`:
@@ -989,7 +997,7 @@ El proyecto implementa los siguientes mecanismos reales (verificados en codigo):
 | Citas obligatorias               | `sources` en `ChatResponse` con URL, fecha, participante, texto y similitud      | `schemas/chat.py:14`                     |
 | Rechazo sin evidencia            | El modelo responde "No tengo informacion al respecto" sin fuentes relevantes     | Verificado con pregunta trampa            |
 | Limitacion de chunks             | `RAG_TOP_K = 8` (configurable)                                                   | `config.py:23`                           |
-| Truncado de contexto             | `MAX_CONTEXT_TOKENS = 8192` con truncado FIFO del historial                       | `services/context_builder.py:13`          |
+| Truncado de contexto             | `MAX_CONTEXT_TOKENS = 10000` con truncado FIFO del historial                       | `services/context_builder.py:13`          |
 | Trazabilidad de fuentes          | Cada chunk cita su `conference_url` original en gob.mx                           | `schemas/chat.py:19`                     |
 | Label cualitativo                | Alta/Media/Baja basado en similitud                                              | `services/qualitative_label.py`          |
 
@@ -1011,7 +1019,7 @@ Los 8 chunks recuperados tenian similitud maxima de 0.40 y trataban temas no rel
 cd backend && uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=90
 ```
 
-**Resultado:** 380 passed, 90.29% coverage (satisface el umbral de >= 90%)
+**Resultado:** 534 passed, 97.27% coverage (satisface el umbral de >= 90%)
 
 **Desglose por area:**
 
@@ -1031,7 +1039,7 @@ cd backend && uv run pytest --cov=src --cov-report=term-missing --cov-fail-under
 cd frontend && pnpm test:unit
 ```
 
-**Resultado:** 7 test files, 39 tests, all passed
+**Resultado:** 7 test files, 43 tests, all passed
 
 ### Linting y typecheck
 
@@ -1101,7 +1109,7 @@ make typecheck     # ty check + vue-tsc
 - **DLQ con 0 registros en esta ejecucion:** Aunque el mecanismo de DLQ esta implementado,
   la ejecucion actual no produjo rechazos. No se pudo generar evidencia de un registro
   invalido real sin alterar datos productivos.
-- **Limitaciones del modelo local:** Gemma4-26B (cuantizado Q4_K_M) tiene capacidad
+- **Limitaciones del modelo local:** gemma-4-12b (cuantizado Q4_K_M) tiene capacidad
   limitada comparado con modelos cloud. Las respuestas pueden ser menos precisas
   o detalladas que con modelos mas grandes.
 - **Evaluacion subjetiva:** La pregunta sobre imparcialidad es inherentemente evaluativa.
@@ -1131,7 +1139,7 @@ cd frontend && pnpm install && cd ..
 
 # 4. Descargar modelos (si no estan ya)
 ollama pull embeddinggemma
-# Configurar llamacpp con Gemma4-26B
+# Configurar llamacpp con gemma-4-12b
 
 # 5. Levantar infraestructura
 docker compose up -d

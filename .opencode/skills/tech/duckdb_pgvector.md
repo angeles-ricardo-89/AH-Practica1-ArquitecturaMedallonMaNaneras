@@ -203,7 +203,7 @@ async def generate_embedding(
     text: str,
     *,
     base_url: str = "http://localhost:11434",
-    model: str = "nomic-embed-text",
+    model: str = "embeddinggemma",
 ) -> list[float]:
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(
@@ -215,18 +215,27 @@ async def generate_embedding(
         return data["embedding"]
 ```
 
+## Separacion de Espacios Vectoriales (local vs productivo)
+
+Dueña de esta regla junto con el PRD 3.0 (seccion 11.3). Invariante dura: **nunca mezclar embeddings de modelos diferentes**, aunque compartan 768 dimensiones.
+
+- Corpus local: EmbeddingGemma via Ollama. Corpus productivo: `gemini-embedding-001` (768 dims, normalizacion, tareas `RETRIEVAL_DOCUMENT` / `RETRIEVAL_QUERY`).
+- Cada indice registra metadatos obligatorios: proveedor+modelo, dimension, tipo de tarea, version del formato de texto embebido, fecha de construccion y hash del corpus.
+- Produccion se construye por reindexacion TOTAL hacia Neon; el servicio falla al iniciar si la config de consulta no coincide con los metadatos del indice (fallar cerrado).
+- Los filtros relacionales (fecha/participante) se aplican ANTES del ranking vectorial cuando estan presentes; nunca despues de descartar candidatos.
+
 ## Herramientas
 
 - **DuckDB**: Motor analitico embebido con soporte para catalogo externo (Postgres).
 - **pgvector**: Extension de PostgreSQL para busqueda vectorial.
-- **Ollama**: Servidor local de modelos de embedding.
+- **Ollama**: Servidor local de modelos de embedding (embeddinggemma).
 - **psycopg**: Driver PostgreSQL para Python.
 
 ## Checklist de Verificacion
 
 - [ ] DuckDB puede hacer ATTACH al catalogo Postgres sin errores.
 - [ ] MERGE INTO en Silver no duplica registros en ejecuciones repetidas.
-- [ ] pgvector acepta embeddings de dimension correcta (768 para nomic-embed-text).
+- [ ] pgvector acepta embeddings de dimension correcta (768 para embeddinggemma).
 - [ ] Indice HNSW acelera busquedas: query vectorial < 100ms para corpus < 10k registros.
 - [ ] Ollama responde con embedding del tamano esperado (verificar `len(embedding)`).
 - [ ] Busqueda hibrida (filtros + vector) devuelve resultados correctos.

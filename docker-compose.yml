@@ -23,6 +23,8 @@ services:
     build: ./backend
     container_name: mananeras-backend
     restart: unless-stopped
+    env_file:
+      - .env
     volumes:
       - ./backend:/app
     extra_hosts:

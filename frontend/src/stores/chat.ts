@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ChatResponse, SourceChunk } from '../api/chat'
+import type { ToolTrace } from '../api/conversations'
 import { sendChatMessage } from '../api/chat'
 
 export interface ChatMessage {
@@ -8,6 +9,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   sources?: SourceChunk[]
+  traces?: ToolTrace[]
   timestamp: number
   metrics?: {
     similarity: number
@@ -19,7 +21,7 @@ export interface ChatMessage {
   }
 }
 
-export const MAX_CONTEXT_TOKENS = 8192
+export const MAX_CONTEXT_TOKENS = 10000
 
 export const useChatStore = defineStore('chat', () => {
   const messages = ref<ChatMessage[]>([])
@@ -56,7 +58,7 @@ export const useChatStore = defineStore('chat', () => {
           numSources,
           coverage: numSources > 0 ? 100 : 0,
           latency: response.latency_ms,
-          tokens: response.token_usage?.total_tokens ?? 0,
+          tokens: response.token_usage?.total ?? 0,
           model: response.model_used,
         },
       })
@@ -75,5 +77,13 @@ export const useChatStore = defineStore('chat', () => {
     error.value = null
   }
 
-  return { messages, isLoading, tokenUsage, error, sendMessage, clearMessages }
+  function setLoading(loading: boolean) {
+    isLoading.value = loading
+  }
+
+  function setTokenUsage(usage: Record<string, number>) {
+    tokenUsage.value = usage
+  }
+
+  return { messages, isLoading, tokenUsage, error, sendMessage, clearMessages, addMessage, setLoading, setTokenUsage }
 })

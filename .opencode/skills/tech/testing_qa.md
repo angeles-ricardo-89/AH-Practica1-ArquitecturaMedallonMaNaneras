@@ -71,9 +71,9 @@ def test_settings() -> Settings:
         postgres_db="mananeras_test",
         ducklake_data_path="/tmp/lakehouse_test",
         llamacpp_base_url="http://localhost:9200/v1",
-        llamacpp_model="gemma4",
+        llamacpp_model="gemma-4-12b",
         ollama_base_url="http://localhost:11434",
-        ollama_embed_model="nomic-embed-text",
+        ollama_embed_model="embeddinggemma",
     )
 
 
@@ -223,7 +223,7 @@ describe("TokenBar", () => {
 
   it("muestra barra verde cuando uso < 90%", () => {
     const wrapper = mount(TokenBar, {
-      props: { current: 4000, max: 8192 },
+      props: { current: 4000, max: 10000 },
     });
     const bar = wrapper.find('[data-testid="token-fill"]');
     expect(bar.classes()).toContain("bg-emerald-500");
@@ -232,13 +232,27 @@ describe("TokenBar", () => {
 
   it("muestra barra roja cuando uso > 90%", () => {
     const wrapper = mount(TokenBar, {
-      props: { current: 7500, max: 8192 },
+      props: { current: 7500, max: 10000 },
     });
     const bar = wrapper.find('[data-testid="token-fill"]');
     expect(bar.classes()).toContain("bg-red-500");
   });
 });
 ```
+
+## Pruebas de Seguridad, Aislamiento y Rate Limits (PRD 3.0)
+
+El agente, la memoria y la autenticacion anaden una capa de pruebas obligatorias (PRD 3.0, seccion 16 y 13):
+
+- **Unidad:** claims JWT, expiracion, hashing Argon2, CSRF y validacion de tools (allowlist).
+- **Integracion con PostgreSQL vivo:** propiedad y borrado de conversaciones.
+- **Matriz de aislamiento:** 2 usuarios x 2 conversaciones x leer/continuar/borrar (CA-M01..M05).
+- **Contrato backend-frontend:** tokens, errores y respuestas del agente.
+- **Prompt injection:** en pregunta, memoria y corpus recuperado (CA-T06).
+- **Rate limits:** login (5/min), chat (10/min), cuota diaria (100), resultados y pasos (CA-A05, PRD seccion 10).
+- **Offline:** prueba del agente local sin red hacia Gemini.
+- **Smoke test productivo** desde una sesion limpia.
+- **No-evidencia:** respuesta de negativa correcta (CA-T07).
 
 ## Evaluacion LLM-as-a-Judge
 
@@ -257,7 +271,7 @@ def evaluate_rag_responses(
     relevance_threshold: float = 0.80,
 ) -> dict[str, float]:
     # Procesa 50 preguntas del Golden Dataset
-    # Usa gemma4 como juez para evaluar fidelidad y relevancia
+    # Usa gemma-4-12b como juez para evaluar fidelidad y relevancia
     scores = {"fidelity": 0.0, "relevance": 0.0, "total_questions": len(golden_dataset)}
     # ... logica de evaluacion
     return scores

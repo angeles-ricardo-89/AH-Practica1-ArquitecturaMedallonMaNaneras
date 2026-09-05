@@ -250,7 +250,7 @@ class TestCallFunctions:
         assert result == "95"
         post_args, _ = mock_client.post.call_args
         assert post_args[0] == "http://localhost:9200/v1/chat/completions"
-        assert mock_client.post.call_args.kwargs["json"]["model"] == "gemma4"
+        assert mock_client.post.call_args.kwargs["json"]["model"] == "gemma-4-12b"
 
     @patch("lakehouse.pipeline.evaluate_rag.httpx.Client")
     @patch("lakehouse.pipeline.evaluate_rag.ContextBuilder")

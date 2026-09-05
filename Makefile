@@ -1,4 +1,4 @@
-.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full test lint typecheck install evaluacion
+.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full test lint typecheck install evaluacion e2e
 
 # ─── Docker ───────────────────────────────────────────────
 up:
@@ -46,6 +46,11 @@ test-frontend:
 	cd frontend && pnpm test:unit
 
 test: test-backend test-frontend
+
+# E2E sin mocks contra backend vivo (requiere demo users en .env + llamacpp + Ollama)
+# Default: el stack docker real (frontend :5174 proxya /api -> backend)
+e2e:
+	cd backend && bash -c 'set -a; source ../.env 2>/dev/null || true; set +a; E2E_BASE_URL=$${E2E_BASE_URL:-http://localhost:5174/api} E2E_USERNAME=$${DEMO_USER_1_USERNAME:-} E2E_PASSWORD=$${DEMO_USER_1_PASSWORD:-} uv run pytest tests/e2e -m e2e -o addopts=""'
 
 # ─── Lint & Typecheck ─────────────────────────────────────
 lint:

@@ -34,7 +34,7 @@ describe('DashboardPage Integration', () => {
     }
     const wrapper = mount(DashboardPage)
     expect(wrapper.text()).toContain('Dashboard técnico')
-    expect(wrapper.text()).toContain('Pipeline medallón')
+    expect(wrapper.text()).toContain('Conversaciones')
     expect(wrapper.text()).toContain('Chat RAG')
     expect(wrapper.text()).toContain('Embeddings 3D')
     expect(wrapper.text()).toContain('Fuentes usadas')
@@ -85,15 +85,12 @@ describe('DashboardPage Integration', () => {
     const wrapper = mount(DashboardPage)
     await nextTick()
 
-    expect(wrapper.text()).toContain('Bronze')
-    expect(wrapper.text()).toContain('Silver')
-    expect(wrapper.text()).toContain('Gold')
-    expect(wrapper.text()).toContain('Ingesta cruda')
-    expect(wrapper.text()).toContain('Validación + limpieza')
-    expect(wrapper.text()).toContain('En curso')
+    expect(wrapper.text()).toContain('+42')
+    expect(wrapper.text()).toContain('+41')
+    expect(wrapper.text()).toContain('+0')
   })
 
-  it('opens evidence modal when pipeline card is clicked', async () => {
+  it('opens evidence modal when medallion is clicked', async () => {
     const obsStore = useObservabilityStore()
     obsStore.layers = {
       layers: [
@@ -116,10 +113,10 @@ describe('DashboardPage Integration', () => {
     const wrapper = mount(DashboardPage)
     await nextTick()
 
-    const card = wrapper.findComponent({ name: 'PipelineCard' })
-    expect(card.exists()).toBe(true)
+    const bronzeButton = wrapper.findAll('button').find((b) => b.text().includes('B'))
+    expect(bronzeButton).toBeTruthy()
 
-    await card.trigger('click')
+    await bronzeButton!.trigger('click')
     await nextTick()
 
     const dashboardStore = useDashboardStore()

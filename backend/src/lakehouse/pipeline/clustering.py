@@ -347,7 +347,6 @@ def generate_label(
         json={
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            #"temperature": 0,
             "max_tokens": max_tokens,
         },
         timeout=timeout,
