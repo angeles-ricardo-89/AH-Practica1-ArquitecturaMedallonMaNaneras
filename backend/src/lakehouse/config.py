@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     ollama_embed_model: str = "embeddinggemma"
 
     llamacpp_base_url: str = "http://localhost:9200/v1"
-    llamacpp_model: str = "gemma4"
+    llamacpp_model: str = "gemma-4-12b"
 
     rag_top_k: int = 8
     max_context_tokens: int = 10000
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     temporal_parser_max_retries: int = 3
     temporal_parser_max_tokens: int = 2040
 
-    umap_clustering_n_components: int = 15
+    umap_clustering_n_components: int = 30
     umap_clustering_n_neighbors: int = 50
     umap_clustering_min_dist: float = 0.0
     umap_clustering_metric: str = "cosine"

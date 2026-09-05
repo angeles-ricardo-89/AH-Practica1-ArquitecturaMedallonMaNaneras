@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import DashboardPage from '../../src/components/dashboard/DashboardPage.vue'
+import SourcesList from '../../src/components/inspector/SourcesList.vue'
 import { useObservabilityStore } from '../../src/stores/observability'
 import { useDashboardStore } from '../../src/stores/dashboard'
 import { useChatStore } from '../../src/stores/chat'
@@ -181,5 +182,91 @@ describe('DashboardPage Integration', () => {
     expect(wrapper.text()).toContain('Conferencia de prensa del 30 de julio de 2026')
     expect(wrapper.text()).toContain('0.87')
     expect(wrapper.text()).toContain('Alta')
+  })
+
+  async function mountWithSelectedResponse() {
+    const chatStore = useChatStore()
+    chatStore.messages = [
+      {
+        id: 'msg_user_1',
+        role: 'user',
+        content: 'Pregunta de prueba',
+        timestamp: Date.now(),
+      },
+      {
+        id: 'msg_assistant_1',
+        role: 'assistant',
+        content: 'Respuesta con fuentes',
+        timestamp: Date.now(),
+        sources: [
+          {
+            conference_id: 'conf_001',
+            conference_date: '2026-07-30',
+            participant: 'Presidenta',
+            chunk_text: 'Fragmento sobre vivienda',
+            similarity: 0.87,
+            conference_url: 'https://gob.mx',
+            pregunta_activa: 'Conferencia de prensa del 30 de julio de 2026',
+            qualitative_label: 'Alta',
+            embedding_3d: [1, 2, 3],
+          },
+        ],
+        metrics: {
+          similarity: 0.87,
+          numSources: 1,
+          coverage: 100,
+          latency: 1200,
+          tokens: 800,
+          model: 'test-model',
+        },
+      },
+    ]
+
+    const wrapper = mount(DashboardPage, { attachTo: document.body })
+    await nextTick()
+
+    const dashboardStore = useDashboardStore()
+    dashboardStore.selectResponse('msg_assistant_1')
+    await nextTick()
+    expect(dashboardStore.selectedResponseId).toBe('msg_assistant_1')
+
+    return { wrapper, dashboardStore }
+  }
+
+  it('keeps selection when clicking inside the inspector column', async () => {
+    const { wrapper, dashboardStore } = await mountWithSelectedResponse()
+
+    const embeddingsHeading = wrapper
+      .findAll('h3')
+      .find((h) => h.text().includes('Embeddings 3D'))
+    expect(embeddingsHeading).toBeTruthy()
+    await embeddingsHeading!.trigger('click')
+    await nextTick()
+    expect(dashboardStore.selectedResponseId).toBe('msg_assistant_1')
+
+    const resizer = wrapper.find('.cursor-ns-resize')
+    expect(resizer.exists()).toBe(true)
+    await resizer.trigger('click')
+    await nextTick()
+    expect(dashboardStore.selectedResponseId).toBe('msg_assistant_1')
+
+    const sourceCard = wrapper.findComponent(SourcesList).find('.rounded-xl')
+    expect(sourceCard.exists()).toBe(true)
+    await sourceCard.trigger('click')
+    await nextTick()
+    expect(dashboardStore.selectedResponseId).toBe('msg_assistant_1')
+
+    wrapper.unmount()
+  })
+
+  it('deselects when clicking outside chat and inspector', async () => {
+    const { wrapper, dashboardStore } = await mountWithSelectedResponse()
+
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await nextTick()
+
+    expect(dashboardStore.selectedResponseId).toBeNull()
+
+    wrapper.unmount()
   })
 })
