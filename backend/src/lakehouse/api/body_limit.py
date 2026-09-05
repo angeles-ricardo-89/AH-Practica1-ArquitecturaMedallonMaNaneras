@@ -19,6 +19,6 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.method in ("POST", "PUT", "PATCH"):
             length = request.headers.get("content-length")
-            if length and length.isdigit() and int(length) > self._max_bytes:
+            if length and length.isascii() and length.isdigit() and int(length) > self._max_bytes:
                 return JSONResponse(status_code=413, content={"detail": "Request body too large"})
         return await call_next(request)

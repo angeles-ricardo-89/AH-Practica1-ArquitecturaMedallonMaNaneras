@@ -165,3 +165,12 @@ def test_body_size_limit_returns_413() -> None:
     r = client.post("/auth/login", content=big, headers={"content-type": "application/json"})
     assert r.status_code == 413
     assert r.json() == {"detail": "Request body too large"}
+    assert r.headers.get("x-content-type-options") == "nosniff"
+
+
+def test_body_size_at_limit_not_rejected() -> None:
+    client = TestClient(create_app(Settings(max_request_body_bytes=10)))
+    ok = client.post(
+        "/auth/login", content='{"ab":"1"}', headers={"content-type": "application/json"}
+    )
+    assert ok.status_code != 413

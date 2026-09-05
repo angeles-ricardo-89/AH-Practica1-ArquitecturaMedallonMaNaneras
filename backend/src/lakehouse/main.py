@@ -47,7 +47,6 @@ def create_app(settings: Settings) -> FastAPI:
         lifespan=lifespan,
         **docs_kwargs,
     )
-    app.add_middleware(SecurityHeadersMiddleware, production=settings.app_env == "production")
     if settings.cors_allowed_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -57,6 +56,7 @@ def create_app(settings: Settings) -> FastAPI:
             allow_headers=["*"],
         )
     app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_body_bytes)
+    app.add_middleware(SecurityHeadersMiddleware, production=settings.app_env == "production")
 
     protected = [Depends(get_current_user)]
 
