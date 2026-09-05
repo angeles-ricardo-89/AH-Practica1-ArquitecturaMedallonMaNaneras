@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import jwt as pyjwt
 import pytest
+from fastapi.testclient import TestClient
 
 from lakehouse.config import Settings
+from lakehouse.main import create_app
 from lakehouse.services.security import (
     create_access_token,
     create_csrf_token,
@@ -14,6 +16,30 @@ from lakehouse.services.security import (
     verify_csrf_token,
     verify_password,
 )
+
+pytestmark = pytest.mark.security("HDRS")
+
+
+def test_security_headers_always_present() -> None:
+    client = TestClient(create_app(Settings()))
+    r = client.get("/health")
+    assert r.headers.get("x-content-type-options") == "nosniff"
+    assert r.headers.get("referrer-policy") == "no-referrer"
+    assert r.headers.get("x-frame-options") == "DENY"
+
+
+def test_hsts_and_csp_only_in_production() -> None:
+    client = TestClient(create_app(Settings(app_env="production")))
+    r = client.get("/health")
+    assert "strict-transport-security" in r.headers
+    assert "content-security-policy" in r.headers
+
+
+def test_no_hsts_csp_in_local() -> None:
+    client = TestClient(create_app(Settings()))
+    r = client.get("/health")
+    assert "strict-transport-security" not in r.headers
+    assert "content-security-policy" not in r.headers
 
 
 def test_hash_and_verify_password() -> None:
