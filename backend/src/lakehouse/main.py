@@ -7,6 +7,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from lakehouse.api.body_limit import BodySizeLimitMiddleware
 from lakehouse.api.deps import get_current_user
 from lakehouse.api.routers import (
     auth,
@@ -55,6 +56,7 @@ def create_app(settings: Settings) -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_body_bytes)
 
     protected = [Depends(get_current_user)]
 

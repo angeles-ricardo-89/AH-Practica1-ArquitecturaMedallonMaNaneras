@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     chat_rate_limit: int = 10
     daily_rate_limit: int = 100
     cors_allowed_origins: list[str] = []
+    max_request_body_bytes: int = 65536
 
     @property
     def cookie_secure(self) -> bool:

@@ -157,3 +157,11 @@ def test_runtime_error_does_not_leak_internals() -> None:
     assert "SECRET_INTERNAL_DETAIL" not in r.text
     assert r.json() == {"detail": "Internal server error"}
     assert r.headers.get("x-content-type-options") == "nosniff"
+
+
+def test_body_size_limit_returns_413() -> None:
+    client = TestClient(create_app(Settings()))
+    big = '{"question": "' + "a" * 70000 + '"}'
+    r = client.post("/auth/login", content=big, headers={"content-type": "application/json"})
+    assert r.status_code == 413
+    assert r.json() == {"detail": "Request body too large"}
