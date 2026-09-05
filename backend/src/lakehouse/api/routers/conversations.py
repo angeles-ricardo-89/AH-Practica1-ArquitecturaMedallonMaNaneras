@@ -165,10 +165,7 @@ def send_message(
 
     add_message(conn_str, conv_id, user.id, "user", payload.question)
 
-    try:
-        result = run_agent_turn(settings, payload.question, history)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    result = run_agent_turn(settings, payload.question, history)
 
     assistant_id = add_message(
         conn_str,
