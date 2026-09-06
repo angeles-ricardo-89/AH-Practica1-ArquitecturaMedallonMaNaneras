@@ -18,13 +18,9 @@ SECRET = "a" * 40
 @pytest.fixture
 def owner(pg_conn_str: str):
     with psycopg.connect(pg_conn_str) as conn:
-        conn.execute(
-            "INSERT INTO app_user (username, password_hash) VALUES ('mem_user', 'x')"
-        )
+        conn.execute("INSERT INTO app_user (username, password_hash) VALUES ('mem_user', 'x')")
         conn.commit()
-        oid = conn.execute(
-            "SELECT id FROM app_user WHERE username = 'mem_user'"
-        ).fetchone()[0]
+        oid = conn.execute("SELECT id FROM app_user WHERE username = 'mem_user'").fetchone()[0]
     yield oid
     with psycopg.connect(pg_conn_str) as conn:
         conn.execute("DELETE FROM app_user WHERE username = 'mem_user'")
@@ -62,13 +58,9 @@ def test_delete_cascade(owner, pg_conn_str: str) -> None:
 def test_cross_user_returns_none(owner, pg_conn_str: str) -> None:
     pid = create_conversation(pg_conn_str, owner, "A", SECRET)
     with psycopg.connect(pg_conn_str) as conn:
-        conn.execute(
-            "INSERT INTO app_user (username, password_hash) VALUES ('other', 'x')"
-        )
+        conn.execute("INSERT INTO app_user (username, password_hash) VALUES ('other', 'x')")
         conn.commit()
-        other_id = conn.execute(
-            "SELECT id FROM app_user WHERE username = 'other'"
-        ).fetchone()[0]
+        other_id = conn.execute("SELECT id FROM app_user WHERE username = 'other'").fetchone()[0]
     assert get_conversation(pg_conn_str, other_id, pid) is None
     assert resolve_conversation_id(pg_conn_str, other_id, pid) is None
     with psycopg.connect(pg_conn_str) as conn:

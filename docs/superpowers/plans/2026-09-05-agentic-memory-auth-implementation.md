@@ -3,7 +3,7 @@
 **Fecha:** 2026-09-05
 **Spec:** `docs/superpowers/specs/2026-09-05-agentic-memory-auth-design.md`
 **PRD:** `docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md` (agregado al PRD 2.0)
-**Estado:** Plan propuesto, pendiente de aprobación explícita del usuario
+**Estado:** Plan aprobado (T1–T12 y S1–S10 completados); pendiente T13 (evidencia PDF)
 
 > **Para workers agénticos:** implementar tarea por tarea, en orden, sin saltar dependencias. Cada tarea termina con un checkpoint verificable antes de avanzar.
 
@@ -169,11 +169,24 @@
 
 ### T12 — Cloud Run + Neon (Terraform)
 
-- **Archivos probables:** `infra/terraform/*.tf`, `terraform.tfvars.example`, `.gitignore`, `scripts/gcp_cost.py` + `scripts/gcp_cost.example.json`.
-- **Prueba primero:** `terraform validate`/`plan` limpios; `gcp_cost.py` determinista (misma entrada → misma salida) y marca excesos de free tier.
-- **Cambio mínimo:** IaC Terraform (estado GCS, SA privilegios mínimos, Cloud Run `max-instances=1` escala a cero, Neon TLS+pooling, Secret Manager ≤6 versiones); construir la herramienta de costo definida en `costo_infraestructura_gcp.md`.
-- **Comando de validación:** `terraform validate && terraform plan`; `uv run python scripts/gcp_cost.py --config scripts/gcp_cost.example.json`.
-- **Criterio de terminado:** URL `run.app` abre login, autentica, conversa, retoma y borra (CA-D04…CA-D08); costo ~USD 0 documentado.
+> **Ampliación aprobada por el usuario (2026-09-05, diálogo socrático):** T12 se expande más allá de su lista de archivos original porque el despliegue real exige cerrar gaps no contemplados en el plan. Alcance confirmado: despliegue real a GCP + URL `run.app` viva.
+
+**Decisiones confirmadas con el usuario:**
+- Proyecto GCP destino: `rag-conferencias-matutinas` (billing activo; NO `sfs-stagging`). Región `us-central1`.
+- Neon ya creado; su URL agrupada con credenciales vive en Secret Manager como `NEON_DATABASE_URL` (ya existe). Terraform la referencia vía data source, no la crea.
+- Secretos que ya existen: `GEMINI_API_KEY`, `NEON_DATABASE_URL`, `POSTGRES_PASSWORD`, `POSTGRES_USER`. Faltan por crear en Secret Manager: `JWT_SECRET`, `CSRF_SECRET`, `DEMO_USER_1_USERNAME/PASSWORD`, `DEMO_USER_2_USERNAME/PASSWORD` (los genera el agente con valores fuertes).
+- Gaps cerrados como parte de T12 (autorizados uno a uno):
+  1. **Build productivo single-origin** — hoy no existe (Dockerfiles en modo dev: `fastapi dev --reload` y `pnpm dev`; `main.py` no sirve estáticos; router frontend en history-mode). Se crea un `Dockerfile` multi-stage que compila `pnpm build` y sirve `dist/` vía `StaticFiles` con fallback SPA desde FastAPI, corriendo uvicorn (no `fastapi dev`).
+  2. **CLI de reindexación** — `reindex_production.py` existe pero no hay comando para invocarlo. Se añade `pipeline reindex-production` (GeminiEmbeddingAdapter + `reindex_corpus`) más el bootstrap del esquema Neon (`CREATE EXTENSION vector`, `ensure_gold_tables`, auth_memory, rate_limit, index_metadata, índice HNSW).
+  3. **Conexión productiva a Neon** — toda la capa de datos construye `postgresql://` desde `postgres_*` e ignora `neon_database_url` (solo usado en validación de índice). Se añade helper único `get_database_url(settings)` (prod → `neon_database_url` + TLS vía `build_neon_connection_string`; local → URL actual) y se sustituyen los builders dispersos (`_pg_conn_str`, `_get_pgvector_connection_string`, `main.py` lifespan).
+  4. **Frontend same-origin** — `API_BASE` hardcodeado a `/api` (proxy Vite). Se hace configurable vía `VITE_API_BASE` (default `/api` para dev; `''` en el build productivo). Rutas frontend solo `/` y `/login`, sin colisión con la API en raíz.
+  5. **Gateway de proveedor (Gemini en prod / local como hoy)** — los adaptadores `GeminiEmbeddingAdapter`/`GeminiChatAdapter` de T11 existen pero no están cableados a ningún flujo runtime; en producción toda la generación (planner/synthesizer/chat) y el embedding de consulta (`chat.py`, `search`, `tools.buscar_declaraciones`) llamarían a llama.cpp/Ollama (inexistentes en Cloud Run) y el espacio vectorial no coincidiría con el índice Gemini. Se añade un gateway fino: en `APP_ENV=production` generación y embedding de consulta usan los adaptadores Gemini; en local se mantiene el comportamiento actual (llama.cpp/Ollama) sin tocar los tests existentes.
+
+- **Archivos probables:** `infra/terraform/*.tf`, `terraform.tfvars.example`, `.gitignore` (`*.tfvars`, `.terraform/`), `scripts/gcp_cost.py` + `scripts/gcp_cost.example.json`, `backend/Dockerfile` (productivo, multi-stage), `backend/src/lakehouse/main.py` (sirve estáticos en prod), `backend/src/lakehouse/db/connection.py` (`get_database_url`), `backend/src/lakehouse/cli.py` (`pipeline reindex-production`), `backend/tests/...`, `frontend/src/api/client.ts`.
+- **Prueba primero:** tests de `get_database_url` (prod→Neon+TLS, local→URL actual, `-pooler` ausente→error); test de estáticos (SPA fallback + `/assets` + API intacta en prod); `terraform validate`/`plan` limpios; `gcp_cost.py` determinista (misma entrada → misma salida) y marca excesos de free tier.
+- **Cambio mínimo:** los 4 gaps de arriba + IaC Terraform (estado GCS `rag-conferencias-matutinas-tfstate` con versionado, SA privilegios mínimos, Cloud Run `max-instances=1` escala a cero 1 vCPU/concurrencia 10, Artifact Registry, montaje de secretos ≤6 versiones, habilitación de APIs `run`/`cloudbuild`/`generativelanguage`) + herramienta de costo de `costo_infraestructura_gcp.md`.
+- **Comando de validación:** `terraform validate && terraform plan`; `uv run python scripts/gcp_cost.py --config scripts/gcp_cost.example.json`; `uv run pytest --cov=src --cov-fail-under=90`; `ruff`, `ty`.
+- **Criterio de terminado:** URL `run.app` abre login, autentica, conversa (corpus reindexado a Neon con Gemini), retoma y borra, con aislamiento entre los 2 usuarios demo (CA-D04…CA-D08); `/health` público (CA-D05); Neon TLS+pooling (CA-D07); costo ~USD 0 documentado.
 - **Dependencia:** T9, T11.
 - **Rollback:** `terraform destroy`; el entorno local nunca se toca.
 

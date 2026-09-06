@@ -6,8 +6,8 @@
 - **PRD:** `docs/prd/arquitectura_medallon_y_embbeding_CSP.md`
 - **Fecha de creacion:** 2026-07-26
 - **Estado actual:** PRD 3.0 aprobado (agente/memoria/auth); plan 2026-09-05 en implementacion
-- **Ultimo checkpoint completado:** T11 (adaptadores Gemini y reindexacion productiva)
-- **Siguiente fase (pendiente):** T12 (Cloud Run + Neon via Terraform)
+- **Ultimo checkpoint completado:** T12 (Cloud Run + Neon via Terraform)
+- **Siguiente fase (pendiente):** T13 (pruebas finales y evidencia para el PDF)
 
 ## Reglas de Reanudacion
 
@@ -692,6 +692,28 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 - `tests/test_gemini_adapters.py`: 24 tests (adaptadores mockeados en la frontera de `google-genai`, normalización, fail-closed, TLS/pooling, validación de metadatos, reindexación con separación de índices).
 - Suite backend 645 passed, coverage 96.68%; `ruff`/`ty` sin errores.
 
+#### T12: Cloud Run + Neon (Terraform)
+
+**Objetivo:** Despliegue real a GCP con IaC Terraform (Cloud Run + Neon + Secret Manager), build productivo single-origin web+API, conexion productiva a Neon (TLS+pooler) y URL `run.app` viva que cumple CA-D04…CA-D08.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- `infra/terraform/` (IaC): estado remoto en GCS `rag-conferencias-matutinas-tfstate`, SA `lakehouse-cloudrun` con minimos privilegios (solo `secretAccessor`), Cloud Run `max-instances=1` escala a cero (1 vCPU / 1Gi / concurrencia 10), Artifact Registry `lakehouse`, 4 secretos nuevos con random_password (JWT, CSRF, contraseñas demo) referenciando los existentes GEMINI_API_KEY/NEON_DATABASE_URL. `terraform validate`/`plan`/`apply` limpios; lockfile commiteado; `terraform.tfvars` gitignored.
+- Secret Manager con **6 versiones activas** (se deshabilitaron los legacy `POSTGRES_USER`/`POSTGRES_PASSWORD` que no usa la app).
+- **Build unico single-origin:** `Dockerfile` raiz multi-stage (frontend `pnpm build` con `VITE_API_BASE=''` + runtime uvicorn sirviendo `dist/` con fallback SPA desde FastAPI; `main.py::_mount_frontend_static`). `.dockerignore` excluye secretos/corpus/git.
+- **Conexion productiva a Neon:** `db/connection.py::get_database_url` (prod → `neon_database_url` + TLS vía `build_neon_connection_string`, fail-closed; local → URL actual) sustituyendo los builders dispersos; `pg_connect`/`pg_conn_str_with_timeouts` omiten el startup parameter `statement_timeout` en endpoints `-pooler` (Neon lo rechaza).
+- **CLI de reindexacion:** `pipeline reindex-production` (bootstrap Neon idempotente + GeminiEmbeddingAdapter + `reindex_corpus`); corpus reindexado **11120/11120** embeddings a Neon con `index_metadata` = google/`gemini-embedding-001`/768/RETRIEVAL_DOCUMENT/v1 (fail-closed de arranque satisfecho).
+- **Visuales productivas (clusters + 3D sobre Gemini):** `pipeline sync-production-visuals` recalcula sobre los embeddings GEMINI de Neon (sin mezclar espacios) reutilizando UMAP-3D (`embedding_3d` en 11120 filas), UMAP+HDBSCAN (**52 clusters** con run `7aca59fb…`) y etiquetado (**52/52 completados**); `/clusters/latest` devuelve 52 clusters etiquetados + ruido y `/embeddings/3d` devuelve 11,120 puntos 3D en la URL productiva.
+- **Gateway proveedor prod/local:** `agent/llm.py::chat_json/chat_text` y `rag_search.embed_search_query` despachan a Gemini en produccion (embeddings `RETRIEVAL_QUERY`, chat `gemini-3.5-flash-lite`) y a llama.cpp/Ollama en local. `GeminiChatAdapter` extrae el system prompt a `system_instruction` y mapea roles a `user`/`model` (Gemini no acepta role `system`). Afecta planner/synthesizer/chat router/temporal parser/tools.
+- `scripts/gcp_cost.py` determinista (snapshot de precios 2026-09-05) + `scripts/gcp_cost.example.json`: **total mensual estimado USD 0.00, within_free_tier=true**.
+- **URL productiva:** `https://rag-del-pueblo-iens6os2ba-uc.a.run.app` (servicio Cloud Run `rag-del-pueblo`; antes `lakehouse-mananeras`)
+  - `GET /health` publico → `{"status":"ok","version":"0.1.0"}` (CA-D05).
+  - Login OK con ambos usuarios demo; `/auth/me`; crear/listar/retomar/borrar conversaciones (CA-D04).
+  - Aislamiento: usuario 2 no lista conversaciones del 1 y obtiene `404` al leer/borrar las ajenas (CA-D06).
+  - Turno del agente en UI: pregunta de salud → respuesta con **5 fuentes citadas**, `buscar_declaraciones` en tool_executions, `model_used=gemini-3.5-flash-lite`, token_usage y latency visibles (CA-D04/D08).
+- Gates: backend **675 passed**, cobertura **96.34%** (`--cov-fail-under=90`); `ruff` y `ty` sin errores; frontend `pnpm typecheck` + `pnpm test:unit` (47) verdes; `make security` 16/16. Se corrigio YAML invalido en `frontend/pnpm-workspace.yaml` (`onlyBuiltDependencies`).
+
 ---
 
 ## Resumen de Checkpoints
@@ -736,3 +758,4 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 | S10 | Seguridad | Pruebas de seguridad + GATE-SEC + verificación | [x] |
 | T10 | Agente/Memoria/Auth | Docker y verificación del pipeline | [x] |
 | T11 | Agente/Memoria/Auth | Adaptadores Gemini y reindexación productiva | [x] |
+| T12 | Agente/Memoria/Auth | Cloud Run + Neon via Terraform | [x] |

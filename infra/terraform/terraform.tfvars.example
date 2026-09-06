@@ -1,0 +1,14 @@
+# Copia a terraform.tfvars (NO se commitea; *.tfvars esta gitignored).
+project          = "rag-conferencias-matutinas"
+region           = "us-central1"
+service_name     = "rag-del-pueblo"
+artifact_repo    = "lakehouse"
+image            = "us-central1-docker.pkg.dev/rag-conferencias-matutinas/lakehouse/app:latest"
+
+demo_user_1_username = "demo_1"
+demo_user_2_username = "demo_2"
+
+existing_secrets = {
+  gemini_api_key = "GEMINI_API_KEY"
+  neon_db_url    = "NEON_DATABASE_URL"
+}

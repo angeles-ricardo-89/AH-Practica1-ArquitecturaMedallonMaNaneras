@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from lakehouse.api.deps import CurrentUser, SettingsDep, get_current_user, require_csrf
-from lakehouse.db.connection import pg_connect
+from lakehouse.db.connection import get_database_url, pg_connect
 from lakehouse.schemas.auth import LoginRequest, LoginResponse, MeResponse
 from lakehouse.services.rate_limit import is_allowed, minute_window_start, retry_after_seconds
 from lakehouse.services.security import (
@@ -25,10 +25,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _pg_conn_str(settings: Settings) -> str:
-    return (
-        f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
-        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-    )
+    return get_database_url(settings)
 
 
 @router.post(

@@ -5,12 +5,12 @@ import re
 import time
 from datetime import UTC, datetime, timedelta
 
-import httpx
 import pydantic
 
 from lakehouse.config import Settings
 from lakehouse.log_config import get_logger
 from lakehouse.schemas.temporal import TimeFilterOut, TimeParserResult
+from lakehouse.services.agent.llm import chat_json
 
 logger = get_logger(__name__, layer="service")
 
@@ -84,28 +84,21 @@ class TemporalParser:
 
     def extraer(self, query: str) -> TimeParserResult:
         system_prompt = _build_system_prompt()
-        url = f"{self._settings.llamacpp_base_url}/chat/completions"
-        temperature = self._settings.temporal_parser_temperature
         max_tokens = self._settings.temporal_parser_max_tokens
+        temperature = self._settings.temporal_parser_temperature
         max_retries = self._settings.temporal_parser_max_retries
 
         for attempt in range(max_retries):
             try:
-                with httpx.Client(timeout=30.0) as client:
-                    resp = client.post(
-                        url,
-                        json={
-                            "model": self._settings.llamacpp_model,
-                            "messages": [
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": query},
-                            ],
-                            "temperature": temperature,
-                            "max_tokens": max_tokens,
-                        },
-                    )
-                    resp.raise_for_status()
-                    raw = resp.json()["choices"][0]["message"]["content"]
+                raw = chat_json(
+                    self._settings,
+                    [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": query},
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
 
                 parsed = _try_parse_json(raw)
                 if parsed is not None:
@@ -123,7 +116,7 @@ class TemporalParser:
                         if attempt < max_retries - 1:
                             continue
 
-            except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+            except Exception:
                 logger.exception("TemporalParser attempt %d failed", attempt + 1)
                 if attempt < max_retries - 1:
                     time.sleep(1.0 * (2**attempt))

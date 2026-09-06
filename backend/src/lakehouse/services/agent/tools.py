@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING, LiteralString, cast
 
 import psycopg
 
-from lakehouse.db.connection import pg_conn_str_with_timeouts, pg_connect
-from lakehouse.db.pgvector_conn import get_pgvector_connection_string
+from lakehouse.db.connection import get_database_url, pg_conn_str_with_timeouts, pg_connect
 from lakehouse.pipeline.enrichment import MIN_CHUNK_LENGTH
 from lakehouse.schemas.agent import (
     BuscarDeclaracionesInput,
@@ -19,7 +18,7 @@ from lakehouse.schemas.agent import (
     ExplorarTemasInput,
     ExplorarTemasOutput,
 )
-from lakehouse.services.rag_search import _embed_query
+from lakehouse.services.rag_search import embed_search_query
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -36,13 +35,7 @@ TOOL_INPUT_MODELS: dict[str, type[BaseModel]] = {
 
 
 def _conn_str(settings: Settings) -> str:
-    return get_pgvector_connection_string(
-        settings.postgres_host,
-        settings.postgres_port,
-        settings.postgres_db,
-        settings.postgres_user,
-        settings.postgres_password,
-    )
+    return get_database_url(settings)
 
 
 def _conn_str_with_timeouts(settings: Settings) -> str:
@@ -65,9 +58,7 @@ def _latest_run_id(conn_str: str) -> str | None:
 def buscar_declaraciones(
     settings: Settings, entrada: BuscarDeclaracionesInput
 ) -> BuscarDeclaracionesOutput:
-    query_vector = _embed_query(
-        entrada.consulta, settings.ollama_base_url, settings.ollama_embed_model
-    )
+    query_vector = embed_search_query(settings, entrada.consulta)
     embedding_str = "[" + ",".join(str(v) for v in query_vector) + "]"
 
     where = ["LENGTH(chunk_text) >= %s"]

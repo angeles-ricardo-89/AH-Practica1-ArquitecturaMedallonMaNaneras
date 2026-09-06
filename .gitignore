@@ -53,3 +53,11 @@ backend/test.db
 ducklake_files.duckdb
 backend/data/lakehouse/ducklake_files.duckdb
 
+# Terraform (IaC productivo). tfvars y estado local NO se commitean; el estado remoto vive en GCS.
+infra/terraform/.terraform/
+infra/terraform/*.tfvars
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/crash.log
+infra/terraform/tfplan
+

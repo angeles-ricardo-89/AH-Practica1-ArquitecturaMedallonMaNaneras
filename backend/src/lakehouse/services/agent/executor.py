@@ -14,6 +14,7 @@ from lakehouse.schemas.agent import (
     ToolExecutionTrace,
 )
 from lakehouse.schemas.chat import SourceChunk
+from lakehouse.services.agent.llm import active_chat_model
 from lakehouse.services.agent.planner import (
     ToolDecision,
     plan_first_tool,
@@ -42,13 +43,9 @@ def _run_tool(
             settings, cast("BuscarDeclaracionesInput", decision.parsed_input)
         )
     if name == "explorar_temas":
-        return explorar_temas(
-            settings, cast("ExplorarTemasInput", decision.parsed_input)
-        )
+        return explorar_temas(settings, cast("ExplorarTemasInput", decision.parsed_input))
     if name == "consultar_cluster":
-        return consultar_cluster(
-            settings, cast("ConsultarClusterInput", decision.parsed_input)
-        )
+        return consultar_cluster(settings, cast("ConsultarClusterInput", decision.parsed_input))
     raise ValueError(f"Unknown tool: {name}")
 
 
@@ -163,9 +160,10 @@ def run_agent_turn(
     latency_ms = int((time.perf_counter() - turn_start) * 1000)
     sources = _to_source_chunks(results)
 
-    prompt_text = "\n".join(
-        f"{m.get('role', 'user')}: {m.get('content', '')}" for m in history
-    ) + f"\nuser: {question}\n"
+    prompt_text = (
+        "\n".join(f"{m.get('role', 'user')}: {m.get('content', '')}" for m in history)
+        + f"\nuser: {question}\n"
+    )
     if results:
         prompt_text += format_results(results)
     total_tokens = estimate_tokens(prompt_text) + estimate_tokens(answer)
@@ -174,7 +172,7 @@ def run_agent_turn(
         question=question,
         answer=answer,
         refusal=refusal,
-        model_used=settings.llamacpp_model,
+        model_used=active_chat_model(settings),
         tool_executions=traces,
         sources=sources,
         token_usage={"total": total_tokens},

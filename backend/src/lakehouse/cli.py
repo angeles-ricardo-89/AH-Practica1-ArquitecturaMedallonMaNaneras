@@ -8,13 +8,22 @@ import typer
 from lakehouse.config import Settings
 from lakehouse.db.duckdb_conn import get_connection
 from lakehouse.db.observability_conn import ensure_observability_tables
+from lakehouse.db.pgvector_conn import build_neon_connection_string
 from lakehouse.log_config import get_logger
 from lakehouse.pipeline.evaluate_rag import evaluate_rag as evaluate_rag_fn
 from lakehouse.pipeline.interrupt import install_graceful_interrupt, interrupt_state
 from lakehouse.pipeline.verify import ensure_verify_database, verify_pipeline
 from lakehouse.services.enrich_service import EnrichService
+from lakehouse.services.gemini_embedding import (
+    RETRIEVAL_DOCUMENT,
+    GeminiEmbeddingAdapter,
+)
+from lakehouse.services.index_metadata import GOOGLE_PROVIDER
 from lakehouse.services.ingest_service import IngestService
+from lakehouse.services.neon_bootstrap import bootstrap_neon_schema
 from lakehouse.services.parse_service import ParseService
+from lakehouse.services.prod_visuals import sync_production_visuals as run_sync_visuals
+from lakehouse.services.reindex_production import reindex_corpus
 
 logger = get_logger(__name__, layer="cli")
 app = typer.Typer()
@@ -295,6 +304,84 @@ def verify(
     typer.echo(
         f"  Etiquetado: {result['labels_completed']} completados, "
         f"{result['labels_failed']} fallidos"
+    )
+
+
+@pipeline_app.command()
+def reindex_production(
+    source_table: str = typer.Option(
+        "gold.rag_corpus",
+        "--source-table",
+        help="Tabla Gold local de origen (fuente de la reindexacion)",
+    ),
+    batch_size: int = typer.Option(
+        default=16,
+        help="Tamano de lote para embeddings Gemini",
+    ),
+) -> None:
+    """Re-embebe el corpus local con Gemini hacia la base Neon productiva.
+
+    Prepara el esquema objetivo (bootstrap idempotente) y reindexa TODOS los
+    chunks hacia un indice independiente, registrando los metadatos del indice.
+    """
+    settings = Settings()
+    if not settings.neon_database_url:
+        raise typer.BadParameter(
+            "NEON_DATABASE_URL es obligatorio (Secret Manager o env) para reindexar a produccion"
+        )
+    source_conn_str = _get_pg_conn_str(settings)
+    target_conn_str = build_neon_connection_string(settings.neon_database_url)
+
+    logger.info(
+        "Preparando esquema productivo en Neon",
+        target=target_conn_str.split("@")[-1],
+    )
+    bootstrap_neon_schema(target_conn_str)
+
+    adapter = GeminiEmbeddingAdapter(
+        settings.gemini_api_key,
+        settings.gemini_embedding_model,
+        settings.gemini_embedding_dimension,
+    )
+    logger.info(
+        "Reindexando corpus a produccion",
+        source=source_table,
+        target=source_table,
+        model=settings.gemini_embedding_model,
+        dimension=settings.gemini_embedding_dimension,
+    )
+    result = reindex_corpus(
+        source_conn_str=source_conn_str,
+        target_conn_str=target_conn_str,
+        embed_documents=adapter.embed_documents,
+        provider=GOOGLE_PROVIDER,
+        model=settings.gemini_embedding_model,
+        dimension=settings.gemini_embedding_dimension,
+        task_type=RETRIEVAL_DOCUMENT,
+        format_version=settings.index_format_version,
+        source_table=source_table,
+        target_table=source_table,
+        batch_size=batch_size,
+    )
+    typer.echo(
+        f"Reindexacion productiva completada: {result['embedded']}/{result['total']} "
+        f"embeddings reindexados"
+    )
+
+
+@pipeline_app.command(name="sync-production-visuals")
+def sync_visuals_cmd() -> None:
+    """Recalcula embedding_3d y clusters sobre los embeddings Gemini de Neon.
+
+    Ejecuta UMAP-3D + UMAP/HDBSCAN + etiquetado contra el indice productivo
+    (Neon) y escribe los resultados de vuelta en Neon. No toca el entorno local.
+    """
+    settings = Settings()
+    result = run_sync_visuals(settings)
+    typer.echo(
+        f"Visuales productivas sincronizadas: embedding_3d {result['embedding_3d_updated']} "
+        f"filas, run {result['run_id']}, {result['clusters']} clusters, "
+        f"etiquetado={result['labeling']}"
     )
 
 
