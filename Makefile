@@ -1,4 +1,4 @@
-.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full test lint typecheck install evaluacion e2e security security-report
+.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full docker-verify test lint typecheck install evaluacion e2e security security-report
 
 # ─── Docker ───────────────────────────────────────────────
 up:
@@ -34,6 +34,12 @@ pipeline-enrich:
 
 pipeline-full:
 	cd backend && PYTHONPATH=src uv run python -m lakehouse pipeline ingest $(ARGS) && PYTHONPATH=src uv run python -m lakehouse pipeline parse $(ARGS) && PYTHONPATH=src uv run python -m lakehouse pipeline enrich $(ARGS)
+
+# Verificacion del pipeline completo (Bronze→Silver→Gold→clustering→etiquetado)
+# en contenedor con la muestra Bronze congelada. Requiere postgres arriba y
+# Ollama (11434) + llamacpp (9200) corriendo en el host.
+docker-verify:
+	docker compose run --rm pipeline
 
 evaluate-rag:
 	cd backend && PYTHONPATH=src uv run python -m lakehouse evaluate-rag
