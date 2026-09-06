@@ -8,7 +8,8 @@
 
 **Fuente oficial:** [https://www.gob.mx/presidencia/es/archivo/articulos](https://www.gob.mx/presidencia/es/archivo/articulos)
 
-<img width="1774" height="887" alt="df1c51bc-70a1-41b6-8883-0c3934f07bdc" src="https://github.com/user-attachments/assets/260cd5e4-3f72-497d-96e1-1fb8e11709f7" />
+<img width="1774" height="887" alt="20c1e068-37b0-4c2f-b8e9-460edfc78bc9" src="https://github.com/user-attachments/assets/77df50d5-ecb5-4440-a3af-6a4d6e1dacda" />
+
 
 
 
