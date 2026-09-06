@@ -4,7 +4,19 @@ from datetime import UTC, datetime, timedelta
 
 import psycopg
 
+from lakehouse.config import Settings
+from lakehouse.db.connection import pg_conn_str_with_timeouts
 from lakehouse.db.rate_limit import ensure_rate_limit_tables
+
+_SETTINGS = Settings()
+
+
+def _conn_str_with_timeouts(conn_str: str) -> str:
+    return pg_conn_str_with_timeouts(
+        conn_str,
+        connect_timeout=_SETTINGS.db_connect_timeout,
+        statement_timeout_ms=_SETTINGS.db_statement_timeout_ms,
+    )
 
 
 def minute_window_start() -> datetime:
@@ -22,7 +34,7 @@ def retry_after_seconds() -> int:
 
 def increment(pg_conn_str: str, key: str, window_start: datetime) -> int:
     ensure_rate_limit_tables(pg_conn_str)
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         row = conn.execute(
             "INSERT INTO rate_limit_counter (key, window_start, count) "
             "VALUES (%s, %s, 1) "
@@ -41,7 +53,7 @@ def is_allowed(pg_conn_str: str, key: str, window_start: datetime, limit: int) -
 
 
 def cleanup_rate_limits(pg_conn_str: str, older_than: datetime) -> int:
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         row = conn.execute(
             "DELETE FROM rate_limit_counter WHERE window_start < %s RETURNING 1",
             (older_than,),

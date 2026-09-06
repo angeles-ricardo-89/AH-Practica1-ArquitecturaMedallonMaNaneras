@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from urllib.parse import unquote
+
 import jwt as pyjwt
+import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
 from lakehouse.config import Settings
+from lakehouse.db.connection import pg_conn_str_with_timeouts, pg_connect
 from lakehouse.main import create_app
 from lakehouse.services.security import (
     create_access_token,
@@ -174,3 +178,27 @@ def test_body_size_at_limit_not_rejected() -> None:
         "/auth/login", content='{"ab":"1"}', headers={"content-type": "application/json"}
     )
     assert ok.status_code != 413
+
+
+def test_pg_connect_applies_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake(conn_str: str, **kwargs: object) -> object:
+        captured.update(kwargs)
+        raise RuntimeError("stop")
+
+    monkeypatch.setattr(psycopg, "connect", fake)
+    with pytest.raises(RuntimeError):
+        pg_connect("x", connect_timeout=5, statement_timeout_ms=10000)
+    assert captured.get("connect_timeout") == 5
+    assert "statement_timeout=10000" in str(captured.get("options", ""))
+
+
+def test_pg_conn_str_embeds_timeouts() -> None:
+    conn_str = pg_conn_str_with_timeouts(
+        "postgresql://u:p@localhost:5433/db",
+        connect_timeout=5,
+        statement_timeout_ms=10000,
+    )
+    assert "connect_timeout=5" in conn_str
+    assert "statement_timeout=10000" in unquote(conn_str)

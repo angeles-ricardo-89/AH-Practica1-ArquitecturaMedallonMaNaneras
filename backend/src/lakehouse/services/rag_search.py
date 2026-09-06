@@ -8,6 +8,7 @@ import httpx
 import psycopg
 
 from lakehouse.config import Settings
+from lakehouse.db.connection import pg_conn_str_with_timeouts
 from lakehouse.log_config import get_logger
 from lakehouse.pipeline.enrichment import MIN_CHUNK_LENGTH
 from lakehouse.schemas.chat import SourceChunk
@@ -25,11 +26,10 @@ def _get_pgvector_connection_string(settings: Settings) -> str:
 
 
 def _call_ollama_embed(url: str, model: str, text: str) -> list[float]:
-    with httpx.Client() as client:
+    with httpx.Client(timeout=Settings().model_request_timeout) as client:
         resp = client.post(
             url,
             json={"model": model, "input": text},
-            timeout=30,
         )
     if resp.status_code != 200:
         raise httpx.HTTPStatusError(
@@ -110,7 +110,11 @@ def search_gold_corpus_from_vector(
     if settings is None:
         settings = Settings()
 
-    conn_str = _get_pgvector_connection_string(settings)
+    conn_str = pg_conn_str_with_timeouts(
+        _get_pgvector_connection_string(settings),
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
+    )
     embedding_str = "[" + ",".join(str(v) for v in query_vector) + "]"
 
     try:
@@ -169,7 +173,11 @@ def search_with_date_filter(
     if settings is None:
         settings = Settings()
 
-    conn_str = _get_pgvector_connection_string(settings)
+    conn_str = pg_conn_str_with_timeouts(
+        _get_pgvector_connection_string(settings),
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
+    )
     embedding_str = "[" + ",".join(str(v) for v in query_vector) + "]"
 
     try:
