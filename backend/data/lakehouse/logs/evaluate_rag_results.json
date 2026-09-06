@@ -1,413 +1,416 @@
 {
   "status": "completed",
   "total": 50,
-  "scored": 50,
-  "failed": 0,
-  "avg_fidelity": 0.0,
-  "avg_relevance": 0.0,
-  "avg_coverage": 0.0,
-  "fidelity_passed": false,
-  "relevance_passed": false,
-  "coverage_passed": false,
+  "scored": 47,
+  "failed": 3,
+  "avg_fidelity": 93.51,
+  "avg_relevance": 99.53,
+  "avg_coverage": 73.09,
+  "fidelity_passed": true,
+  "relevance_passed": true,
+  "coverage_passed": true,
   "results": [
     {
       "id": 1,
       "question": "¿Cómo va la reforma energética?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "La reforma energética se encuentra en un proceso de avance con el objetivo de rescatar la soberanía energética y fortalecer a las empresas públicas del Estado. Basado en las fuentes proporcionadas, los puntos principales sobre el estado y contenido de la reforma son los siguientes:\n\n*   **Cambio de estatus legal de las empresas públicas:** La reforma busca que Pemex y la CFE dejen de ser consideradas \"empresas productivas\" (regidas por el derecho mercantil) y regresen a ser \"empresas públicas\" (regidas por el derecho público). El objetivo es que su función principal sea el servicio público y el bienestar de los ciudadanos, en lugar de la rentabilidad del mercado.\n*   **Esquema de generación eléctrica:** Se establece un esquema de participación donde la CFE generará el **54 por ciento** de la energía eléctrica y la iniciativa privada el **46 por ciento**. La CFE tendrá preponderancia en el despacho de energía para los hogares.\n*   **Regulación de la iniciativa privada:** La reforma no busca cerrar la inversión privada, sino regularla y motivarla bajo reglas claras, transparentes y ordenadas, favoreciendo la generación de energía limpia y renovable.\n*   **Litio e Internet:** Se propone que el litio sea reservado para la explotación por parte del Estado mexicano, sin otorgar concesiones. Asimismo, tanto el litio como el servicio de internet se consideran áreas estratégicas del Estado.\n*   **Estado actual del proceso:** La reforma cuenta con la mayoría calificada en el Congreso (Cámara de Diputados, Senadores y la mayoría de los Congresos estatales). Se están firmando nuevas leyes que sustituyen por completo las leyes de la reforma de 2013 para garantizar la disponibilidad de energía, la transmisión y la rectoría del Estado.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 2,
       "question": "¿Qué dijo la presidenta sobre la salud?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "La Presidenta Claudia Sheinbaum Pardo ha abordado el tema de la salud desde diversos enfoques, destacando los siguientes puntos clave en las conferencias proporcionadas:\n\n**1. Principios y Objetivos Generales:**\n*   **Derecho a la salud:** Define la salud como una garantía para todo el pueblo de México.\n*   **Tres componentes fundamentales:** Instruyó que el sistema de salud debe basarse en: **calidad, eficiencia y seguridad**, además de ser **gratuito** para toda la población.\n*   **República Sana:** Su compromiso es buscar el bienestar de la población con calidad, seguridad y eficiencia.\n*   **Humanización:** Subrayó la importancia de la \"humanización\" en la atención, buscando que el personal (médicos, enfermeras y administrativos) trate a los pacientes con respeto y dignidad.\n\n**2. Programas y Estrategias de Prevención:**\n*   **Salud Casa por Casa:** Programa orientado a adultos mayores (más de 65 años) y personas con discapacidad. Cuenta con 20,000 profesionales de la salud que visitan hogares con maletines médicos para realizar historias clínicas y brindar atención preventiva.\n*   **Vida Saludable, vive feliz:** Programa en las escuelas para combatir el sedentarismo y el consumo de productos \"chatarra\", con el fin de prevenir enfermedades como diabetes, hipertensión y obesidad desde la infancia.\n*   **Vacunación:** Ha enfatizado la recuperación de los porcentajes de vacunación, mencionando la aplicación de 104 millones de biológicos desde su llegada a la presidencia y la disponibilidad de vacunas para brotes específicos (como sarampión y tosferina).\n\n**3. Abasto y Gestión de Medicamentos:**\n*   **Nuevo modelo de compra:** Implementó un sistema basado en \"Protocolos de Atención\" definidos por expertos. Esto permite reducir la cantidad de claves de medicamentos (por ejemplo, de 4,000 a solo 6 o 7 para ciertas enfermedades), lo que facilita la distribución y evita el desperdicio o posibles actos de corrupción.\n*   **Rutas de la Salud:** Programa para asegurar que los centros de salud tengan medicamentos completos y suficientes, permitiendo que los pacientes reciban sus tratamientos sin costo.\n*   **Estado del abasto:** Mencionó que el IMSS reporta cerca del 96% de abasto y el ISSSTE cerca del 92%, trabajando en cubrir el porcentaje faltante.\n\n**4. Infraestructura y Tecnología:**\n*   **Nuevos hospitales:** Ha impulsado la construcción de hospitales con innovación y actualización tecnológica (como equipos de mastografía que permiten biopsia simultánea) y que sirvan para la formación de profesionales de la salud.\n*   **Continuidad de obras:** Destacó la importancia de concluir las obras de infraestructura hospitalaria que quedaron pendientes de administraciones anteriores.",
+      "fidelity": 45.0,
+      "relevance": 100.0,
+      "coverage": 50.0
     },
     {
       "id": 3,
       "question": "¿Cuál es el plan de seguridad?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en las fuentes proporcionadas, se mencionan diferentes planes y estrategias de seguridad:\n\n**1. Estrategia Nacional de Seguridad:**\nEsta estrategia se basa en cuatro ejes (aunque el texto detalla principalmente dos):\n*   **Atención a las causas:** Se enfoca en atender de manera prioritaria a las familias más vulnerables, reducir la pobreza, cerrar brechas de desigualdad y generar oportunidades para que los jóvenes tengan acceso a una mejor calidad de vida, con el fin de alejarlos de la delincuencia y del reclutamiento de grupos delictivos.\n*   **Consolidación de la Guardia Nacional:** Se busca su consolidación dentro de la Secretaría de la Defensa Nacional (SEDENA) para fortalecer sus capacidades operativas, garantizando su permanencia, disciplina, desarrollo y profesionalismo. Se define como una institución policial de la federación con formación bajo doctrina militar y regulación estricta para el respeto a los derechos humanos.\n\n**2. Plan Contención (específicamente para Michoacán):**\nEste plan tiene como finalidad establecer una coordinación permanente con los mandos territoriales aledaños al estado de Michoacán e incluye las siguientes acciones:\n*   Búsqueda de inteligencia y coordinación para implementar operaciones coincidentes.\n*   **Mandos Especiales:** Procedimiento donde se le da el mando a un Comandante que puede emplear las tropas de un mando territorial y de otro.\n*   **Medidas operativas:** Establecimiento de filtros carreteros mediante puestos de control, uso de medios tecnológicos y binomios canófilos.\n*   **Seguridad en límites:** Envío de células de detección de explosivos, detectores y carros antiminas en los límites con Michoacán y Jalisco para revisar caminos con información de artefactos.\n\n**3. Estrategia de Seguridad y Construcción de Paz:**\nSe menciona como una estrategia para seguir bajando los delitos de alto impacto, los homicidios y los robos con violencia, trabajando en la disminución de la tendencia de estos delitos.\n\n**4. Planes de auxilio (Plan DN-III-E, GNA y Marina):**\nAunque son planes de protección civil y no de seguridad pública general, se mencionan como parte de la respuesta del Gobierno ante desastres naturales (inundaciones, huracanes, etc.).",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 80.0
     },
     {
       "id": 4,
       "question": "¿Qué pasó con la economía?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en las fuentes proporcionadas, la situación de la economía se describe desde dos perspectivas: la situación actual (datos de 2026) y el contexto histórico del modelo económico.\n\n**Situación actual (Conferencia del 10 de junio de 2026):**\nEl Secretario de Hacienda describe una economía con un \"crecimiento sólido\" en variables principales, rechazando la narrativa de \"estado de alerta\":\n\n*   **Consumo e Inversión:** El consumo creció 3.2% en marzo. Existe una estrategia para empujar la inversión productiva mediante la nueva Ley de Infraestructura.\n*   **Sector Externo:** En abril se registró un récord de exportaciones y un superávit comercial de más de 4 mil millones de pesos (superando por mucho las estimaciones de los analistas). México representa el 16.9% de las importaciones de Estados Unidos.\n*   **Mercado Laboral:** La tasa de desempleo se ubicó en 2.6% en abril (uno de los niveles más bajos de la OCDE). La pobreza laboral está en mínimos históricos.\n*   **Salario Mínimo:** Tuvo un aumento del 13% (ubicándose en 315 pesos diarios), con un incremento del poder adquisitivo de más de 150% desde 2018. Las remuneraciones a asalariados representan el 30.5% del PIB.\n*   **Inflación y Combustibles:** La inflación se situó en 3.94% (por debajo del 4%). El precio de la gasolina regular se mantiene en un promedio nacional de 23.7 pesos, gracias a la concertación para estabilizar los precios.\n*   **Deuda Pública:** Al cierre de abril de 2026, la deuda pública representa el 50% del PIB, cifra que es menor a años anteriores y por debajo del promedio de América Latina y de países como Estados Unidos, España y Portugal.\n\n**Contexto Histórico (Conferencia del 21 de mayo de 2026):**\nLa Presidenta Claudia Sheinbaum explica la evolución del modelo económico:\n\n*   **Modelo Neoliberal (desde 1983):** Se describe un cambio profundo donde se vendieron empresas del Estado, se redujeron derechos sociales y se dejó de subir el salario mínimo.\n*   **Crisis de 1994:** A pesar del discurso de \"bonanza\", ocurrió una crisis económica severa.\n*   **Rescate Bancario (Fobaproa):** Se menciona que se rescataron bancos privados utilizando recursos públicos (una deuda que aún se paga), mientras que los deudores pequeños no recibieron apoyo.\n*   **Modelo Actual:** Se enfoca en devolver derechos al pueblo, como la creación de pensiones para adultos mayores y el enfoque en la economía de las familias.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 90.0
     },
     {
       "id": 5,
       "question": "¿Cómo avanza el programa de becas?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "El avance del programa de becas, según las conferencias proporcionadas, se detalla de la siguiente manera:\n\n**Cifras Generales y Crecimiento:**\n*   **Crecimiento exponencial:** En comparación con el año 2000, el número de becarios ha crecido un 710.5% y el presupuesto un 4,352.7%.\n*   **Cierre de ciclo (proyectado para 2026):** Se espera alcanzar una sumatoria de **20,132,490 becarios** con una inversión de **136,627 millones de pesos**.\n*   **Avance presupuestal (diciembre 2025):** De un presupuesto anual de 850 mil millones de pesos para todos los programas del Bienestar, se habían ejercido 774,837 millones de pesos (91% del total).\n\n**Programas Específicos:**\n*   **Beca “Rita Cetina”:**\n    *   **Secundaria:** Atiende a 5,247,246 estudiantes que reciben 1,900 pesos de forma bimestral.\n    *   **Primaria (útiles y uniformes):** Atiende a 9,994,200 estudiantes con un apoyo anual de 2,500 pesos. Se está llevando a cabo la entrega de 5 millones de tarjetas para este fin, con fecha de conclusión el 31 de julio de 2026.\n*   **Beca “Gertrudis Bocanegra” (Plan Michoacán):**\n    *   Se ha expandido recientemente a los estados de **Chiapas y Campeche**.\n    *   Atiende a 167,597 estudiantes en estas tres entidades con un monto de 1,900 pesos bimestrales para transporte.\n    *   En diciembre de 2025, se reportó un avance del 41% en el diálogo con la matrícula de educación superior de Michoacán (98,569 estudiantes).\n*   **Jóvenes Escribiendo el Futuro:** Atiende a 423,107 estudiantes con una inversión de 12,270 millones de pesos.\n*   **Preescolar:** Cuenta con 176,362 becarios.\n\n**Operatividad y Logística:**\n*   **Reposición de tarjetas:** En diciembre de 2025, se reportó un avance del 62% en la reposición de plásticos vencidos (461,685 de 744,476 tarjetas).\n*   **Transparencia y Seguimiento:** Se implementó un canal",
+      "fidelity": 50.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 6,
       "question": "¿Qué dijo sobre la reforma judicial?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la reforma al Poder Judicial, la presidenta Claudia Sheinbaum Pardo ha señalado los siguientes puntos en las conferencias proporcionadas:\n\n**Motivaciones y problemas actuales:**\n*   **Corrupción y Nepotismo:** Afirmó que el Poder Judicial tiene problemas de corrupción y que la propia presidenta de la Corte ha reconocido que hay más del 50% de nepotismo. Mencionó que existe un \"familismo\" donde los cargos son asignados por \"dedazo\" de amigos y parientes.\n*   **Falta de Justicia:** Señaló que la Corte no ha actuado frente a amparos de la delincuencia organizada, ha sido cómplice en la liberación de cuentas de la esposa de García Luna, ha permitido la impunidad en el pago de impuestos y ha tomado posiciones políticas contra el Poder Legislativo (como en el caso de la \"Eléctrica\").\n*   **Resistencia Judicial:** Desestimó las acusaciones de \"golpe judicial\" o \"lawfare\", calificándolas como \"resistencias\" de jueces, magistrados y ministros que no quieren dejar sus puestos, subrayando que la reforma se ganó por una amplísima mayoría.\n\n**Cambios principales y procedimiento:**\n*   **Voto Popular:** El cambio fundamental es que el pueblo de México decidirá quiénes serán los jueces, magistrados y ministros a través del voto popular.\n*   **Requisitos para aspirantes:** Quienes aspiren a estos cargos deben tener un promedio de 8 en su carrera y 9 en la materia a la que aspiran. Además, deben entregar cartas de recomendación, un ensayo, su currículum y pasar por un comité de personas honestas y capaces que validará su información.\n*   **Justicia Expedita:** La reforma también incluye la modificación de leyes para que los procedimientos sean más rápidos (expeditos) y para eliminar esquemas de \"amparo sobre amparo\", garantizando que los casos se resuelvan sin que influya el poder del dinero.\n\n**Objetivo general:**\n*   La presidenta sostiene que el objetivo es \"sanear\" el Poder Judicial para fortalecer el Estado de derecho y lograr un sistema de justicia que dé justicia al que menos tiene, sea democrático y trate por igual a todos. Define esta reforma como una de las más profundas de la Cuarta Transformación.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 7,
       "question": "¿Qué acciones hay contra la corrupción?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en las fuentes proporcionadas, las acciones contra la corrupción incluyen las siguientes:\n\n**Enfoque y Estrategia General:**\n*   **Cambio de enfoque:** Pasar de un enfoque correctivo a uno **preventivo**, buscando evitar que se cometan actos de corrupción antes de que ocurran.\n*   **Separación del poder político y económico:** Orientar el gobierno al servicio del pueblo en lugar de favorecer a los grupos más poderosos o ricos.\n*   **Austeridad Republicana:** Implementar la política de \"cero lujos\".\n*   **Combate a la impunidad:** Crear mecanismos legales y jurídicos con certidumbre para que \"violar la ley sea más caro que cumplirla\".\n\n**Gestión del Servicio Público y Administración:**\n*   **Dignificación del servicio público:** Trabajar en la formación ética, de integridad, mística y vocación de los servidores públicos, acompañada de capacitación técnica.\n*   **Modernización y Digitalización:** Utilizar la Agencia de Transformación Digital para aumentar la sistematización de procesos. Se busca que, al haber menos contacto humano y más agilidad en los sistemas, disminuya la tentación de caer en sobornos o discrecionalidad.\n*   **Reestructura de la administración pública:** Trabajar en una organización más eficiente, expedita y orientada a resultados.\n*   **Focalización de la anticorrupción:** Orientar a los Órganos Internos de Control (OIC) a áreas de mayor impacto y relevancia para evitar la burocracia excesiva.\n\n**Compras Públicas y Proveeduría:**\n*   **Consolidación de compras públicas:** Trabajar en transparencia proactiva y consolidar las compras.\n*   **Modificaciones a las Leyes de Adquisiciones y de Obras:** Implementar mecanismos como **subastas** (que han logrado bajar precios hasta en un 70%) y **ofertas subsecuentes de descuento**.\n*   **Desarrollo de nueva proveeduría:** Cambiar las estrategias de compra para eliminar intermediarios (especialmente en el sector salud) y permitir que los fabricantes vendan directamente al gobierno.\n*   **Ruedas de negocios:** Apoyar a pequeñas y medianas empresas (mipymes) y empresas sociales (cooperativas) para evitar intermediarismo.\n\n**Transparencia y Denuncia:**\n*   **Cultura de la denuncia:** Fortalecer la cultura de la denuncia tanto en el sector público como en el privado, garantizando la confidencialidad.\n*   **Transparencia proactiva y datos abiertos:** Trabajar con la Agencia de Transformación Digital para abrir datos de fácil acceso y proponer una Ley General de Transparencia.\n*   **Información histórica:** Extraer y poner a la vista la información histórica de CompraNet (contratos de 2012 al 2022).\n\n**Acciones en Programas Sociales y Fiscales:**\n*   **Entrega directa de recursos:** Eliminar a los intermediarios en los apoyos sociales para evitar comisiones y asegurar que el recurso llegue directamente a la población.\n*   **Eliminación de condonaciones de impuestos:** Acabar con los privilegios de condonación de impuestos a las grandes fortunas.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 8,
       "question": "¿Cómo está la relación con Estados Unidos?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "La relación entre México y Estados Unidos se basa en la búsqueda de una buena relación en todos los temas, desde la protección de los mexicanos en Estados Unidos hasta temas de seguridad. Según la Presidenta Claudia Sheinbaum, esta relación se coordina bajo cuatro principios fundamentales:\n\n1.  **Respeto a la soberanía y la integridad territorial:** Este punto es considerado no negociable.\n2.  **Responsabilidad compartida y diferenciada:** Ambos países comparten la responsabilidad para disminuir el tráfico de drogas, pero la responsabilidad es diferenciada porque cada país tiene distintas problemáticas y capacidades.\n3.  **Respeto y confianza mutua:** Es necesario que exista confianza para poder coordinarse, incluyendo la confianza de Estados Unidos en las Fuerzas Armadas, la Secretaría de Seguridad y la Secretaría de Relaciones Exteriores de México.\n4.  **Cooperación sin subordinación:** México se coordina como un país libre y soberano con Estados Unidos como iguales, respetando que, mientras ellos pueden ser una potencia militar, México es una potencia cultural.\n\nAdemás, la Presidenta destacó que el gobierno de Estados Unidos ha escuchado a México e incorporado en su estrategia dos temas fundamentales:\n*   La **disminución del consumo** de drogas ilícitas en Estados Unidos (para reducir la tentación de los grupos delictivos de pasar drogas a través de México).\n*   La **disminución del tráfico de armas** de Estados Unidos a México.\n\nFinalmente, se enfatiza que debe existir una relación recíproca y de confianza mutua, rechazando acusaciones de colusión con grupos delictivos, calificándolas como falsas.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 9,
       "question": "¿Qué dijo sobre la reforma electoral?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la reforma electoral, la Presidenta Claudia Sheinbaum Pardo mencionó los siguientes puntos principales:\n\n*   **Reducción de recursos:** El objetivo central es \"adelgazar la clase política\" mediante la reducción del monto de apoyo que reciben los partidos políticos, el INE, los Institutos Electorales Estatales, los Tribunales, los Congresos estatales, el Senado de la República y los partidos políticos. La intención es que el recurso sea para el pueblo y que lo que se necesite para las elecciones se utilice sin despilfarros.\n*   **Eliminación de las listas:** La reforma busca que ya no existan \"listas\" en la representación proporcional (específicamente en el Senado) y que la gente pueda elegir directamente a sus representantes. La Presidenta señaló que la gente no quiere las \"listas de las cúpulas de los partidos\", sino que quiere elegir.\n*   **El Fuero:** Aclaró que el fuero **no se tocó** en la reforma. Aunque manifestó que su opinión personal es que debería quitarse, la decisión final fue de la Comisión. Además, precisó que el hecho de que un diputado tenga fuero no significa que no pueda ser juzgado o acusado, ya que están obligados a responder a las carpetas de investigación.\n*   **Fortalecimiento del Órgano Interno de Control (OIC):** Se contempla darle más herramientas al OIC del INE para que realice evaluaciones de patrimonio de los altos funcionarios del Instituto.\n*   **Naturaleza de la reforma:** La describió como una reforma \"muy racional, razonable y que cumple con lo que nos pidió la gente\". Aseguró que no cedió ante negociaciones que comprometieran los principios para lograr consensos con la oposición.\n*   **Envío del documento:** Informó que el texto completo de las reformas constitucionales y a las leyes se enviaría el lunes, tras una revisión para asegurar que no hubiera problemas legales.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 10,
       "question": "¿Cuál es el estado del IMSS-Bienestar?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "El estado actual del IMSS-Bienestar, según las fuentes proporcionadas, es el siguiente:\n\n*   **Alcance y Cobertura:** Es la red de servicios públicos de salud más grande del país, operando actualmente en **24 estados**. Tiene la responsabilidad de atender a más de **56 millones de personas** que no cuentan con seguridad social (principalmente personas en los estratos de menor ingreso).\n*   **Infraestructura:** Opera **10,761 unidades de salud**, que incluyen Centros de Salud, hospitales comunitarios, hospitales generales y hospitales de alta especialidad. El 96% de la población vive a menos de 30 minutos de una de estas unidades.\n*   **Modelo de Operación:** Funciona bajo una lógica de **red única integrada** con un solo modelo médico y responsabilidad federal directa. La atención es **100% gratuita y universal**, eliminando los copagos y cuotas que existían en modelos anteriores.\n*   **Resultados y Crecimiento:**\n    *   Se registra un crecimiento del **50% en consultas generales** en comparación con 2023.\n    *   En consultas de especialidad, el crecimiento en los estados con IMSS-Bienestar es del **90%** (frente a un 20% en estados sin el modelo).\n    *   En julio de 2026, se realizaron **4 millones de consultas generales**, siendo el mes con mejor productividad desde el inicio de la institución.\n    *   Se han incorporado **9,334 médicos especialistas** y **18,000 enfermeros y enfermeras** bajo el gobierno de la Presidenta Claudia Sheinbaum.\n*   **Inversión y Metas:**\n    *   Se ha autorizado una inversión de más de **17 mil millones de pesos** en los próximos tres años para infraestructura (rehabilitación, ampliación y construcción de hospitales).\n    *   Para el año **2030**, se proyecta alcanzar 100 millones de consultas generales, 15 millones de consultas de especialidad, 1.5 millones de procedimientos quirúrgicos y atender a 25 millones de personas cada año.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 11,
       "question": "¿Qué dijo sobre la reforma de pensiones?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la reforma de pensiones, la Presidenta Claudia Sheinbaum Pardo señaló lo siguiente:\n\n*   **Dificultad de eliminar la reforma de 2007:** Mencionó que quitar la reforma actual tiene \"problemáticas diversas\" porque los retiros de los maestros ya están en cuentas individualizadas, por lo que no es algo \"trivial\" de hacer.\n*   **Fondo de Pensiones para el Bienestar:** Esta es la propuesta para lograr \"pensiones justas\". Explicó que este fondo busca que las pensiones estén indexadas al **salario medio del IMSS**, y afirmó que, bajo este esquema, algunos maestros se jubilarán mejor que con la reforma de 2007.\n*   **Funcionamiento del Fondo:** Explicó que el Fondo de Pensiones para el Bienestar funciona de manera solidaria para maestros, trabajadores del IMSS y trabajadores del Estado. Si una cuenta individual daría una pensión baja (por ejemplo, 4,000 pesos para alguien con un salario medio de 15,000 a 16,000 pesos), el Fondo otorga automáticamente lo correspondiente para que la persona se jubile con el salario medio del IMSS, el cual sube cada año. Como ejemplo, mencionó que alguien que iba a recibir 6,000 pesos, ahora recibiría 18,000 pesos.\n*   **Medidas actuales:** Debido a limitaciones presupuestales, la propuesta actual que el gobierno puede ofrecer incluye:\n    *   Un aumento salarial del **9% ahora** y un **1% adicional en septiembre** (lo cual es más del doble de la inflación).\n    *   El **congelamiento de la edad de jubilación**, lo cual representa un ahorro de recursos para el Estado.\n*   **Estado del diálogo:** Reiteró que el gobierno sigue en mesas de trabajo y diálogo con el magisterio para explicar estos argumentos y las razones de los avances realizados.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 12,
       "question": "¿Cómo avanza el Tren Maya?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "El avance del Tren Maya se refleja en diversos indicadores de movilidad, infraestructura, servicios turísticos y nuevas líneas de negocio, según las fuentes proporcionadas:\n\n**1. Movilidad y Crecimiento de Pasajeros:**\n*   **Hito de pasajeros:** El 7 de abril de 2025 se alcanzó la cifra de un millón de pasajeros movilizados.\n*   **Crecimiento porcentual:** En el primer trimestre de 2025 se transportaron 282,100 pasajeros, lo que representa un incremento del 181% en comparación con el primer trimestre de 2024 (donde fueron 100,411).\n*   **Ocupación mensual:** La ocupación promedio ha aumentado un 22% mes con mes.\n*   **Metas:** Para el año 2025, se tiene planeado movilizar a 1.2 millones de personas.\n\n**2. Infraestructura y Flota:**\n*   **Estado de la flota:** Se proyecta un total de 40 trenes, de los cuales ya se cuentan con 38 y un par más están por recibirse.\n*   **Tipos de trenes:** El sistema cuenta con trenes de pasajeros estándar, trenes de larga distancia y el tren-restaurante \"Janal\".\n*   **Tramo Sur:** Se destaca la apertura del tramo sur, que conecta Escárcega con Chetumal.\n\n**3. Servicios Turísticos y Alianzas:**\n*   **Paquetes turísticos:** Se operan paquetes como \"La ruta de las maravillas\" y \"Mares y lagunas\", con un nivel de satisfacción del 97% entre los usuarios.\n*   **Convenios:** Se han establecido alianzas con Mexicana de Aviación y los hoteles del GAFSACOMM para integrar servicios de vuelo y hospedaje.\n*   **Presencia digital:** Los hoteles del GAFSACOMM ya están disponibles en aplicaciones como Expedia, Price Travel, Best Day y Booking. El Tren Maya también cuenta con presencia en Civitatis para reservar viajes de Cancún a Chichén Itzá.\n\n**4. Nuevas Líneas de Negocio:**\n*   **Producción de cerveza:** Se firmó un contrato de licenciamiento de marca con una cervecería de Yucatán para la fabricación, etiquetado y venta de cerveza a bordo del tren-restaurante.\n\n**5. Impacto Ambiental:**\n*   Como parte del proyecto, se crearon nueve áreas naturales protegidas y siete áreas de protección que suman más de un millón 397 mil hectáreas para fomentar el turismo sustentable.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 90.0
     },
     {
       "id": 13,
       "question": "¿Qué se hace contra la violencia de género?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en las fuentes proporcionadas, las acciones que se están realizando contra la violencia de género incluyen las siguientes:\n\n**Reformas Constitucionales y Legales:**\n*   **Artículo 4º:** Se establece el derecho a una vida libre de violencias para todas las personas, fundamentalmente para las mujeres.\n*   **Artículos 21 y 73:** Se establece que el actuar de las instituciones de seguridad pública debe contar con perspectiva de género y se faculta a las autoridades federales para conocer delitos de fuero común que a veces no son atendidos.\n*   **Artículo 116:** Se estableció la perspectiva de género para las personas juzgadoras.\n*   **Fiscalías Especializadas:** Se obliga a todas las entidades federativas a tener Fiscalías Especializadas y Abogadas de las Mujeres para atender cualquier tipo de violencia.\n*   **Reformas en estados:** Se busca la incorporación de la perspectiva de género, la igualdad salarial y el derecho a una vida libre de violencias en las Constituciones locales de los 32 estados, así como la revisión de la Ley de Seguridad Pública, la Ley de la Fiscalía y la Ley de una Vida Libre de Violencia para las Mujeres.\n\n**Campañas y Prevención:**\n*   **Campaña \"¡Es tiempo de mujeres sin violencia!\":** Una campaña permanente que busca cambiar conductas cotidianas, ubicar y combatir las violencias que se replican en la sociedad, bajo la consigna \"No es normal, es violencia\".\n*   **Prevención escolar:** Se busca prevenir las violencias desde las escuelas.\n*   **Capacitación:** Capacitación para servidores públicos con perspectiva de género.\n\n**Compromisos y Acciones Específicas:**\n*   **Atención y Refugios:** Garantizar que las mujeres en situación de violencia reciban atención adecuada en centros de justicia y refugios.\n*   **Presupuesto:** Acompañar con presupuesto estatal el esfuerzo del Gobierno de México en materia de atención y prevención.\n*   **Modelos de prevención:** Fortalecer los modelos de prevención de la violencia feminicida en cada entidad.\n*   **Iniciativas legislativas específicas:**\n    *   **Tipo penal de abuso sexual:** Para revisión en los estados.\n    *   **Investigación de feminicidios:** Investigar toda muerte violenta de mujeres desde la óptica de la desigualdad y la perspectiva de género como feminicidio inicial.\n    *   **Patria potestad:** Reforma para evitar que la patria potestad se quede en las familias de los feminicidas.\n    *   **Ley Olimpia:** Contra la violencia digital.\n    *   **Ley Sabina:** Registro Nacional de Deudores Alimentarios.\n    *   **Violencia vicaria:** Atención a este tipo de violencia familiar.\n    *   **Ley Ingrid:** Prohibición de la divulgación de documentos o material audiovisual relacionado con feminicidios.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 14,
       "question": "¿Qué dijo sobre la reforma laboral?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "En las fuentes proporcionadas, se mencionan dos reformas laborales distintas:\n\n**1. Reforma para trabajadores de plataformas digitales (Conferencia 2025-06-20):**\n*   **Reconocimiento laboral:** La reforma reconoce a las personas que trabajan en plataformas digitales como trabajadores y trabajadoras, eliminando las figuras de \"socios\" o \"deliverys independientes\".\n*   **Seguridad Social:** Garantiza el acceso a la seguridad social en el IMSS.\n*   **Protección contra algoritmos:** Los trabajadores podrán conocer las reglas del juego, como las directrices del algoritmo, las penalizaciones y la asignación de bonos.\n*   **Libertad de asociación:** Garantiza el derecho a organizarse y demandar mejoras mediante la organización sindical.\n*   **Flexibilidad:** Se mantiene el modelo flexible donde los trabajadores eligen sus tiempos y días de conexión.\n*   **Contribuciones:** Las empresas cubrirán las cuotas correspondientes para la inscripción al Seguro Social cuando el trabajador logre el salario mínimo.\n*   **Periodo de prueba:** Se estableció un periodo piloto de 6 meses (180 días) para ajustar los mecanismos digitales antes de que la obligatoriedad se aplique directamente a partir del 1 de enero de 2026.\n\n**2. Reforma de la jornada laboral de 40 horas (Conferencia 2026-03-04):**\n*   **Distribución de la jornada:** La Presidenta explicó que el acuerdo no necesariamente implica trabajar 8 horas diarias con 2 días de descanso para todos los casos, ya que depende de las características de cada empleo.\n*   **Variabilidad:** Debido a la variabilidad en el mundo laboral, la distribución puede ser distinta (por ejemplo, casos con 3 días de descanso) y se eligió este esquema en acuerdo con sindicatos y empleadores.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
       "coverage": 0.0
     },
     {
       "id": 15,
       "question": "¿Cómo está Pemex?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en la conferencia del 5 de agosto de 2025, la situación de Pemex se describe de la siguiente manera:\n\n*   **Producción:** Actualmente, Pemex está produciendo casi **1.7 millones de barriles diarios**. El objetivo es que la empresa pueda producir **1.8 millones de barriles por sí misma**. La Presidenta destacó que, a diferencia de periodos anteriores donde la producción cayó, bajo la administración actual la producción llegó a casi 1.8 millones en 2024.\n*   **Refinación:** Se están procesando 1,100 barriles nacionales más 240 de la refinería Deer Park. La producción de gasolinas y diésel es de casi 800 mil barriles, lo cual cubre la demanda actual. Se espera que la producción aumente con la finalización de las coquizadoras de Tula y Salina Cruz.\n*   **Deuda:** La deuda de Pemex se redujo de 105.8 mil millones de dólares en 2024 a **97.6 mil millones de dólares**. El objetivo es bajarla a **77 mil millones de dólares**. El Secretario de Hacienda mencionó que, a partir de 2027, los flujos de ingresos de la empresa deberían ser suficientes para sostenerse.\n*   **Estrategia y Gestión:** \n    *   Se está aplicando una política de **Austeridad Republicana**, que incluye la revisión de salarios de los directivos para que no ganen más que la Presidenta.\n    *   Se busca que la producción sea para el **mercado nacional** y no para exportación.\n    *   Se cuenta con una infraestructura de **ocho refinerías** (las seis históricas, Deer Park en Texas y la Refinería Olmeca).\n    *   Se está trabajando bajo una nueva Ley de Pemex que permite la integración vertical y horizontal.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 16,
       "question": "¿Qué pasa con el agua?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "Basado en las fuentes proporcionadas, la situación del agua se aborda desde varios frentes:\n\n**1. Relación Internacional y Sequía (Tratado de Aguas de 1944):**\n*   México está actuando conforme al Tratado de Aguas de 1944 con Estados Unidos. Debido a una **sequía extraordinaria** en los años 2022 y 2023, el país se encuentra en una situación compleja.\n*   Actualmente, queda un **volumen pendiente de poco más de mil millones de metros cúbicos de agua** que México debe cubrir en este ciclo.\n*   Los niveles en las presas internacionales son bajos: la presa La Amistad tiene 153 millones de metros cúbicos (menos del 9% de su capacidad) y la presa Falcón tiene 51 millones de metros cúbicos.\n\n**2. Situación en Baja California y Tijuana:**\n*   Tijuana ya agotó la cantidad de agua a la que tiene derecho por los acuerdos del río Colorado a partir del 1 de octubre y debe comprar agua al distrito de riego.\n*   Se está considerando la construcción de una **planta desaladora** debido al crecimiento de la población y a que el sistema de distribución actual es deficiente (se pierde cerca del 30% del agua).\n*   Se menciona que no existe actualmente una norma de salud pública en México que permita transformar agua negra (de drenaje) en agua potable.\n\n**3. Reformas a la Ley de Aguas Nacionales:**\n*   Existe una propuesta para modificar la ley con el objetivo de que **los privados ya no puedan vender o transmitir sus derechos de uso de agua** a otros privados.\n*   La propuesta establece que el agua que no sea utilizada por los distritos de riego debe regresar a la Conagua para que esta la concesione directamente a los municipios.\n\n**4. Situación en Sonora:**\n*   Existe un problema grave de falta de agua en Hermosillo.\n*   Se están considerando la construcción de presas, pero se garantiza que se realizará una **consulta abierta y transparente** con los pobladores para definir las condiciones de estos proyectos.\n\n**5. Infraestructura y Riesgos:**\n*   Ante lluvias cada vez más agresivas e impredecibles, se busca fortalecer los Atlas de Riesgo y construir infraestructura (como puentes) con \"periodos de retorno\" de mil años para disminuir las probabilidades de afectaciones.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
       "coverage": 0.0
     },
     {
       "id": 17,
       "question": "¿Qué dijo sobre la reforma fiscal?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la reforma fiscal, la Presidenta Claudia Sheinbaum Pardo manifestó lo siguiente durante la conferencia del 20 de diciembre de 2024:\n\n*   **Postura actual:** Declaró que no están pensando en una reforma fiscal en este momento.\n*   **Oportunidades de ingreso:** Antes de considerar una reforma fiscal, señaló que existen muchas oportunidades de ingreso. Mencionó que este año el ingreso está casi un 6 por ciento arriba en términos reales (más de 400 mil millones de pesos respecto al 2023) sin haber realizado una reforma fiscal.\n*   **Estrategia de \"Economía Moral\":** El enfoque del gobierno es trabajar en la \"economía moral\", la cual consiste en:\n    *   Erradicar la corrupción.\n    *   Asegurar que se paguen los impuestos que corresponden.\n    *   Erradicar privilegios.\n    *   Combatir la facturación falsa (la cual ya es delito con prisión preventiva oficiosa).\n    *   Abordar el tema de las Aduanas.\n    *   Simplificar el pago de impuestos para beneficiar a todos.\n*   **Sobre el IVA:** Aclaró que no van a aumentar el IVA, ya que es el impuesto más regresivo que existe.\n*   **Perspectiva para 2025:** Ante la pregunta de si en 2025 se construiría el consenso para una reforma fiscal que entrara en vigor en 2026, respondió: \"No, no estamos pensando en eso. Y primero hay que seguir en esta tarea, antes de pensar aumentar tasas de impuestos\".",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 18,
       "question": "¿Cómo va la construcción de refinerías?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en la información proporcionada en la Conferencia del 11 de octubre de 2024, el estado de las refinerías es el siguiente:\n\n*   **Refinería Olmeca:** Se informó que la planta se encuentra operando al **80 por ciento**. Actualmente está en el periodo de arranque, realizando corridas y pruebas para verificar que esté funcionando correctamente, y se espera que alcance el 100 por ciento de producción en unos días. La Secretaria de Energía complementó que, en términos físicos, la refinería se encuentra operando al mínimo.\n*   **Refinería petroquímica de Shell (Deer Park):** Se mencionó que esta parte quedó aislada y no tuvo afectaciones tras un accidente ocurrido en el sitio.\n\nNo se proporciona información sobre el progreso de la construcción de nuevas refinerías, sino sobre el estado de operación y arranque de las mencionadas.",
+      "fidelity": 100.0,
+      "relevance": 95.0,
+      "coverage": 90.0
     },
     {
       "id": 19,
       "question": "¿Qué dijo sobre la reforma educativa?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la reforma educativa, la Presidenta Claudia Sheinbaum Pardo mencionó los siguientes puntos en las conferencias:\n\n*   **Sobre la reforma de 2013 (Enrique Peña Nieto):** Señaló que se impuso con \"sangre\", mencionando que generó heridos, muertes y detenciones. Indicó que, como forma de represión, se despidieron a 1,500 maestros que luchaban contra la privatización de la educación.\n*   **Acciones de reinstalación:** Mencionó que el gobierno de Andrés Manuel López Obrador prometió la reinstalación de los maestros despedidos por oponerse a la reforma de 2013. Específicamente, señaló el caso de cuatro maestros en Querétaro que aún no han sido reinstalados debido a la \"obstaculización\" por parte del gobierno estatal.\n*   **Comparativa de evaluaciones:** Explicó que en la reforma de 2013, si un maestro no \"supuestamente\" pasaba la evaluación, era corrido. Por el contrario, la modificación de 2019 estableció que la evaluación no puede ser punitiva.\n*   **Mejoras y beneficios actuales:** Destacó que se otorgaron casi un millón de plazas de base, aumentos salariales significativos y pensiones justas. Mencionó un aumento salarial del 9% (más un 1% adicional en septiembre), el cual es más del doble de la inflación.\n*   **Nueva Escuela Mexicana y formación:** Señaló que la \"Transformación\" de la Nueva Escuela Mexicana debe reflejarse en la formación de los formadores a través de la Universidad Pedagógica Nacional (UPN) y las Normales, las cuales deben servir como lugares para la formación y actualización permanente de los maestros.\n*   **Fondo de Pensiones para el Bienestar:** Mencionó este fondo como la vía para lograr pensiones justas, las cuales están indexadas al salario medio del IMSS, asegurando que los maestros tengan un retiro digno de manera solidaria.\n*   **Mesa de diálogo:** Enfatizó que existe una mesa de diálogo con la Secretaría de Gobernación y la Secretaría de Educación Pública para discutir temas como el Usicamm y los métodos de evaluación, buscando que los propios maestros decidan cómo quieren ser evaluados.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 20,
       "question": "¿Qué pasó en la conferencia de hoy?",
-      "answer": "Respuesta.",
+      "answer": "",
       "fidelity": 0.0,
       "relevance": 0.0,
-      "coverage": 0.0
+      "coverage": 0.0,
+      "error": "chat_failed"
     },
     {
       "id": 21,
       "question": "¿Qué dijo sobre el campo y la agricultura?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre el campo y la agricultura, se mencionaron diversos puntos en las conferencias proporcionadas, divididos por las autoridades que intervinieron:\n\n**Por parte de la Secretaría de Agricultura y Desarrollo Rural (Columba López Gutiérrez):**\n*   **Capacitación y nuevas prácticas:** Se anunció el programa \"El Maíz es la Raíz\", que incluye capacitación sobre conservación de suelos, aumento de la productividad, intercalado de cultivos y reincorporación de materia orgánica. También se ofrecerán cursos digitales a través de dispositivos móviles.\n*   **Organización y comercio local:** Se promueve la organización comunitaria para la venta de maíz y hortalizas, con el objetivo de que los pueblos consuman lo que producen para mejorar el comercio de los productores.\n*   **Ahorro y maquinaria:** Se enfatiza la importancia de generar ahorros para la reinversión en el arreglo de maquinaria como tractores, cosechadoras y desgranadoras.\n*   **Créditos y tecnología:** Se informó sobre el crédito \"Cosechando Soberanía\" con un interés anual del 7% para rehabilitar invernaderos, instalar sistemas de riego por goteo y establecer unidades de procesamiento (tortillerías, producción de pinole, tostadas, tlayudas, etc.). Además, se planea una ventanilla itinerante para facilitar el acceso a estos créditos.\n*   **Sanidad vegetal:** La Junta de Sanidad Vegetal trabajará con los productores en el cuidado de los cultivos, control de plagas, enfermedades y almacenamiento.\n\n**Por parte de la Presidenta de México (Claudia Sheinbaum Pardo):**\n*   **Fertilizantes:** Se informó que Pemex está produciendo fertilizantes a través de Fertinal y que realizó compras a tiempo de urea para evitar incrementos excesivos en los costos para los pequeños productores. Se mencionó que la distribución de fertilizantes ya inició (específicamente en Zacatecas).\n*   **Inflación y productos básicos:** Ante el encarecimiento de productos como el jitomate, el limón y el pollo (causado en parte por heladas en Florida), se planteó la posibilidad de incluirlos en el PACIC de manera temporal. También se mencionó el control del precio del diésel para reducir costos de transporte.\n*   **Tierras y conflictos agrarios:** Se destacó la entrega de tierras a pueblos originarios (como los yaquis y rarámuris) y la existencia de una mesa de trabajo permanente entre la Secretaría de Gobernación, la Procuraduría Agraria y el Registro Agrario Nacional (RAN) para resolver conflictos agrarios históricos y acelerar la regularización de parcelas.\n*   **Programas de producción:** Se mencionó la situación de la producción de alfalfa y trigo en el Valle de Mexicali y San Quintín. Se anunció que se presentará un \"programa integral\" que iniciará con el maíz, junto con apoyos para el precio del trigo, particularmente en Sonora, buscando condiciones de largo plazo que no dependan únicamente de los precios internacionales.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 80.0
     },
     {
       "id": 22,
       "question": "¿Cómo está la inflación?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en las fuentes proporcionadas, la situación de la inflación se describe de la siguiente manera:\n\n**Estado actual y contexto histórico:**\n*   **Contención:** La Presidenta Claudia Sheinbaum Pardo señaló que la inflación está contenida y se mantiene dentro del rango histórico de los últimos 20 a 26 años, a pesar del incremento en los precios de los combustibles por la situación en Medio Oriente.\n*   **Datos recientes:** El dato observado por el Inegi para la última quincena de marzo fue de **4.6%**. En contraste, durante el 2025, el dato observado fue de **3.7%**, lo cual se considera dentro del rango \"óptimo\" (3% más/menos 1%) con menor impacto para los consumidores.\n*   **Comparativa:** Se menciona que la inflación actual es inferior a la registrada en 2008 (6.5%) y en 2017 (6.8%).\n\n**Componentes que impactan el Índice de Inflación (Primer trimestre de 2026):**\n*   **Impactos negativos (Aumentos):** Se identificaron principalmente por factores estacionales y climatológicos en el sector agrícola, afectando el precio del **jitomate, la papa y la cebolla** (específicamente por falta de oferta en el tomate). También se menciona un ligero aumento en el precio de la **tortilla**.\n*   **Impactos positivos (Disminuciones):** Se observaron bajas en los precios del **huevo, la carne de res, el gas doméstico y la carne de cerdo**.\n\n**Acciones del Gobierno para contener la inflación:**\n*   **Subsidios a combustibles:** Se aplica la renuncia parcial al impuesto (IEPS) a las gasolinas. La Presidenta mencionó que, sin esta intervención, el diésel estaría alrededor de 35 pesos y la gasolina magna entre 31 y 32 pesos.\n*   **Acuerdos con gasolineros:** Se estableció que la gasolina regular se mantenga en un máximo de 23.99 pesos y el diésel no exceda los 28 pesos por litro.\n*   **PACIC (Programa Contra la Inflación y la Carestía):** Se trabaja con comercializadores para mantener la canasta básica, donde existen marcas especiales que permiten sostener a una familia con menos de 900 pesos.\n*   **Acuerdos directos:** Se están estableciendo acuerdos entre productores y comercializadores (especialmente en el caso del tomate) para eliminar eslabones en la cadena logística y reducir costos.\n*   **Supervisión:** Profeco y otras dependencias vigilan que los comercializadores no excedan los rangos normales de precios.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 23,
       "question": "¿Qué dijo sobre la reforma de telecomunicaciones?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la reforma a la Ley de Telecomunicaciones, la Presidenta Claudia Sheinbaum Pardo destacó los siguientes puntos principales:\n\n*   **Cambios Institucionales:** Informó que la Cofece y el IFT desaparecen (lo cual ya ocurrió en la Constitución). En sustitución de la Cofece, entra un nuevo **organismo Antimonopolio** para garantizar la competencia, disminuir precios y evitar la monopolización de servicios. Las atribuciones del IFT se redistribuirán entre la Comisión de Competencia de Antimonopolio, la Agencia de Transformación Digital y la Secretaría de Infraestructura, Comunicaciones y Transportes.\n*   **Radios Comunitarias:** Se busca dar oportunidad de sobrevivencia y promoción a las radios comunitarias, particularmente en comunidades indígenas y de pueblos originarios, eliminando las limitaciones que antes impedían su desarrollo.\n*   **Derecho de las Audiencias:** Se recupera el \"derecho de las audiencias\", permitiendo que los ciudadanos puedan quejarse cuando reciban información falsa o que no tenga que ver con la realidad.\n*   **Internet y Competencia:** Se permitirá que **CFE-Internet (Internet para Todos)** dé servicio en igualdad de circunstancias que las empresas privadas para generar más competencia y bajar los precios. Además, se menciona una legislación (tomada de Brasil) donde los privados podrían poner cobertura gratuita en zonas sin servicio sobre los derechos de concesión.\n*   **Censura y Propaganda:** La Presidenta aclaró que el artículo que generó confusión sobre la censura se elimina por completo. Asimismo, se establece que ningún gobierno extranjero puede pagar propaganda política o ideológica en México, aunque sí pueden promover actividades turísticas, culturales o deportivas.\n*   **Clarificación sobre la \"Ley de Censura\":** El titular de la Agencia de Transformación Digital, José Antonio Peña Merino, aclaró que nunca fue una ley de censura. El artículo 109, que mencionaba \"apagar plataformas\", era un tema estrictamente fiscal (relacionado con la Ley del IVA) y no sobre opiniones en redes sociales. La ley busca, por el contrario, democratizar el acceso a internet.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 24,
       "question": "¿Qué acciones hay para el medio ambiente?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "Basado en las fuentes proporcionadas, las acciones para el medio ambiente incluyen las siguientes:\n\n**Estrategias y Campañas Nacionales:**\n*   **Estrategia Nacional de Limpieza y Conservación de Playas y Costas:** Busca eliminar el 100 por ciento de los plásticos de las costas en un periodo de 5 años (para el año 2030).\n*   **Campaña Nacional de Limpieza y Conservación de Playas y Costas de México:** Incluye jornadas de limpieza en diversas regiones.\n\n**Acciones por Estado:**\n*   **Yucatán:** Implementación del programa \"Yucatán Cero Residuos\", que consiste en el saneamiento permanente de manglares con el apoyo de pescadores, jóvenes, organizaciones civiles, universidades y empresas.\n*   **Quintana Roo:** Acciones para la eliminación del plástico en las costas, programas de educación ambiental, reciclaje comunitario, limpiezas de playas y protección de especies marinas.\n*   **Jalisco:** Limpieza de seis playas en Puerto Vallarta (más de 3 kilómetros de playa) con voluntarios. También trabajan con un enfoque de cuenca para la conservación de bosques y selvas, restauración productiva ligada a la ganadería libre de deforestación, turismo responsable, conservación de humedales y promoción de refugios pesqueros.\n\n**Acciones Legislativas y de Gestión (Nueva Ley del Equilibrio Ecológico y la Protección al Ambiente):**\n*   **Restauración y Prevención:** Creación de un programa de restauración ecológica y priorizar la prevención antes que la reparación.\n*   **Integración de Conocimientos:** Combinar avances científicos e innovación (como la economía circular) con los saberes ancestrales de los pueblos indígenas.\n*   **Justicia y Acceso a la Información:** Asegurar el acceso a la información pública y a la justicia ambiental, garantizando un medio ambiente sano para proteger la salud.\n*   **Protección de Especies:** Protección de especies emblemáticas como el lobo mexicano, el cóndor, la ballena azul y los delfines.\n*   **Ordenamiento Territorial:** Gestión del ordenamiento de los ríos y de los desarrollos inmobiliarios.\n*   **Economía Circular:** Transición de una \"economía que desecha\" a una \"economía que aprovecha\".\n*   **Protección a Defensores:** Inclusión de un capítulo para proteger a los defensores ambientales.\n*   **Evaluación Estratégica:** Exigir evaluaciones estratégicas ambientales previas para grandes proyectos para evitar la fragmentación de los mismos.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
       "coverage": 0.0
     },
     {
       "id": 25,
       "question": "¿Qué dijo sobre la reforma política?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "Sobre la reforma política (electoral), la Presidenta Claudia Sheinbaum Pardo destacó los siguientes puntos:\n\n*   **Reducción de recursos:** El objetivo principal es \"adelgazar la clase política\" y que el recurso sea para el pueblo. La propuesta contempla una reducción del **25 por ciento en total** de los apoyos que reciben:\n    *   Los partidos políticos.\n    *   El INE.\n    *   Los Institutos Electorales Estatales.\n    *   Los Tribunales.\n    *   Los Congresos estatales.\n    *   El Senado de la República.\n*   **El \"Fuero\":** La Presidenta aclaró que, finalmente, **no se tocó el fuero** y se mantiene. Aunque manifestó que su opinión personal es que debería quitarse, dejó la decisión a la Comisión. Añadió que el fuero no significa que un diputado no pueda ser juzgado o acusado, ya que se puede abrir una carpeta de investigación y, al terminar su diputación, puede haber una orden de aprehensión.\n*   **Representación Proporcional y Listas:** Explicó que la reforma busca que la gente vote por el partido y también por la persona que corresponde a la representación proporcional. Precisó que \"la gente no quiere que haya listas\", por lo que la propuesta es que haya representación proporcional pero con personas electas.\n*   **Fortalecimiento del Órgano Interno de Control:** Se contempla darle más herramientas para realizar evaluaciones de patrimonio de los altos funcionarios del INE.\n*   **Fiscalización:** Se busca una mayor colaboración con la UIF y la Secretaría de Hacienda mediante medidas precautorias inmediatas. Si se encuentran recursos de procedencia ilícita, estos se retirarían durante la campaña electoral.\n*   **Principios y Eficacia:** La Presidenta calificó la reforma como \"racional y razonable\", cumpliendo con lo que pidió la gente. Mencionó que hubo límites para la negociación, basándose en la idea de que \"la política es principios y eficacia\", y que no cedió en puntos como las listas porque no es lo que la ciudadanía desea.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
       "coverage": 0.0
     },
     {
       "id": 26,
       "question": "¿Cómo va la cobertura de vacunación?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "La cobertura de vacunación presenta los siguientes resultados según las fuentes proporcionadas:\n\n**Estado general y metas:**\n*   La gran parte de la población mexicana ya está vacunada, lo que ha permitido controlar el brote.\n*   El objetivo es alcanzar una cobertura del **95 por ciento** en la población.\n*   Se destaca que la primera dosis ofrece una buena cobertura (hasta el 93-95 por ciento), pero la segunda dosis es la que otorga una inmunidad de hasta el 99 por ciento a largo plazo.\n\n**Cobertura por grupos de edad (según datos de la ENSANUT):**\n*   **Niños de 0 a 7 años y de 8 a 10 años:** Tienen coberturas de entre el **82 y 83 por ciento**.\n*   **Jóvenes de 11 a 15 años:** La cobertura es del **78 por ciento**.\n*   **Jóvenes de 16 a 20 años:** La cobertura es del **68 por ciento**.\n*   **Personas de 21 a 25 años:** La cobertura es del **55 por ciento**.\n*   **Personas de 26 a 30 años:** La cobertura es del **47 por ciento**.\n*   En edades mayores, las coberturas son más altas debido a la protección natural por la circulación de la enfermedad en el pasado.\n\n**Avances específicos en el estado de Jalisco (sitio de mayor brote):**\nSe han registrado incrementos significativos en la vacunación:\n*   **Primera dosis:** Aumentó de 65 a **85 por ciento**.\n*   **Segunda dosis:** Aumentó de 64 a **89 por ciento**.\n*   **Tercera dosis (recuperación):** Aumentó de 61 a **84 por ciento**.\n\n**Datos de suministro y aplicación:**\n*   Se cuenta con 28 millones de dosis disponibles (según la conferencia del 11-02-2026) y se han aplicado 14.3 millones de vacunas en 2025 y 2026.\n*   En la conferencia del 20-01-2026, se informó que se han aplicado un total de 11,853,684 dosis hasta ese momento.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
       "coverage": 0.0
     },
     {
       "id": 27,
       "question": "¿Qué dijo sobre la migración?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre el tema de la migración, la Presidenta Claudia Sheinbaum Pardo mencionó diversos puntos en las conferencias proporcionadas:\n\n**En la conferencia del 27 de noviembre de 2024:**\n*   **Estrategia Integral:** Afirmó que México desarrolla un \"trabajo integral\" y una \"estrategia\" en seguridad que está dando resultados. Mencionó que el gobierno está trabajando para disminuir la migración de mexicanos hacia Estados Unidos y gestionar a las personas que transitan por el país.\n*   **Acciones Específicas:** Señaló que se ha atendido a las caravanas (mencionando que una de ellas ya ni siquiera está caminando) y que los permisos del \"CBP One\" se encuentran en el sur y no llegan al norte.\n*   **Prevención y Apoyo:** Destacó que a través de AMEXCID se apoya a jóvenes y familias en Honduras, El Salvador y Guatemala para evitar que emigren, y que se brinda apoyo económico a quienes son regresados a sus países por una única ocasión.\n*   **Colaboración con EE. UU.:** Enfatizó que la mejor manera de manejar el fenómeno es colaborar y sentarse a la mesa, especialmente en temas como las bandas dedicadas a la trata de personas.\n*   **Zonas de Atención:** Mencionó que existen zonas de atención integral (como en el AIFA) que ofrecen empleo y apoyos a personas que no pudieron entrar a Estados Unidos o que están retornando.\n\n**En la conferencia del 14 de agosto de 2026:**",
+      "fidelity": 50.0,
+      "relevance": 95.0,
+      "coverage": 90.0
     },
     {
       "id": 28,
       "question": "¿Qué obras están en marcha?",
-      "answer": "Respuesta.",
+      "answer": "",
       "fidelity": 0.0,
       "relevance": 0.0,
-      "coverage": 0.0
+      "coverage": 0.0,
+      "error": "chat_failed"
     },
     {
       "id": 29,
       "question": "¿Qué dijo sobre la reforma de vivienda?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la reforma de vivienda, la Presidenta Claudia Sheinbaum Pardo mencionó los siguientes puntos clave en las conferencias:\n\n**Iniciativas y Reformas Legales:**\n*   **Reforma Constitucional:** Se envió una iniciativa para reconocer la vivienda como un derecho.\n*   **Reforma a la Ley del Infonavit:** Esta ley ya fue aprobada en enero de 2025. Sus objetivos principales son:\n    *   Facultar al Infonavit para tener una empresa constructora.\n    *   Cambiar la estructura del Infonavit para evitar irregularidades del pasado.\n    *   Acelerar la vivienda no solo mediante el crédito, sino a través de la construcción directa.\n    *   Atender específicamente a trabajadores que ganan entre 1 y 2 salarios mínimos, quienes anteriormente no eran atendidos por el Infonavit.\n    *   **Condonación de deudas:** La ley permite atender a otros 2 millones de derechohabientes con deudas (sumándose a los 2 millones que ya habían sido apoyados), mediante la disminución o congelamiento de sus deudas.\n*   **Reforma a la Ley del ISSSTE:** Esta reforma fue pausada debido a que los maestros no estaban de acuerdo con la interpretación de la misma.\n\n**Metas y Acciones de Vivienda:**\n*   **Meta del sexenio:** Construir 1 millón 100 mil viviendas y realizar 1 millón 550 mil créditos de mejoramiento de vivienda (a través de Conavi e Infonavit), sumando un total de 2 millones 650 mil acciones de vivienda.\n*   **Escrituración:** La meta es alcanzar 1 millón de escrituras en todo el país.\n*   **Avances en 2025:** Se informó que la meta para 2025 es de 400 mil viviendas (302 mil de Infonavit, 86 mil de Conavi y 9 mil de FOVISSSTE), con un avance del 70%.\n*   **Mejoramientos:** La meta para el sexenio es de 1 millón 800 mil mejoramientos y ampliaciones.\n\n**Situación de Viviendas Ocupadas o Abandonadas:**\n*   La Presidenta aclaró que la propiedad privada está resguardada por la Constitución.\n*   Se está realizando un censo de cerca de 800 mil viviendas que están abandonadas o ocupadas indebidamente (muchas debido a fraudes o porque estaban muy alejadas de los centros de trabajo).\n*   Se están buscando alternativas para estas viviendas sin afectar la propiedad privada ni los créditos de los trabajadores.\n*   Se mantiene la política de **no realizar desalojos**, ya que se determinó que esa ruta no funcionó en el pasado; en su lugar, un juez debe determinar si una ocupación es ilegal para que proceda la autoridad.\n\n**Beneficiarios:**\n*   Se informó que ya se han beneficiado 1 millón 598 mil personas a través de la liberación de hipotecas, quitas y congelamiento de mensualidades (1.415 millones por Infonavit y 183 mil por FOVISSSTE).",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 30,
       "question": "¿Qué pasó con el peso mexicano?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en las fuentes proporcionadas, la situación del peso mexicano se describe en diferentes momentos:\n\n*   **Situación actual (Junio 2025):** El tipo de cambio peso-dólar rompió el \"umbral psicológico\" o \"piso\" de los 19 pesos por dólar, situándose en **18.92 pesos por dólar**. Esto representa una ganancia de 77 centavos (aproximadamente un 4%) respecto a los 19.69 pesos por dólar con los que inició la administración actual. La Presidenta destacó que este es un hito, siendo apenas la tercera vez en la historia moderna que ocurre una situación similar.\n*   **Estabilidad reciente (Junio 2025):** En la conferencia del 27 de junio de 2025, el Secretario de Hacienda informó que el tipo de cambio se mantuvo muy estable en un rango entre **18.85 y 18.95 pesos por dólar** tras una intervención preventiva en la administración de tres instituciones financieras.\n*   **Contexto histórico:** Se menciona que durante el \"Error de diciembre\" (entre 1994 y 1996), la moneda mexicana perdió más de la mitad de su valor, pasando de 3.4 pesos por dólar a 9.4 pesos por dólar.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 31,
       "question": "¿Qué dijo sobre la reforma energética y las renovables?",
-      "answer": "Respuesta.",
+      "answer": "",
       "fidelity": 0.0,
       "relevance": 0.0,
-      "coverage": 0.0
+      "coverage": 0.0,
+      "error": "chat_failed"
     },
     {
       "id": 32,
       "question": "¿Cómo avanza el programa Jóvenes Construyendo el Futuro?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "El programa Jóvenes Construyendo el Futuro presenta los siguientes avances y datos clave según la conferencia del 19 de mayo de 2025:\n\n**Impacto y Participación:**\n*   **Alcance histórico:** De 2019 a 2025, el programa ha atendido a más de 3 millones de jóvenes en todo el territorio nacional (60% mujeres y 40% hombres).\n*   **Empleabilidad:** 7 de cada 10 jóvenes que participan logran encontrar un empleo u ocupación productiva después del programa. Además, un estudio del Inegi indica que los egresados tienen tres veces más probabilidad de encontrar empleo que quienes no participan.\n*   **Salud:** Los participantes tienen un incremento del 25% en el acceso a servicios de salud a nivel nacional.\n*   **Percepción social:** El 88% de los centros de trabajo consideran que el programa aleja a los jóvenes del crimen y la violencia, mientras que el 79% considera que ayuda a la juventud a salir de la pobreza.\n\n**Inversión y Presupuesto:**\n*   **Inversión histórica:** Se ha invertido un total de 139 mil millones de pesos en la juventud.\n*   **Proyección 2025:** La inversión proyectada para este año es de 24 mil 205 millones de pesos.\n*   **Municipios prioritarios:** Se han invertido 240 millones de pesos en los últimos meses para atender a 10,603 jóvenes en nueve municipios prioritarios de seis entidades federativas (Centro, Tabasco; Chilpancingo y Acapulco, Guerrero; Tijuana, Baja California; San Cristóbal de la Casas y Frontera Comalapa, Chiapas; Chimalhuacán, Estado de México; y León y Celaya, Guanajuato).\n\n**Operación y Logística:**\n*   **Capacitación reciente:** El pasado 6 de mayo, 80 mil jóvenes comenzaron su capacitación.\n*   **Atención territorial:** Se han desplegado 5 mil oficinas móviles (módulos itinerantes) para vincular a jóvenes y centros de trabajo.\n*   **Apoyo económico:** El Gobierno de México otorga un apoyo equivalente a un salario mínimo vigente al centro del país (8,480 pesos), entregado a través de las Tarjetas del Banco del Bienestar, además de cobertura del seguro médico del IMSS.\n*   **Próximas fechas:** La próxima apertura para vinculaciones será el 2 de junio, con aperturas bimestrales restantes en junio, agosto, octubre y diciembre.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 33,
       "question": "¿Qué dijo sobre la seguridad en carreteras?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la seguridad en carreteras, se presentaron diversas acciones y cifras por parte de diferentes autoridades:\n\n**Por parte del Comandante de la Guardia Nacional, Hernán Cortés Hernández:**\n\n*   **Tendencia a la baja:** Se informó que el robo de vehículos de carga mostró un decremento del 22.41% a partir de enero de 2025.\n*   **Planes “Cero Robos”:** Se implementaron en las autopistas México-Querétaro y México-Puebla (que aportan el 29% del total de este ilícito) y en la carretera federal Mazatlán-Culiacán.\n    *   **México-Querétaro:** Despliegue de 585 efectivos, 194 vehículos, 3 helicópteros, 2 aeronaves no tripuladas, 20 drones, 10 torres de detección y 4 células de inteligencia.\n    *   **México-Puebla:** Despliegue de 302 elementos, 131 vehículos, 3 helicópteros, 2 aeronaves no tripuladas, 22 drones, 10 torres de detección y 5 células de inteligencia.\n    *   **Mazatlán a Culiacán:** Patrullajes de 298 efectivos en 143 vehículos, con apoyo de 2 helicópteros, 12 drones, 5 torres de identificación y 4 células de inteligencia.\n*   **Operación “Paradero Seguro”:** Enfocada en desmantelar “cachimbas”. En lo que va de la administración, se han desarticulado 145 instalaciones, asegurado 171,736 litros de hidrocarburo y detenido a 38 personas.\n*   **Plan Vacaciones Verano 2025:** Implementado desde el 1º de julio para brindar seguridad en destinos turísticos, aeropuertos, tramos carreteros, zonas de concentración y el programa “Héroes Paisanos”. Para este plan se cuenta con un total de 41,866 elementos de la Guardia Nacional.\n\n**Por parte del Secretario de Infraestructura, Comunicaciones y Transportes, Jesús Antonio Esteva Medina:**\n\nInformó sobre cuatro acciones principales:\n1.  **Cierre de accesos irregulares:** Se están iniciando en las autopistas México-Querétaro y México-Puebla. Se han detectado 118 accesos irregulares en total (17 atendidos).\n    *   Entre Tepalcapa y Palmillas: 41 detectados (9 cerrados, 32 por delimitar).\n    *   Entre Palmillas y Querétaro: 39 detectados (6 cerrados, 33 en proceso).\n    *   México-Puebla: 38 detectados (2 cerrados, 36 en proceso).\n2.  **Instalación de arcos dinámicos:** Equipos con reconocimiento de placas, sensores de dimensiones, básculas de pesaje y radares de velocidad. Se instalarán en 12 puntos estratégicos (Querétaro y Puebla) y en los ejes troncales principales del país.\n3.  **Modernización de infraestructura:** Actualmente existen 2,142 dispositivos de detección (cámaras panorámicas, de carril",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 34,
       "question": "¿Qué pasó con la deuda externa?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "Las fuentes proporcionadas no mencionan de manera general qué pasó con la \"deuda externa\" del país, pero sí detallan información específica sobre la deuda de Pemex y la de la Financiera Nacional para el Desarrollo Agropecuario, Pesquero y Forestal:\n\n*   **Deuda de Pemex:** Se describe como una \"maldita deuda corrupta\" generada en los periodos de Calderón y Peña Nieto. \n    *   Durante el gobierno de **Calderón**, la deuda pasó de 46.1 a 60.5 mil millones de dólares. \n    *   En el gobierno de **Peña Nieto**, aumentó de 64.3 a 105.8 mil millones de dólares. \n    *   Con la llegada de **López Obrador**, la deuda se redujo a 97.6 mil millones de dólares.\n\n*   **Deuda de la Financiera:** Se menciona que quedaron \"deudas impagables\" del pasado neoliberal. El gobierno decidió finiquitar estas deudas para cerca de 70 mil personas, ofreciendo dos vías:\n    1.  La liberación total de la deuda en caso de que ya hayan pagado lo suficiente.\n    2.  Plazos módicos para pagar el remanente en 12, 24 o 36 meses.",
+      "fidelity": 100.0,
+      "relevance": 95.0,
       "coverage": 0.0
     },
     {
       "id": 35,
       "question": "¿Qué dijo sobre la reforma al Poder Legislativo?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en las fuentes proporcionadas, la Presidenta Claudia Sheinbaum y los integrantes de la Comisión Presidencial para la Reforma Electoral mencionaron los siguientes puntos respecto a la reforma (enfocada principalmente en la reforma electoral y su impacto en el Poder Legislativo):\n\n*   **Representación del pueblo:** El titular de la Comisión, Pablo Gómez Álvarez, señaló que el sistema actual de \"plurinominales\" ha perdido su razón de ser, ya que actualmente representa a las directivas de los partidos en lugar del pueblo. Propuso un sistema de representación del pueblo basado en la crítica al sistema actual, el cual consideró como una copia deficiente del sistema alemán.\n*   **Reducción de recursos:** La Presidenta mencionó que la reforma busca reducir los recursos que reciben el **Senado de la República**, los **Congresos estatales**, los partidos políticos, el INE y los Institutos Electorales Estatales. El objetivo es que el recurso sea para el pueblo y se utilice para las elecciones sin despilfarros.\n*   **Eliminación de listas plurinominales:** Sheinbaum explicó que la reforma busca eliminar las \"listas plurinominales\" (de las cúpulas de los partidos) porque la gente quiere que haya elección. Propuso un sistema donde, en la representación proporcional, el pueblo pueda votar por personas específicas (lista abierta).\n*   **El fuero:** Respecto al fuero de los diputados federales, la Presidenta aclaró que, aunque ella está de acuerdo con que se quite, finalmente **no se incluyó** en la reforma tras las discusiones de la Comisión.\n*   **Estado de la propuesta:** Se mencionó que la propuesta es \"racional y razonable\", cumple con lo que pidió la gente y que el documento completo se enviaría para revisión legal y constitucional.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 75.0
     },
     {
       "id": 36,
       "question": "¿Cómo está la producción de maíz?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "La producción de maíz en México se caracteriza por los siguientes puntos, según las fuentes proporcionadas:\n\n**Autosuficiencia y tipos de maíz:**\n*   **Maíz blanco:** México es autosuficiente en maíz blanco, que es el destinado al consumo humano (principalmente para la tortilla). Existen dos formas: el **maíz nativo** (semillas originarias milenarias) y el **maíz híbrido** (semillas mejoradas en laboratorio, pero no transgénicas).\n*   **Maíz amarillo:** El maíz que se importa (principalmente de Estados Unidos) es el amarillo, el cual se utiliza mayoritariamente para alimento animal y para la industrialización de cereales. El gobierno tiene como objetivo aumentar la producción nacional de maíz amarillo no transgénico.\n\n**Situación actual del mercado y precios:**\n*   **Precios internacionales:** Debido a un año de mucha lluvia en México y en otras partes del mundo (especialmente en Estados Unidos), ha habido una gran producción global que ha reducido los precios.\n*   **Bolsa de Chicago:** El precio del maíz se fija en la Bolsa de Chicago, donde no se diferencia entre maíz amarillo y blanco, lo que provoca que los precios bajen cuando hay mucha oferta.\n*   **Esfuerzos de compra:** Ante precios bajos (por ejemplo, de 4,200 pesos por tonelada), se han realizado gestiones con grandes compradores (como Minsa, Maseca y Gruma) para que realicen un esfuerzo adicional y compren el maíz a precios superiores (por encima de los 6,000 pesos por tonelada).\n\n**Programas de apoyo por sector:**\n*   **Pequeños productores (1 a 2 hectáreas):** Se les apoya con el programa \"Producción para el Bienestar\" (apoyo anual) y \"Fertilizantes Gratuitos\". También se cuenta con el programa \"Sembrando Vida\".\n*   **Productores medianos (hasta 20 hectáreas):** Se diseñó el programa \"Cosechando Soberanía\", que ofrece créditos a baja tasa de interés (8.5%) y seguros para el precio.\n*   **Maíz nativo:** Existe el proyecto \"El maíz es la raíz\", que ofrece capacitación, equipamiento especializado para pequeñas parcelas y vínculos para generar valor agregado (como la producción directa de tortillas).\n\n**Regiones clave:**\n*   Sinaloa y el Bajío son las principales zonas de producción de maíz híbrido. En estas regiones, se están trabajando mesas de trabajo para garantizar la cosecha y asegurar precios preferenciales para los productores.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 90.0
     },
     {
       "id": 37,
       "question": "¿Qué dijo sobre el aeropuerto AIFA?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre el Aeropuerto Internacional \"Felipe Ángeles\" (AIFA), la Presidenta Claudia Sheinbaum Pardo mencionó lo siguiente:\n\n*   **Funcionamiento y rentabilidad:** Afirmó que el AIFA funciona muy bien y que es un aeropuerto rentable, con un número creciente de pasajeros y un buen desempeño en el transporte de carga.\n*   **Base de Mexicana de Aviación:** Señaló que el AIFA es la base principal de la línea Mexicana de Aviación.\n*   **Comparación con el Aeropuerto de Texcoco:** Defendió la decisión de construir el AIFA, argumentando que el Aeropuerto de Texcoco nunca habría sido una buena alternativa debido a que habría requerido costos de mantenimiento y operación excesivos por los hundimientos de la zona, y que no habría sido viable en términos estructurales, ambientales ni económicos. Además, afirmó que el proyecto de Texcoco tenía como fin real comercializar el actual Aeropuerto Internacional de la Ciudad de México (AICM) como un desarrollo inmobiliario.\n*   **Sanción de Estados Unidos:** Mencionó que existe una sanción del Departamento de Transporte de Estados Unidos relacionada con el crecimiento de varias líneas o vuelos hacia ese país, pero indicó que ya están resolviendo el tema.\n*   **Redes sociales:** Comentó que en redes sociales la gente compara los baños del Estadio Azteca con los del AIFA, señalando que \"los del AIFA le ganaron\".",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 38,
       "question": "¿Qué acciones hay contra el crimen organizado?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Las acciones contra el crimen organizado se basan en la **Estrategia Nacional de Seguridad** encabezada por la Presidenta Claudia Sheinbaum, la cual se estructura bajo los siguientes ejes y acciones específicas:\n\n**Ejes de la Estrategia Nacional de Seguridad:**\n1.  Atención a las causas.\n2.  Consolidación de la Guardia Nacional (a cargo de la Secretaría de la Defensa Nacional).\n3.  Fortalecimiento de las capacidades de inteligencia e investigación.\n4.  Coordinación entre las instituciones del Gabinete de Seguridad.\n5.  Presencia operativa en las regiones con mayor incidencia delictiva.\n\n**Acciones y tácticas principales:**\n*   **Coordinación Interinstitucional:** Trabajo conjunto entre la Secretaría de la Defensa Nacional (SEDENA), Secretaría de Marina (SEMAR), Secretaría de Seguridad y Protección Ciudadana (SSPC), Fiscalía General de la República (FGR), Guardia Nacional y el Centro Nacional de Inteligencia (CNI), en coordinación con los 32 estados.\n*   **Inteligencia e Investigación:** Realización de trabajos de inteligencia para identificar y detener a líderes de células criminales, objetivos prioritarios y operadores logísticos y financieros.\n*   **Cero Tolerancia a la Corrupción:** Combate a la impunidad y desarticulación de redes vinculadas al mercado ilícito de combustibles.\n*   **Estrategia Nacional contra la Extorsión:** Acciones específicas para proteger a los sectores productivos (como productores de aguacate, limón, ganaderos y transportistas) mediante la detención de células dedicadas al cobro de cuotas.\n*   **Plan Michoacán por la Paz y la Justicia:** Implementación de cuatro líneas de acción: mayor presencia territorial, inteligencia para detener generadores de violencia, coordinación institucional y protección a los sectores productivos.\n\n**Resultados y acciones específicas reportadas:**\n*   **Detenciones de objetivos prioritarios:** Se han detenido a líderes de grupos como \"Los Linos\", \"Gente del Guano\", y operadores financieros de organizaciones vinculadas con el cártel del Noreste y \"Los Chapitos\".\n*   **Aseguramiento de recursos:** Se han asegurado armas de fuego, dosis de droga, vehículos, explosivos improvisados, drones y equipos tácticos.\n*   **Combate al tráfico de hidrocarburos:** Aseguramiento de buques y detención de líderes de células dedicadas al contrabando de combustible desde Estados Unidos.\n*   **",
+      "fidelity": 50.0,
+      "relevance": 95.0,
+      "coverage": 100.0
     },
     {
       "id": 39,
       "question": "¿Qué dijo sobre la reforma agraria?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la reforma agraria, las fuentes proporcionan la siguiente información detallada a través de las intervenciones del Procurador Agrario y la Presidenta de México:\n\n**Nueva Política Agraria del \"Segundo Piso de la Cuarta Transformación\":**\n*   **Objetivo:** Dejar atrás el marco neoliberal para rescatar, defender y revalorizar a los ejidos y comunidades agrarias.\n*   **Enfoques:** Se busca un enfoque de equidad de género, relevo generacional, pertinencia cultural y construcción de paz.\n*   **Acciones operativas:** \n    *   Transformar el sector en uno de \"territorio\" (no de escritorio) con la creación de **1,000 Centros de Atención Agraria** y Jornadas Itinerantes de Justicia Agraria.\n    *   Simplificación radical de trámites y servicios con el apoyo de la Agencia de Transformación Digital.\n    *   Propuesta de un **Sistema Nacional de Mediación y Conciliación Agraria** para devolver poder a las asambleas ejidales y comunales.\n\n**Compromisos del \"Acuerdo Nacional por una República Rural y Soberana\":**\nSe mencionan varios compromisos cumplidos bajo este acuerdo:\n1.  **Maíz:** Prohibición de la siembra de maíces genéticamente modificados mediante la reforma a los artículos 4o. y 27 constitucional.\n2.  **Programas de apoyo:** Elevación a rango constitucional de programas como Sembrando Vida, Producción para el Bienestar, Fertilizantes para el Bienestar, Apoyo a Pescadores y Precios de Garantía.\n3.  **Derechos Indígenas:** Reforma al artículo 2º constitucional para los derechos indígenas y afromexicanos, incluyendo un Fondo de apoyo directo para comunidades indígenas.\n4.  **Derecho al Agua:** Garantizar el derecho humano al agua y la reforma a la Ley de Aguas Nacionales a través del Plan Hidráulico Nacional.\n5.  **Derechos de las mujeres:** Entrega de Certificados y Constancias de Derechos Agrarios Plenos a al menos 150 mil mujeres rurales.\n\n**Acciones específicas sobre la tenencia de la tierra:**\n*   **Regreso de tierras:** Se están regresando hectáreas a pueblos originarios mediante la compra de tierra, expropiación consensuada o resolución de litigios en tribunales.\n*   **Mesa de trabajo permanente:** Existe una mesa de trabajo en la Secretaría de Gobernación, Procuraduría Agraria y Registro Agrario Nacional para atender conflictos agrarios históricos y evitar que se resuelvan en tribunales sin acuerdos con las comunidades.\n*   **Regularización:** El Registro Agrario Nacional trabaja en la regularización de parcelas para pequeños comuneros y campesinos que no han obtenido",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 90.0
     },
     {
       "id": 40,
       "question": "¿Cómo va la venta de la marca Mexicana de Aviación?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "La venta y el posicionamiento de la marca Mexicana de Aviación muestran un crecimiento sostenido y una estrategia de expansión tanto nacional como internacional, según se detalla en las fuentes:\n\n*   **Crecimiento y participación de mercado:** Al cierre de 2024, la aerolínea registró un crecimiento acumulado del 43%. En el primer semestre de 2025, transportó a más de 200 mil pasajeros (un 24% más que en el mismo periodo de 2024) y alcanzó una participación del 58% en el mercado nacional (un 7% más que en el primer semestre de 2024), con la meta de alcanzar el 70% al finalizar el año.\n*   **Factor de ocupación y promociones:** En el primer semestre de 2025, el factor de ocupación fue del 53% (un 15% más que en el primer semestre de 2024). Además, se implementaron más de 50 promociones durante el primer semestre de 2025, logrando la venta de más de 35 mil boletos, lo que representa el 19% de las ventas totales de la aerolínea en ese periodo.\n*   **Presencia internacional:** Mexicana se ha integrado a más de 100 agencias de viaje digitales y tiene presencia en 92 países de los 5 continentes. Cuenta con alianzas estratégicas con Expedia (a través de Euroairlines) y con CitizenPlane (a través de agencias como KAYAK, Kiwi y eDreams) para comercializar boletos a nivel mundial.\n*   **Diversificación de ingresos:** La aerolínea ha logrado diversificar sus fuentes de ingresos más allá de la venta de boletos, incorporando la venta de servicios adicionales (como maletas de a bordo, equipaje extra, equipo deportivo y mascotas) y ventas a bordo.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 50.0
     },
     {
       "id": 41,
       "question": "¿Qué dijo sobre el tratado T-MEC?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre el tratado T-MEC, la Presidenta Claudia Sheinbaum Pardo mencionó los siguientes puntos:\n\n*   **Distinción con el TLC:** Aclaró que las críticas del presidente Trump fueron dirigidas al TLC (firmado en 1994), y no al T-MEC. Explicó que el T-MEC es un tratado distinto, \"mucho más justo\", que fue negociado durante el gobierno de López Obrador.\n*   **Estatus de aranceles:** Señaló que el tratado \"sobrevivió\" a la nueva arquitectura comercial. Los productos que están dentro del T-MEC (como los sectores agropecuario, maquinaria, electrónica, calzado y vestido) mantienen un arancel del cero por ciento.\n*   **Revisión programada:** Mencionó que el tratado tiene una revisión prevista para el año 2026.\n*   **Estrategia para las empresas:** Indicó que las empresas (como las automotrices alemanas) deben buscar entrar dentro del marco del T-MEC para evitar aranceles, lo que implica aumentar el \"contenido de origen\" (producir más en México, Estados Unidos o Canadá).\n*   **Trato preferencial en la industria automotriz:**\n    *   Para los **vehículos** que califican para trato preferencial bajo el T-MEC, los importadores pueden identificar la cantidad de contenido estadounidense para que esa parte no se le cobre el arancel del 25 por ciento.\n    *   Para las **autopartes**, estas permanecen libres de aranceles mientras se establece un proceso para aplicar aranceles a su contenido no estadounidense.\n*   **Situación de México:** Resaltó que, a pesar del nuevo orden comercial, México mantiene una \"situación preferencial\" gracias al tratado.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 85.0
     },
     {
       "id": 42,
       "question": "¿Qué pasa con los precios de la gasolina?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Con base en las fuentes proporcionadas, esto es lo que sucede con los precios de la gasolina:\n\n**1. Estrategia de Estabilización y Acuerdo con el Sector Privado:**\nSe firmó un acuerdo voluntario y compartido con las empresas del sector gasolinero para estabilizar el precio de la **gasolina regular**, con el objetivo de que **no supere los 24 pesos por litro**. Este acuerdo busca proteger la economía familiar, ya que la gasolina es el tercer bien con mayor incidencia en la formación del Índice Nacional de Precios al Consumidor (INPC).\n\n**2. Compromisos de las instituciones:**\n*   **Pemex:** Facilitará la distribución de \"última milla\" y mantendrá un precio único para las terminales de almacenamiento de distribución para garantizar ganancias razonables a sus clientes.\n*   **Secretaría de Hacienda:** Continuará aplicando estímulos al IEPS para amortizar las fluctuaciones de los precios internacionales del petróleo y el tipo de cambio.\n*   **Profeco:** Mantendrá el monitoreo semanal para determinar abusos y denunciará a las gasolineras que se excedan del margen permitido.\n*   **Otras dependencias:** El SAT, la CRE (que se convertirá en la Comisión Nacional de Energía) y la ASEA fortalecerán la supervisión y el control.\n\n**3. Evolución Histórica y Contexto Actual:**\n*   **Gobierno de AMLO:** El precio pasó de 25.48 a 24.15 pesos (una reducción del 5.2%).\n*   **Presidencia de Claudia Sheinbaum:** En los primeros tres meses, el precio pasó de 23.95 a 23.85 pesos (una disminución del 0.4%).\n*   **Comparativa:** Se destaca que los precios actuales son menores a los de los sexenios de Calderón (donde subió 22.9%) y Peña Nieto (donde subió 42.8% en términos reales).\n\n**4. Implementación:**\nEl acuerdo entró en vigor a finales de febrero de 2025, con un ajuste de precio paulatino durante un periodo de 15 días para que la cadena de suministro (importadores, comercializadores y estaciones finales) se adapte al compromiso de los 24 pesos.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 85.0
     },
     {
       "id": 43,
       "question": "¿Qué dijo sobre la reforma de protección animal?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la reforma de protección animal, la Presidenta Claudia Sheinbaum Pardo mencionó los siguientes puntos en las conferencias:\n\n*   **Reforma Constitucional:** Señaló que la publicación del decreto que reforma y adiciona los artículos 3, 4 y 73 de la Constitución Política de los Estados Unidos Mexicanos en materia de protección y cuidado animal es un \"paso histórico de progreso moral\" y parte de una \"Revolución de las Conciencias\" en favor de la paz entre todos los seres vivos.\n*   **Ley General:** Indicó que el reto inmediato es elaborar la **Ley General en Materia de Bienestar, Cuidado y Protección de los Animales**, la cual debe regir en todo el país bajo principios de progresividad, prohibir el maltrato ambiental y garantizar la protección de los animales por parte del Estado.\n*   **Participación de la sociedad:** Destacó que es importante que participen organizaciones y grupos de la sociedad que son protectores para que la ley refleje el activismo que han desarrollado.\n*   **Sobrepoblación de animales:** Afirmó que la sobrepoblación de perros y gatos es un problema \"extremadamente grave\" que constituye un atentado contra la seguridad y la salud pública, ya que coadyuva a la descomposición del tejido social, a la depredación de la fauna silvestre y a la contaminación.\n*   **Postura contra la matanza:** Rechazó tajantemente la idea de resolver la sobrepoblación mediante matanzas, calificando ese pensamiento como \"retrógrado y criminal\".\n*   **Recepción de proyectos:** Aceptó recibir un anteproyecto integral ético y eficaz del \"Movimiento Consciencia\" para afrontar la sobrepoblación de perros y gatos, instruyendo su revisión y análisis por parte de la Semarnat y la Consejería Jurídica.\n*   **Simbolismo:** Relacionó la historia de \"Simón, el guajolote presidencial\" con la reforma constitucional en materia de bienestar, protección y cuidado animal, señalando que el tiempo de vida de este animal en un santuario coincidió con el tiempo de gestación de dicha reforma.",
+      "fidelity": 50.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 44,
       "question": "¿Cómo está la cobertura educativa?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "Basado en las fuentes proporcionadas, la cobertura educativa se describe de la siguiente manera:\n\n**Educación Básica:**\n*   Al cierre del sexenio anterior, se logró una cobertura del **99 por ciento** de las escuelas públicas de educación básica a nivel nacional.\n*   Para el ejercicio fiscal 2025, el programa \"La Escuela es Nuestra\" proyectó una cobertura del **38 por ciento** de este nivel, lo que incluye el **50 por ciento** de la cobertura de las secundarias del país.\n\n**Educación Media Superior:**\n*   En 2025, se proyectó alcanzar una cobertura nacional del **50 por ciento** de los planteles totales a nivel nacional.\n*   Para el año 2026, se informó que se alcanzó la cobertura del **100 por ciento** de las secundarias y planteles de media superior (entre el año anterior y 2026).\n*   Asimismo, las escuelas públicas que pertenecen a \"Planes de Justicia\" (educación especial, educación inicial, secundarias y media superior) alcanzarían la cobertura del **100 por ciento** entre el año anterior y 2026.\n*   Existe una meta presidencial de aumentar la cobertura de media superior al **85 por ciento**, con el objetivo de crear 120 mil lugares para que ningún joven se quede sin estudiar.\n\n**Becas:**\n*   En 2025, se proyectó una inversión para becas que incluía:\n    *   **Beca universal en básica:** 9,436,907 becarios.\n    *   **Becas \"Benito Juárez\" en media superior:** 4,224,381 becarios.\n    *   **Educación superior:** 409,000 becarios.\n*   Para el año 2026, se informó que el programa de becas de la Presidenta cerraría el año con más de **22 millones de becarios**.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
       "coverage": 0.0
     },
     {
       "id": 45,
       "question": "¿Qué dijo sobre la reforma al Poder Ejecutivo?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "No tengo información sobre una reforma al Poder Ejecutivo en las fuentes proporcionadas. La Presidenta Claudia Sheinbaum Pardo únicamente abordó la **reforma electoral**.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
       "coverage": 0.0
     },
     {
       "id": 46,
       "question": "¿Qué acciones hay para el turismo?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Basado en las fuentes proporcionadas, las acciones para el turismo se dividen en varios ejes y estrategias principales:\n\n**1. Pilares de la Política Turística:**\nLa Secretaría de Turismo trabaja bajo tres pilares fundamentales:\n*   **Gobernanza:** Un sector unido para un turismo social, inclusivo y sustentable, integrado en la cadena de valor.\n*   **Diversificación del Mercado:** Incluye zonas de turismo comunitario, el ordenamiento de Pueblos Mágicos, el programa “Descubre el Mundo Maya”, áreas naturales con vocación turística y sitios de patrimonio de la humanidad.\n*   **Promoción:** Participación en 14 ferias internacionales, alianzas con la iniciativa privada, el Tren Maya y la creación de la plataforma **VisitMexico**, que cuenta con inteligencia virtual (\"Frida, tu robot guía\").\n\n**2. Acciones para el Turismo Comunitario:**\nSe busca que el turismo sea gestionado por las comunidades, integrando su identidad cultural, gastronomía y modos de vida. Acciones específicas incluyen:\n*   **Certificación:** Creación del primer certificado en el mundo para identificar experiencias de turismo comunitario (parte del Sistema Nacional de Calidad Turística).\n*   **Guía Nacional de Turismo Comunitario:** Una convocatoria realizada en conjunto con la Unesco para identificar y difundir experiencias existentes en el país.\n*   **Integración con el Tren Maya:** Utilizar el tren como instrumento para que los turistas lleguen a las comunidades mayas e indígenas (\"tierra adentro\").\n\n**3. Acciones para el Mundial y Eventos Especiales:**\n*   **Festival “Hambre de Gol”:** Un festival de cocineras tradicionales, artesanía y cultura en Campo Marte.\n*   **177 Pueblos Mágicos Mundialistas:** Una acción específica para el evento.\n*   **Rutas Regionales:** Para llevar la grandeza de México a todo el mundo.\n*   **Tianguis Turístico:** Realización de activaciones fuera de las fronteras (como en San Diego, California) con eventos como el \"Festival de Taco\", \"Festival Gastronómico y Cultural\" y \"Puntos México\".\n\n**4. Apoyo al Sector y Desarrollo:**\n*   **La Gran Escapada:** Estrategia para que quienes ofrecen experiencias puedan mostrarlas y obtener el Registro Nacional de Turismo.\n*   **Fortalecimiento local:** Trabajo con presidentes municipales y secretarías de Desarrollo Económico para fortalecer destinos que no son de \"sol y playa\" (como el de las luciérnagas en Tlaxcala).\n*   **Turismo Deportivo:** Participación en el Congreso Mundial de Turismo Deportivo de ONU Turismo para generar negocios en las áreas profesional y amateur.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 90.0
     },
     {
       "id": 47,
       "question": "¿Qué dijo sobre la reforma de salud mental?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "Sobre la salud mental, la Presidenta Claudia Sheinbaum Pardo y los funcionarios que la acompañan detallaron los siguientes puntos:\n\n*   **Programa de Prevención:** Se presentó un programa que incluye más de 15 millones de cartillas (guías informativas) dirigidas a padres, madres, maestros y jóvenes de 3º de secundaria y educación media superior.\n*   **Acciones en Escuelas:** Se dedicará una hora a la semana a este tema a través de talleres especiales con maestros capacitados. Además, cerca de 2,000 profesionales de la salud visitarán las escuelas para atender este tema.\n*   **Enfoque Preventivo y \"ABC de las Emociones\":** Se enfatizó que la prioridad es la prevención, especialmente en escuelas y adolescentes. Se mencionó el \"ABC de las emociones\" para reconocer factores de riesgo, señalando que muchas veces no se requiere un psicólogo, sino la atención empática del médico general o familiar.\n*   **Teleconsultas y Herramientas Digitales:** Se está reforzando la \"Línea de la Vida\" para ofrecer teleconsultas (vía celular, WhatsApp y chatbot), lo cual es vital para personas que viven lejos de los centros de salud. También se realizan capacitaciones continuas con mhGAP (apoyadas por la Organización Panamericana de la Salud) para profesionales de la salud y la educación.\n*   **Atención a Jóvenes en Riesgo:** Existe un proyecto ambicioso para trabajar en 36 municipios con alto índice delictivo, donde se busca detectar a jóvenes y ofrecerles actividades artísticas, deportivas, culturales y educativas para evitar que se incorporen a grupos delictivos.\n*   **Derivación a Especialistas:** La estrategia busca que, si se identifica un caso que requiere atención mayor, se oriente al paciente hacia el especialista correspondiente.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
+      "coverage": 100.0
     },
     {
       "id": 48,
       "question": "¿Cómo avanza el Corredor Interoceánico del Istmo?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
-      "coverage": 0.0
+      "answer": "El avance del Corredor Interoceánico del Istmo de Tehuantepec se divide en tres líneas férreas principales, diversos Polos de Desarrollo y la modernización de puertos estratégicos:\n\n**1. Líneas Férreas:**\n*   **Línea Z (Coatzacoalcos a Salina Cruz):** Se encuentra operativa al 100% desde diciembre de 2023. Se han rehabilitado 227 kilómetros (tramo Medias Aguas a Salina Cruz), 82 puentes ferroviarios y 290 obras de drenaje. Ha movilizado más de 231 mil toneladas de carga y más de 65 mil pasajeros. Actualmente, se está rehabilitando el tramo de Coatzacoalcos a Medias Aguas (93 kilómetros).\n*   **Línea FA (Coatzacoalcos a Palenque):** Se encuentra operativa al 100% desde el 13 de septiembre de este año para carga y pasajeros. Se han rehabilitado 310 kilómetros, 91 puentes y 667 obras de drenaje.\n*   **Línea K (Ixtepec a Ciudad Hidalgo):** Se encuentra en proceso de rehabilitación con un avance general del 58.5%. Se divide en tres tramos:\n    *   **Tramo 1 (Ixtepec a Tonalá):** 79.6% de avance (programado para operar en el primer trimestre de 2025).\n    *   **Tramo 2 (Tonalá a Huixtla):** 58.9% de avance (conclusión programada para el último trimestre de 2026).\n    *   **Tramo 3 (Huixtla a Ciudad Hidalgo y ramal KA):** 36.9% de avance.\n    *   **Viaducto de Huixtla:** Tiene un avance del 72.8% y está programado para terminar en marzo de 2025.\n\n**2. Polos de Desarrollo para el Bienestar:**\n*   **Coatzacoalcos I, Coatzacoalcos II y Salina Cruz:** Tienen vocación industrial y de distribución de vehículos; cuentan con un 80% de avance en sus estudios y avance comercial significativo.\n*   **Texistepec, San Juan Evangelista, Matías Romero, Santa María Mixtequilla e Ixtaltepec:** Tienen vocaciones agroindustriales, dispositivos médicos, farmacéutica y producción de aluminio. Ya fueron licitados y concesionados.\n*   **Ciudad Ixtepec:** Vocación de producción de amoníaco verde. Se encuentra en etapa de Asamblea Pública y Consultas Indígenas. Se proyecta iniciar obras en 2026 y operaciones en 2028.\n\n**3. Puertos y Conexiones:**\n*   **Salina Cruz:** Se está modernizando la Terminal de Usos Múltiples (TUM), con la conclusión de la alineación y reforzamiento de muelles para finales de año. Se dragó y amplió la bocana de entrada (de 80 a 120 metros) y se concluyó un",
+      "fidelity": 50.0,
+      "relevance": 98.0,
+      "coverage": 100.0
     },
     {
       "id": 49,
       "question": "¿Qué dijo sobre la rendición de cuentas?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "En la conferencia del 1 de mayo de 2025, el titular de la Unidad de Inteligencia Financiera (UIF), Pablo Gómez Álvarez, abordó la falta de transparencia y la ocultación de información respecto a la auditoría del Fobaproa. Sus puntos principales sobre este tema fueron:\n\n*   **Falta de transparencia del gobierno de Zedillo:** Afirmó que el gobierno de Zedillo mintió al decir que la auditoría fue transparente, ya que los resultados fueron ocultados mediante un sistema de encriptación con 5 llaves.\n*   **Ocultamiento por intereses políticos:** Señaló que el PRI y el PAN fueron cómplices en ocultar el contenido del documento para proteger los intereses de los \"grandes ricos y poderosos\".\n*   **Revelación por la izquierda:** Mencionó que quien dio a conocer los fraudos fue la \"gente de izquierda en la Cámara\".\n*   **Testimonio de fraudos:** Entregó simbólicamente los documentos a la Presidencia de la República como un testimonio de los fraudos cometidos y para desmentir la supuesta transparencia de la auditoría.\n*   **Transparencia elemental:** Mencionó que en aquel entonces había solicitado la llave del disco encriptado por \"la transparencia más elemental\", pero le fue negada.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
       "coverage": 0.0
     },
     {
       "id": 50,
       "question": "¿Qué pasó con López-Gatell?",
-      "answer": "Respuesta.",
-      "fidelity": 0.0,
-      "relevance": 0.0,
+      "answer": "No tengo información al respecto en las fuentes proporcionadas.",
+      "fidelity": 100.0,
+      "relevance": 100.0,
       "coverage": 0.0
     }
   ],
