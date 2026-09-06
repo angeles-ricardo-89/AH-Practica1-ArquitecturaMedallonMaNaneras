@@ -16,7 +16,7 @@ red. `make security` bloquea; `make security-report` informa.
 ## Marcadores por stack
 
 - **Backend:** `pytest.mark.security("<ID>")`, con el id OWASP del control (A07, A04, CSRF, A01,
-  A05, LLM01, LLM03, LLM08, HDRS, A10, ...). El marcador se registra en `[tool.pytest.ini_options]`
+  A05, LLM01, LLM06, LLM02, A02, A10, ...). El marcador se registra en `[tool.pytest.ini_options]`
   de `backend/pyproject.toml` para evitar warnings. Cuando un archivo cubre VARIOS controles, se
   declara una lista a nivel de modulo:
 
@@ -26,12 +26,12 @@ from __future__ import annotations
 import pytest
 
 pytestmark = [
-    pytest.mark.security("HDRS"),
+    pytest.mark.security("A02"),
     pytest.mark.security("A10"),
 ]
 ```
 
-- **Frontend:** comentario en el archivo de test: `// security: LLM10`.
+- **Frontend:** comentario en el archivo de test: `// security: LLM05`.
 
 ## Catalogo (governance/security-controls.yaml)
 

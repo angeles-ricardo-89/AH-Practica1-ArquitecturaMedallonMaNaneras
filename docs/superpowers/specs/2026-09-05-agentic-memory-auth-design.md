@@ -309,7 +309,7 @@ Backend, configurables, contadores compartidos y atómicos en PostgreSQL (sin Re
 
 ## 15. Amenazas y controles
 
-Cada control tiene prueba o criterio asociado. Fuentes: OWASP Top 10:2025, OWASP LLM 2026, OWASP Agentic 2026 (referencia).
+Cada control tiene prueba o criterio asociado. Fuentes: OWASP Top 10:2025, OWASP LLM 2025, OWASP Agentic 2026 (referencia).
 
 | # | Amenaza | Control | Prueba / criterio |
 |---|---|---|---|
@@ -325,13 +325,13 @@ Cada control tiene prueba o criterio asociado. Fuentes: OWASP Top 10:2025, OWASP
 | 10 | Exceptional Conditions (A10) | Fallar cerrado, timeouts, 429/503 claros, sin fallback sin evidencia | CA-T07, pruebas de timeout |
 | 11 | Prompt Injection (LLM01) | Separar instrucciones/memoria/corpus/resultados; allowlist | CA-T06 |
 | 12 | Sensitive Info Disclosure (LLM02) | Sin secretos en prompts; historial por propietario; logs sin contenido; aviso Gemini gratuito | CA-A06, test de aislamiento |
-| 13 | Excessive Agency (LLM03) | 3 tools lectura, params estrictos, 2 ejecuciones, sin efectos externos | CA-T04, CA-T05 |
+| 13 | Excessive Agency (LLM06) | 3 tools lectura, params estrictos, 2 ejecuciones, sin efectos externos | CA-T04, CA-T05 |
 | 14 | Data/Model Poisoning (LLM05) | Bronze inmutable, hashes, procedencia, reconstrucción controlada de Gold | CA-R05, re-construcción |
 | 15 | Unbounded Consumption (LLM06) | Rate limits, cuotas, top-k, tokens, timeouts, reintentos, max-instances | pruebas de límites (login/chat/cuota) |
 | 16 | Misinformation (LLM07) | Respuesta ligada a evidencia; negativa explícita; cluster ≠ hecho | CA-T07, CA-T08 |
-| 17 | Hidden Context Exposure (LLM08) | No revela prompts/secretos/memoria ajena; errores saneados | test de 404 + errores sin detalle |
+| 17 | Sensitive Information Disclosure (LLM02) | No revela prompts/secretos/memoria ajena; errores saneados | test de 404 + errores sin detalle |
 | 18 | Vector Weaknesses (LLM09) | Índices separados, metadatos, filtros previos, umbral y evaluación | CA-R01, CA-R05, CA-R06 |
-| 19 | Improper Output Handling (LLM10) | UI escapa Markdown/HTML; URLs validadas contra orígenes permitidos; salida nunca ejecutada | test de sanitización de salida (I8) |
+| 19 | Improper Output Handling (LLM05) | UI escapa Markdown/HTML; URLs validadas contra orígenes permitidos; salida nunca ejecutada | test de sanitización de salida (I8) |
 
 Controles complementarios: CSP restrictiva, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, HSTS en prod, límites de tamaño, timeouts de BD, respuestas sin stack traces, escaneo de secretos pre-publicación.
 

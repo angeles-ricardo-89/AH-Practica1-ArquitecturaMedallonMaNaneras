@@ -9,7 +9,7 @@
 
 ## 1. Problema
 
-El PRD 3.0 (§13) y la spec de diseño agéntico (§15) enumeran amenazas y controles basados en OWASP Top 10:2025 y OWASP Top 10 for LLM Applications 2026. Esos controles quedaron como promesas aspiracionales: no existe un gate perpetuo que los vigile, no existe un inspector de seguridad que los materialice, y varios controles nunca se implementaron en código. Concretamente, hoy:
+El PRD 3.0 (§13) y la spec de diseño agéntico (§15) enumeran amenazas y controles basados en OWASP Top 10:2025 y OWASP Top 10 for LLM Applications 2025. Esos controles quedaron como promesas aspiracionales: no existe un gate perpetuo que los vigile, no existe un inspector de seguridad que los materialice, y varios controles nunca se implementaron en código. Concretamente, hoy:
 
 - No hay middleware de headers seguros (`X-Content-Type-Options`, `Referrer-Policy`, CSP, HSTS).
 - `/docs`, `/redoc` y `/openapi.json` quedan expuestos en cualquier `APP_ENV`.
@@ -48,8 +48,8 @@ El PRD 3.0 (§13) y la spec de diseño agéntico (§15) enumeran amenazas y cont
 | H1 | Headers seguros (`X-Content-Type-Options`, `Referrer-Policy`, CSP, HSTS en prod) | spec §13.1 "controles complementarios" | No existe middleware |
 | H2 | OpenAPI/Swagger deshabilitados en producción | spec §9.3 | `/docs`/`/redoc`/`/openapi.json` abiertos siempre |
 | H3 | CORS de origen exacto | spec §13.1 A02 | No existe middleware CORS |
-| H4 | Errores saneados (sin stack traces ni detalle interno) | spec §13.1 A10/LLM08 | `main.py:54` devuelve `str(exc)` |
-| H5 | Límites de tamaño + timeouts de BD/modelo | spec §10, §13.1 A10/LLM06 | Sin límite global de body; `psycopg.connect` sin timeouts |
+| H4 | Errores saneados (sin stack traces ni detalle interno) | spec §13.1 A10/LLM02 | `main.py:54` devuelve `str(exc)` |
+| H5 | Límites de tamaño + timeouts de BD/modelo | spec §10, §13.1 A10 | Sin límite global de body; `psycopg.connect` sin timeouts |
 | H6 | Escaneo de secretos pre-publicación | spec §13 "escaneo de secretos antes de publicar" | No existe |
 
 ### 2.3 Timeouts existentes (contexto para H5)
@@ -147,7 +147,7 @@ controls:
 
 ### 5.3 Controles materializados (catálogo final, no exagerado)
 
-Solo se listan controles que aplican al diseño y quedan materializados en código. Los IDs siguen a OWASP; se añaden dos IDs propios (`CSRF`, `HDRS`) para controles que no tienen ID OWASP único.
+Solo se listan controles que aplican al diseño y quedan materializados en código. Los IDs siguen a OWASP; se añaden dos IDs propios (`CSRF`, `A02`) para controles que no tienen ID OWASP único.
 
 | ID | Control | Prueba/chequeo que lo vigila |
 |---|---|---|
@@ -157,11 +157,11 @@ Solo se listan controles que aplican al diseño y quedan materializados en códi
 | A01 | Control de acceso: propiedad por JWT, 404 en conversación ajena, aislamiento | `tests/test_api/test_conversations.py` + matriz de aislamiento |
 | A05 | Inyección: SQL parametrizado, tools sin SQL | `tests/test_agent/test_tools.py` (rechazo de entradas inválidas) |
 | LLM01 | Prompt injection: corpus como dato, allowlist de 3 tools | `tests/test_agent/test_planner.py` / `test_executor.py` (tool no permitida → rechazo) |
-| LLM03 | Agencia excesiva: máx. 2 tools, parámetros estrictos | `tests/test_agent/test_executor.py` |
-| LLM10 | Manejo de salida: sanitización Markdown/HTML | `frontend/tests/utils/markdown.test.ts` |
-| LLM08 | Exposición de contexto: errores saneados, sin `str(exc)` | `tests/test_security.py` (handler sin detalle interno) |
-| A02/HDRS | Configuración: headers seguros, docs deshabilitadas en prod, CORS exacto | `tests/test_security.py` (headers + docs prod + CORS) |
-| A10/LLM06 | Condiciones excepcionales: límite de body, timeouts BD/modelo | `tests/test_security.py` (413 por body, timeouts configurados) |
+| LLM06 | Agencia excesiva: máx. 2 tools, parámetros estrictos | `tests/test_agent/test_executor.py` |
+| LLM05 | Manejo de salida: sanitización Markdown/HTML | `frontend/tests/utils/markdown.test.ts` |
+| LLM02 | Exposición de contexto: errores saneados, sin `str(exc)` | `tests/test_security.py` (handler sin detalle interno) |
+| A02 | Configuración: headers seguros, docs deshabilitadas en prod, CORS exacto | `tests/test_security.py` (headers + docs prod + CORS) |
+| A10 | Condiciones excepcionales: límite de body, timeouts BD/modelo | `tests/test_security.py` (413 por body, timeouts configurados) |
 | A09 | Logging: sin secretos ni contenido en logs | `tests/test_api/test_auth.py` (nuevo test: login fallido no loguea/ecolea la contraseña) |
 | A03 | Cadena de suministro: lockfiles presentes, dependencias fijadas | chequeo estático `lockfiles` |
 | H6 | Secretos: no rastreados por git | chequeo estático `secrets-scan` |
@@ -187,7 +187,7 @@ Solo se listan controles que aplican al diseño y quedan materializados en códi
 - Lógica:
   1. Cargar `governance/security-controls.yaml`.
   2. Por control: validar existencia de cada `backend_tests`/`frontend_tests` y presencia del marcador correcto (lectura de texto; no requiere levantar Postgres).
-  3. Ejecutar `checks` estáticos: `secrets-scan` (invoca `scripts/scan_secrets.py`) y `lockfiles` (verifica `backend/uv.lock` y `frontend/pnpm-lock.yaml`). El control de "docs deshabilitadas en prod" se vigila con test de pytest (A02/HDRS), no con chequeo estático.
+  3. Ejecutar `checks` estáticos: `secrets-scan` (invoca `scripts/scan_secrets.py`) y `lockfiles` (verifica `backend/uv.lock` y `frontend/pnpm-lock.yaml`). El control de "docs deshabilitadas en prod" se vigila con test de pytest (A02), no con chequeo estático.
   4. Emitir reporte en texto: matriz `ID | título | control | prueba | estado (OK/FAIL)`.
 - **Determinista:** sin heurísticas de nombres; solo catálogo + marcadores + existencia de archivos + checks.
 - **Sin red ni Postgres:** el inspector no levanta el stack; los `checks` y la verificación de marcadores son estáticos.
@@ -214,9 +214,9 @@ Cada skill sigue el formato de las skills de dominio existentes (responsabilidad
 | `security-auth-jwt.md` | A07, A04 | JWT HS256, Argon2, cookie HttpOnly+SameSite+Secure, mensaje genérico, login rate-limit | `test_auth.py`, `test_security.py` |
 | `security-csrf.md` | CSRF | token HMAC `user_id:iat` en header, `require_csrf`, SameSite como defensa en profundidad | `test_auth.py` |
 | `security-access-control.md` | A01 | propiedad derivada del JWT, filtros `user_id`+`conversation_id`, ajena→404 | `test_conversations.py`, matriz aislamiento |
-| `security-injection.md` | A05, LLM01, LLM03 | SQL parametrizado, allowlist de 3 tools, plan JSON validado, máx. 2 ejecuciones, corpus como dato | `test_agent/*` |
-| `security-output-handling.md` | LLM10, LLM08 | DOMPurify en frontend, errores saneados sin `str(exc)` | `markdown.test.ts`, `test_security.py` |
-| `security-headers-config.md` | A02, A06, A10, LLM06, A09, A03 | headers seguros, docs deshabilitadas en prod, CORS exacto, límite de body, timeouts, logging sin secretos, lockfiles | `test_security.py`, checks estáticos |
+| `security-injection.md` | A05, LLM01, LLM06 | SQL parametrizado, allowlist de 3 tools, plan JSON validado, máx. 2 ejecuciones, corpus como dato | `test_agent/*` |
+| `security-output-handling.md` | LLM05, LLM02 | DOMPurify en frontend, errores saneados sin `str(exc)` | `markdown.test.ts`, `test_security.py` |
+| `security-headers-config.md` | A02, A06, A10, A09, A03 | headers seguros, docs deshabilitadas en prod, CORS exacto, límite de body, timeouts, logging sin secretos, lockfiles | `test_security.py`, checks estáticos |
 
 ### 7.2 Skills técnicas (`tech/`, 2 archivos nuevos)
 
@@ -295,7 +295,7 @@ Sustituir el handler `main.py:54` para que responda con un mensaje genérico (`{
 
 ### 9.4 Frontend — unitarias (`frontend/tests/utils/markdown.test.ts`)
 
-- Ya cubre sanitización (script/onerror). Se añade marcador `// security: LLM10` y un caso extra: URL de esquema `javascript:` es eliminada por DOMPurify.
+- Ya cubre sanitización (script/onerror). Se añade marcador `// security: LLM05` y un caso extra: URL de esquema `javascript:` es eliminada por DOMPurify.
 
 ### 9.5 Gates
 

@@ -1,9 +1,9 @@
-# Domain Skill: Inyeccion y Agencia Acotada (A05 + LLM01 + LLM03)
+# Domain Skill: Inyeccion y Agencia Acotada (A05 + LLM01 + LLM06)
 
 ## Proposito
 
 Gobernar las defensas del agente contra inyeccion: SQL parametrizado (OWASP A05), prompt
-injection (OWASP LLM01) y agencia excesiva (OWASP LLM03). Ningun SQL, URL, `user_id` ni nombre
+injection (OWASP LLM01) y agencia excesiva (OWASP LLM06). Ningun SQL, URL, `user_id` ni nombre
 libre de tool proviene del modelo: el plan JSON se valida con Pydantic contra una allowlist de 3
 tools de solo lectura y el agente ejecuta como maximo dos tools por mensaje.
 
@@ -15,8 +15,8 @@ tools de solo lectura y el agente ejecuta como maximo dos tools por mensaje.
 
 ## Fuente de requisitos
 
-- Spec de seguridad: `docs/superpowers/specs/2026-09-05-security-hardening-gate-design.md` (secciones 5.3 y 7.1, controles A05/LLM01/LLM03).
-- Catalogo: `governance/security-controls.yaml` (controles A05, LLM01, LLM03).
+- Spec de seguridad: `docs/superpowers/specs/2026-09-05-security-hardening-gate-design.md` (secciones 5.3 y 7.1, controles A05/LLM01/LLM06).
+- Catalogo: `governance/security-controls.yaml` (controles A05, LLM01, LLM06).
 - PRD 3.0: `docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md` (secciones 6, 7, 13.1, 15.3).
 
 ## Archivos que gobierna
@@ -26,7 +26,7 @@ tools de solo lectura y el agente ejecuta como maximo dos tools por mensaje.
 - `backend/src/lakehouse/services/agent/tools.py` (3 tools allowlist de solo lectura)
 - `backend/src/lakehouse/services/agent/synthesizer.py` (sintesis con evidencia y negativa)
 - `backend/src/lakehouse/schemas/agent.py` (modelos Pydantic del plan)
-- Pruebas: `backend/tests/test_agent/test_planner.py` (marcador LLM01), `test_executor.py` (marcadores LLM01/LLM03), `test_tools.py` (marcador A05)
+- Pruebas: `backend/tests/test_agent/test_planner.py` (marcador LLM01), `test_executor.py` (marcadores LLM01/LLM06), `test_tools.py` (marcador A05)
 
 ## Amenaza y control
 
@@ -37,7 +37,7 @@ tools de solo lectura y el agente ejecuta como maximo dos tools por mensaje.
   como instruccion. Gemma solo produce un plan JSON que Pydantic valida; si no pasa, un reintento
   con instrucciones de reparacion y, si falla de nuevo, fallback seguro a `buscar_declaraciones`
   (trazable, no simulado).
-- **LLM03 Excessive Agency:** el plan admite como maximo 2 ejecuciones de tool por mensaje; cada
+- **LLM06 Excessive Agency:** el plan admite como maximo 2 ejecuciones de tool por mensaje; cada
   tool declara parametros estrictos (tipos, rangos, top_k acotado) y un limite de filas y de
   segundos por ejecucion.
 
@@ -46,7 +46,7 @@ tools de solo lectura y el agente ejecuta como maximo dos tools por mensaje.
 | Tech Skill | Archivo | Como la usa |
 |------------|---------|-------------|
 | FastAPI + Pydantic + Typer | `../tech/fastapi_pydantic_typer.md` | Validacion estricta del plan JSON |
-| Testing de Seguridad | `../tech/security_testing.md` | Marcadores A05/LLM01/LLM03 y gate `make security` |
+| Testing de Seguridad | `../tech/security_testing.md` | Marcadores A05/LLM01/LLM06 y gate `make security` |
 
 ## Invariantes
 
@@ -62,7 +62,7 @@ tools de solo lectura y el agente ejecuta como maximo dos tools por mensaje.
 
 - [ ] Tool fuera de la allowlist rechazada antes de acceder a datos (LLM01, `tests/test_agent/test_planner.py`: `test_validate_plan_allowlist`).
 - [ ] Plan invalido se repara una vez y, si vuelve a fallar, cae al fallback seguro (`test_plan_first_tool_repairs_after_invalid`, `test_plan_first_tool_fallback_after_double_invalid`).
-- [ ] Nunca mas de 2 tools por turno (LLM03, `tests/test_agent/test_executor.py`: `test_run_agent_turn_never_exceeds_two_tools`).
+- [ ] Nunca mas de 2 tools por turno (LLM06, `tests/test_agent/test_executor.py`: `test_run_agent_turn_never_exceeds_two_tools`).
 - [ ] Entradas invalidas de tools rechazadas (A05, `tests/test_agent/test_tools.py`: `test_consultar_cluster_unknown`).
 - [ ] `uv run pytest tests/test_agent/ --cov=src --cov-fail-under=90` verde.
-- [ ] `make security`: controles A05, LLM01 y LLM03 en estado OK.
+- [ ] `make security`: controles A05, LLM01 y LLM06 en estado OK.

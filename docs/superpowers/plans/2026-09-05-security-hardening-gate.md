@@ -123,29 +123,29 @@
         backend_tests: ["tests/test_agent/test_planner.py", "tests/test_agent/test_executor.py"]
         frontend_tests: []
         checks: []
-      - id: "LLM03"
+      - id: "LLM06"
         title: "Excessive Agency"
         family: "security-injection"
         control: "máximo 2 ejecuciones, parámetros estrictos"
         backend_tests: ["tests/test_agent/test_executor.py"]
         frontend_tests: []
         checks: []
-      - id: "LLM10"
+      - id: "LLM05"
         title: "Improper Output Handling"
         family: "security-output-handling"
         control: "sanitización Markdown/HTML en frontend"
         backend_tests: []
         frontend_tests: ["tests/utils/markdown.test.ts"]
         checks: []
-      - id: "LLM08"
-        title: "Hidden Context Exposure"
+      - id: "LLM02"
+        title: "Sensitive Information Disclosure"
         family: "security-output-handling"
         control: "errores saneados sin detalle interno"
         backend_tests: ["tests/test_security.py"]
         frontend_tests: []
         checks: []
-      - id: "HDRS"
-        title: "Security Headers & Misconfiguration"
+      - id: "A02"
+        title: "Security Misconfiguration"
         family: "security-headers-config"
         control: "headers seguros, docs deshabilitadas en prod, CORS exacto"
         backend_tests: ["tests/test_security.py"]
@@ -190,7 +190,7 @@
 - **Archivos:**
   - Crear: `backend/src/lakehouse/api/security_headers.py`.
   - Modificar: `backend/src/lakehouse/main.py`, `backend/src/lakehouse/config.py`, `backend/tests/test_security.py`.
-- **Prueba primero** (añadir a `test_security.py`, con `pytestmark = pytest.mark.security("HDRS")` al inicio del archivo):
+- **Prueba primero** (añadir a `test_security.py`, con `pytestmark = pytest.mark.security("A02")` al inicio del archivo):
   ```python
   from fastapi.testclient import TestClient
   from lakehouse.config import Settings
@@ -523,7 +523,7 @@
 ### S10 — Pruebas de seguridad (unit/integración/e2e) + gate GATE-SEC en AGENTS.md + verificación final
 
 - **Archivos:**
-  - Modificar: `backend/tests/test_security.py` (marcador `pytestmark` + tests de S2–S5 ya añadidos), `backend/tests/test_api/test_auth.py` (marcador + test A09), `backend/tests/test_api/test_conversations.py` (marcador A01), `backend/tests/test_agent/test_tools.py` (marcador A05), `backend/tests/test_agent/test_planner.py` y `test_executor.py` (marcadores LLM01/LLM03), `frontend/tests/utils/markdown.test.ts` (marcador `// security: LLM10` + caso `javascript:`), `backend/tests/e2e/test_e2e_smoke.py` (aislamiento 2 usuarios).
+  - Modificar: `backend/tests/test_security.py` (marcador `pytestmark` + tests de S2–S5 ya añadidos), `backend/tests/test_api/test_auth.py` (marcador + test A09), `backend/tests/test_api/test_conversations.py` (marcador A01), `backend/tests/test_agent/test_tools.py` (marcador A05), `backend/tests/test_agent/test_planner.py` y `test_executor.py` (marcadores LLM01/LLM06), `frontend/tests/utils/markdown.test.ts` (marcador `// security: LLM05` + caso `javascript:`), `backend/tests/e2e/test_e2e_smoke.py` (aislamiento 2 usuarios).
   - Modificar: `AGENTS.md` (gate `GATE-SEC` en la lista de gates perpetuos y en comandos).
 - **Cambio mínimo:**
   - En cada archivo de test, añadir `pytestmark = pytest.mark.security("<ID>")` (backend) o `// security: <ID>` (frontend) según el catálogo S1.

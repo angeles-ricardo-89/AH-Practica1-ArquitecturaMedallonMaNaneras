@@ -77,7 +77,7 @@ No se aceptará ocultar estas inconsistencias en la documentación. El PDF final
 - Construir un corpus productivo independiente con Gemini Embeddings y Neon.
 - Containerizar y verificar localmente el pipeline medallón completo.
 - Publicar una URL funcional en GCP; primero la URL administrada de Cloud Run.
-- Aplicar controles priorizados de OWASP Top 10:2025 y OWASP Top 10 for LLM Applications 2026.
+- Aplicar controles priorizados de OWASP Top 10:2025 y OWASP Top 10 for LLM Applications 2025.
 - Negarse a concluir cuando no exista evidencia suficiente en el corpus.
 
 ### 4.2 No objetivos del MVP
@@ -350,20 +350,20 @@ Esta decisión evita “poner framework por poner framework”. El sistema será
 | A09 Security Logging and Alerting Failures | Eventos de login, 401/403/429, tool y errores; sin tokens, contraseñas ni texto completo |
 | A10 Mishandling of Exceptional Conditions | Fallar cerrado; timeouts; 503/429 claros; sin fallback a respuestas sin evidencia |
 
-### 13.2 OWASP Top 10 for LLM Applications 2026
+### 13.2 OWASP Top 10 for LLM Applications 2025
 
 | Riesgo | Control del MVP |
 | --- | --- |
 | LLM01 Prompt Injection | Separar instrucciones, memoria, corpus y resultados; ignorar instrucciones encontradas dentro del corpus; tools allowlist |
 | LLM02 Sensitive Information Disclosure | No incluir secretos en prompts; historial por propietario; logs sin contenido; aviso sobre Gemini gratuito |
-| LLM03 Excessive Agency | Tres tools de lectura, parámetros estrictos, máximo dos ejecuciones y sin efectos externos |
-| LLM04 Supply Chain | Dependencias mínimas, bloqueadas y escaneadas; no instalar plugins dinámicos |
-| LLM05 Data and Model Poisoning | Bronze inmutable, hashes, procedencia, validación y reconstrucción controlada de Gold |
-| LLM06 Unbounded Consumption | Rate limits, cuotas, top-k, tokens, timeouts, reintentos e instancias máximas |
-| LLM07 Misinformation | Respuesta ligada a evidencias; negativa explícita; clusters descritos como agrupaciones, no hechos |
-| LLM08 Hidden Context Exposure | El sistema no revela prompts, secretos ni memoria de otras conversaciones; errores saneados |
-| LLM09 Vector and Embedding Weaknesses | Índices separados; metadatos del modelo; filtros previos; umbral y evaluación de recuperación |
-| LLM10 Improper Output Handling | La UI escapa Markdown/HTML; URLs se validan contra orígenes permitidos; salida del modelo nunca se ejecuta |
+| LLM03 Supply Chain | Dependencias mínimas, bloqueadas y escaneadas; no instalar plugins dinámicos |
+| LLM04 Data and Model Poisoning | Bronze inmutable, hashes, procedencia, validación y reconstrucción controlada de Gold |
+| LLM05 Improper Output Handling | La UI escapa Markdown/HTML; URLs se validan contra orígenes permitidos; salida del modelo nunca se ejecuta |
+| LLM06 Excessive Agency | Tres tools de lectura, parámetros estrictos, máximo dos ejecuciones y sin efectos externos |
+| LLM07 System Prompt Leakage | El sistema no revela prompts, secretos ni memoria de otras conversaciones; errores saneados |
+| LLM08 Vector and Embedding Weaknesses | Índices separados; metadatos del modelo; filtros previos; umbral y evaluación de recuperación |
+| LLM09 Misinformation | Respuesta ligada a evidencias; negativa explícita; clusters descritos como agrupaciones, no hechos |
+| LLM10 Unbounded Consumption | Rate limits, cuotas, top-k, tokens, timeouts, reintentos e instancias máximas |
 
 Controles complementarios: CSP restrictiva, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, HSTS en producción, límites de tamaño, timeouts de base de datos, respuestas sin stack traces y escaneo de secretos antes de publicar.
 
@@ -612,7 +612,7 @@ El proyecto está listo para entregar cuando existe una URL pública estable y, 
 - [Neon: extensión pgvector](https://neon.com/docs/extensions/pgvector)
 - [Neon: conexión agrupada](https://neon.com/docs/connect/connection-pooling)
 - [OWASP Top 10:2025](https://owasp.org/Top10/2025/)
-- [OWASP Top 10 for LLM Applications 2026 — archivos finales](https://github.com/GenAI-Security-Project/GenAI-LLM-Top10/tree/main/2026/final)
+- [OWASP Top 10 for LLM Applications 2025 — archivos finales](https://github.com/GenAI-Security-Project/GenAI-LLM-Top10/tree/main/2025/final)
 - [OWASP Top 10 for Agentic Applications 2026](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/)
 
 ---

@@ -43,7 +43,7 @@ STRONG = BuscarDeclaracionesOutput(
 
 pytestmark = [
     pytest.mark.security("LLM01"),
-    pytest.mark.security("LLM03"),
+    pytest.mark.security("LLM06"),
 ]
 
 

@@ -23,8 +23,8 @@ from lakehouse.services.security import (
 
 pytestmark = [
     pytest.mark.security("A04"),
-    pytest.mark.security("LLM08"),
-    pytest.mark.security("HDRS"),
+    pytest.mark.security("LLM02"),
+    pytest.mark.security("A02"),
     pytest.mark.security("A10"),
 ]
 
