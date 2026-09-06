@@ -15,7 +15,7 @@ _ALWAYS = {
     "X-Frame-Options": "DENY",
 }
 _CSP = (
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+    "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data:; connect-src 'self'; font-src 'self'; "
     "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 )

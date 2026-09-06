@@ -77,7 +77,7 @@ controls:
   - id: HDRS
     title: Security Headers & Misconfiguration
     family: security-headers-config
-    control: headers seguros, docs deshabilitadas en prod, CORS exacto
+    control: headers seguros, docs deshabilitadas en prod, CORS exacto; CSP permite 'unsafe-eval' SOLO para el grafico 3D (echarts-gl/claygl usa new Function)
     backend_tests:
       - tests/test_security.py
     frontend_tests: []
