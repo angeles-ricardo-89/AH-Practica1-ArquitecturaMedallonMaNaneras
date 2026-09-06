@@ -100,6 +100,8 @@ def test_login_failure_does_not_leak_password(
     secret = "super-secret-password-xyz"
     with caplog.at_level(logging.DEBUG):
         resp = client.post("/auth/login", json={"username": "testuser1", "password": secret})
+        logging.getLogger("lakehouse").debug("benign control record")
     assert resp.status_code == 401
+    assert "benign control record" in caplog.text
     assert secret not in resp.text
     assert secret not in caplog.text

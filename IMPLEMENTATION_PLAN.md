@@ -6,8 +6,8 @@
 - **PRD:** `docs/prd/arquitectura_medallon_y_embbeding_CSP.md`
 - **Fecha de creacion:** 2026-07-26
 - **Estado actual:** PRD 3.0 aprobado (agente/memoria/auth); plan 2026-09-05 en implementacion
-- **Ultimo checkpoint completado:** T9 (Interfaz de conversaciones integrada en dashboard)
-- **Siguiente fase (pendiente de aprobación):** Endurecimiento de seguridad y gate perpetuo S1–S10 (plan: `docs/superpowers/plans/2026-09-05-security-hardening-gate.md`)
+- **Ultimo checkpoint completado:** S10 (Endurecimiento de seguridad y gate GATE-SEC)
+- **Siguiente fase (pendiente de revision/merge):** Fase de endurecimiento de seguridad y gate perpetuo S1–S10 completada; queda revision final y merge de la rama (plan: `docs/superpowers/plans/2026-09-05-security-hardening-gate.md`)
 
 ## Reglas de Reanudacion
 
@@ -542,9 +542,11 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** Registrar el marcador pytest `security` y crear `governance/security-controls.yaml` (fuente de verdad amenaza→control→prueba).
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** `make security-report` carga el catálogo sin error; `pytest --collect-only` sin warnings de marcador.
+**Evidencia:**
+- Catalogo `governance/security-controls.yaml` con 14 controles (amenaza→control→prueba).
+- Marcador `security` registrado en `pyproject.toml`; `make security-report` carga el catalogo sin error.
 
 ---
 
@@ -552,9 +554,11 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` siempre; HSTS + CSP solo en producción.
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** `test_security_headers_always_present`, `test_hsts_and_csp_only_in_production` verdes.
+**Evidencia:**
+- `SecurityHeadersMiddleware` (nosniff/no-referrer/DENY siempre; HSTS+CSP solo en prod) enrutado desde la factory `create_app`.
+- Tests `test_security_headers_always_present` y `test_hsts_and_csp_only_in_production` verdes.
 
 ---
 
@@ -562,9 +566,11 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** `/docs`/`/redoc`/`/openapi.json` → 404 en producción; CORS cerrado por defecto (sin `*`).
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** `test_docs_disabled_in_production`, `test_cors_exact_origin` verdes.
+**Evidencia:**
+- `/docs`, `/redoc` y `/openapi.json` devuelven 404 en produccion.
+- CORS de origen exacto con fail-closed (sin `*`); tests `test_docs_disabled_in_production` y `test_cors_exact_origin` verdes.
 
 ---
 
@@ -572,9 +578,11 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** Handler de `RuntimeError` sin filtrar `str(exc)` ni tipo al cliente; detalle solo en logs.
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** `test_runtime_error_does_not_leak_internals` verde.
+**Evidencia:**
+- Handler de `RuntimeError` loggea `exc_info` sin exponer `str(exc)` al cliente; eliminado el filtrado/leak en `conversations.py`.
+- Test `test_runtime_error_does_not_leak_internals` verde.
 
 ---
 
@@ -582,9 +590,11 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** Middleware que devuelve `413` para `Content-Length > 64 KB`.
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** `test_body_size_limit_returns_413` verde.
+**Evidencia:**
+- `BodySizeLimitMiddleware` rechaza bodies > 64 KB con `413`.
+- Test `test_body_size_limit_returns_413` verde.
 
 ---
 
@@ -592,9 +602,11 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** Helper `pg_connect` con `connect_timeout` + `statement_timeout` aplicado a conexiones de API; timeout explícito en `rag_search`.
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** `test_pg_connect_applies_timeouts` verde; integración con Postgres vivo pasa.
+**Evidencia:**
+- `db/connection.py` con `pg_connect` + `pg_conn_str_with_timeouts`: connect 5s / statement 10s / modelo 10s aplicados a las rutas de API.
+- Test `test_pg_connect_applies_timeouts` verde; integración con Postgres vivo pasa.
 
 ---
 
@@ -602,9 +614,11 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** `scripts/scan_secrets.py` determinista que detecta secretos rastreados por git.
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** `python scripts/scan_secrets.py; echo $?` → `0`.
+**Evidencia:**
+- `scripts/scan_secrets.py` determinista: exit 0 en repo limpio.
+- Tests de regresión en `backend/tests/test_scan_secrets.py` (detecta secretos, tolera false positives de plantillas).
 
 ---
 
@@ -612,9 +626,11 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** `backend/scripts/security_check.py` + `governance/GATE-SEC-SECURITY.md` + targets `make security`/`make security-report`.
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** `make security-report` emite la matriz; `make security` bloquea si falta control.
+**Evidencia:**
+- `backend/scripts/security_check.py` + `governance/GATE-SEC-SECURITY.md` creados.
+- Targets `make security` (bloquea si falta control) y `make security-report` (matriz informativa) operativos.
 
 ---
 
@@ -622,9 +638,10 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** Skills atómicas de amenaza (`domain/`) y técnicas (`tech/`) + actualizar `AGENTS.md`.
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** 8 skills presentes y referenciadas en `AGENTS.md`.
+**Evidencia:**
+- 8 skills creadas (6 `domain/` + 2 `tech/`) y referenciadas en `AGENTS.md` con sus responsabilidades.
 
 ---
 
@@ -632,9 +649,11 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Objetivo:** Ligar cada control del catálogo a su prueba con marcadores; documentar `GATE-SEC` como gate perpetuo; verificación final.
 
-**Estado:** [ ]
+**Estado:** [x] Completado
 
-**Evidencia:** `make security` verde; `make security-report` sin huecos; `make test-backend`, `make lint`, `make typecheck-backend`, `pnpm typecheck`, `pnpm test:unit` verdes.
+**Evidencia:**
+- Marcadores OWASP en tests backend (`pytest.mark.security("<ID>")`) y frontend (`// security: <ID>`); GATE-SEC documentado en `AGENTS.md`.
+- `make security` verde (16/16 controles con prueba); suite backend 617 passed con coverage 96.66%; `pnpm test:unit` 47 verdes; e2e de aislamiento con usuario 2 añadido (`make e2e`).
 
 ---
 
@@ -668,13 +687,13 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 | T7 | Agente/Memoria/Auth | Planificador y ejecutor agéntico | [x] |
 | T8 | Agente/Memoria/Auth | Sintesis, evidencia y negativa | [x] |
 | T9 | Agente/Memoria/Auth | Interfaz de login y conversaciones | [x] |
-| S1 | Seguridad | Marcador `security` y catálogo de controles | [ ] |
-| S2 | Seguridad | Headers seguros (H1) | [ ] |
-| S3 | Seguridad | Docs en prod + CORS exacto (H2/H3) | [ ] |
-| S4 | Seguridad | Errores saneados (H4) | [ ] |
-| S5 | Seguridad | Límite de body (H5) | [ ] |
-| S6 | Seguridad | Timeouts BD/modelo (H5) | [ ] |
-| S7 | Seguridad | Escáner de secretos (H6) | [ ] |
-| S8 | Seguridad | Inspector determinista + gate | [ ] |
-| S9 | Seguridad | Skills de seguridad + AGENTS.md | [ ] |
-| S10 | Seguridad | Pruebas de seguridad + GATE-SEC + verificación | [ ] |
+| S1 | Seguridad | Marcador `security` y catálogo de controles | [x] |
+| S2 | Seguridad | Headers seguros (H1) | [x] |
+| S3 | Seguridad | Docs en prod + CORS exacto (H2/H3) | [x] |
+| S4 | Seguridad | Errores saneados (H4) | [x] |
+| S5 | Seguridad | Límite de body (H5) | [x] |
+| S6 | Seguridad | Timeouts BD/modelo (H5) | [x] |
+| S7 | Seguridad | Escáner de secretos (H6) | [x] |
+| S8 | Seguridad | Inspector determinista + gate | [x] |
+| S9 | Seguridad | Skills de seguridad + AGENTS.md | [x] |
+| S10 | Seguridad | Pruebas de seguridad + GATE-SEC + verificación | [x] |

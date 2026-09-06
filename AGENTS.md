@@ -93,6 +93,20 @@ autenticacion, memoria, el agente o la UI exige evidencia real:
 [BLOQUEO] → si la idempotencia no se verifica (filas_nuevas=0, duplicados=0 en reejecucion)
 ```
 
+### Gate SEC: Seguridad OWASP (GATE-SEC)
+
+Activacion: commit/checkpoint que toque auth, memoria, agente, UI, config, o que introduzca/ajuste un control de seguridad.
+
+```
+[BLOQUEO] → si make security sale != 0 (control materializado sin prueba que lo ejercite)
+[BLOQUEO] → si un control de governance/security-controls.yaml no tiene prueba/chequeo registrado
+[BLOQUEO] → si scripts/scan_secrets.py detecta un secreto rastreado por git
+[BLOQUEO] → si se modifico un archivo de seguridad sin actualizar la skill correspondiente en .opencode/skills/
+```
+
+- Como correr: `make security` (bloquea) / `make security-report` (informa). Referencia: `governance/GATE-SEC-SECURITY.md` y `governance/security-controls.yaml`.
+- Relacion con Gate Q: GATE-SEC se ejecuta en el ciclo de Gate Q (junto a ruff/ty/pytest), pero `make security` no lo sustituye por ninguno de esos checks.
+
 ---
 
 ## SKILLS MANDATORIAS (cargar y seguir; no son opcionales)
@@ -179,6 +193,10 @@ make pipeline-enrich                    # gold: embeddings + clustering (requier
 make pipeline-full
 
 # Evaluacion RAG (backend): python -m lakehouse evaluate-rag
+
+# Seguridad (GATE-SEC)
+make security            # GATE-SEC: bloquea si algun control de seguridad carece de prueba
+make security-report     # GATE-SEC: reporta la matriz amenaza->control->prueba sin bloquear
 
 # Frontend (desde frontend/)
 pnpm lint
