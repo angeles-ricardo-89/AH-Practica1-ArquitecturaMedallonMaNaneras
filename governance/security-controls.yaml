@@ -1,0 +1,116 @@
+version: 1
+controls:
+  - id: A07
+    title: Authentication Failures
+    family: security-auth-jwt
+    control: mensaje genérico, límite de login, expiración JWT
+    backend_tests:
+      - tests/test_api/test_auth.py
+    frontend_tests: []
+    checks: []
+  - id: A04
+    title: Cryptographic Failures
+    family: security-auth-jwt
+    control: secreto fuerte en prod, Argon2, flags de cookie
+    backend_tests:
+      - tests/test_security.py
+      - tests/test_api/test_auth.py
+    frontend_tests: []
+    checks: []
+  - id: CSRF
+    title: CSRF Protection
+    family: security-csrf
+    control: token CSRF obligatorio en operaciones con estado
+    backend_tests:
+      - tests/test_api/test_auth.py
+    frontend_tests: []
+    checks: []
+  - id: A01
+    title: Broken Access Control
+    family: security-access-control
+    control: propiedad por JWT, 404 en conversación ajena, aislamiento
+    backend_tests:
+      - tests/test_api/test_conversations.py
+    frontend_tests: []
+    checks: []
+  - id: A05
+    title: Injection
+    family: security-injection
+    control: SQL parametrizado, tools sin SQL
+    backend_tests:
+      - tests/test_agent/test_tools.py
+    frontend_tests: []
+    checks: []
+  - id: LLM01
+    title: Prompt Injection
+    family: security-injection
+    control: corpus como dato, allowlist de 3 tools
+    backend_tests:
+      - tests/test_agent/test_planner.py
+      - tests/test_agent/test_executor.py
+    frontend_tests: []
+    checks: []
+  - id: LLM03
+    title: Excessive Agency
+    family: security-injection
+    control: máximo 2 ejecuciones, parámetros estrictos
+    backend_tests:
+      - tests/test_agent/test_executor.py
+    frontend_tests: []
+    checks: []
+  - id: LLM10
+    title: Improper Output Handling
+    family: security-output-handling
+    control: sanitización Markdown/HTML en frontend
+    backend_tests: []
+    frontend_tests:
+      - tests/utils/markdown.test.ts
+    checks: []
+  - id: LLM08
+    title: Hidden Context Exposure
+    family: security-output-handling
+    control: errores saneados sin detalle interno
+    backend_tests:
+      - tests/test_security.py
+    frontend_tests: []
+    checks: []
+  - id: HDRS
+    title: Security Headers & Misconfiguration
+    family: security-headers-config
+    control: headers seguros, docs deshabilitadas en prod, CORS exacto
+    backend_tests:
+      - tests/test_security.py
+    frontend_tests: []
+    checks: []
+  - id: A10
+    title: Exceptional Conditions & Consumption
+    family: security-headers-config
+    control: límite de body, timeouts BD/modelo
+    backend_tests:
+      - tests/test_security.py
+    frontend_tests: []
+    checks: []
+  - id: A09
+    title: Logging Failures
+    family: security-headers-config
+    control: sin secretos ni contenido en logs
+    backend_tests:
+      - tests/test_api/test_auth.py
+    frontend_tests: []
+    checks: []
+  - id: A03
+    title: Supply Chain
+    family: security-headers-config
+    control: lockfiles presentes, dependencias fijadas
+    backend_tests: []
+    frontend_tests: []
+    checks:
+      - lockfiles
+  - id: SEC
+    title: Secret Scanning
+    family: security-headers-config
+    control: sin secretos rastreados por git
+    backend_tests: []
+    frontend_tests: []
+    checks:
+      - secrets-scan

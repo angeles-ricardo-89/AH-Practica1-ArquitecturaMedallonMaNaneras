@@ -38,6 +38,11 @@ STRONG = BuscarDeclaracionesOutput(
     ]
 )
 
+pytestmark = [
+    pytest.mark.security("LLM01"),
+    pytest.mark.security("LLM03"),
+]
+
 
 def _fake_settings() -> Settings:
     return Settings(llamacpp_model="gemma-4-12b")
@@ -49,9 +54,7 @@ def test_run_agent_turn_single_tool() -> None:
             "lakehouse.services.agent.planner.chat_json",
             side_effect=[VALID_PLAN, FOLLOWUP_NONE],
         ),
-        patch(
-            "lakehouse.services.agent.executor.buscar_declaraciones", return_value=STRONG
-        ),
+        patch("lakehouse.services.agent.executor.buscar_declaraciones", return_value=STRONG),
         patch(
             "lakehouse.services.agent.synthesizer.chat_text",
             return_value="Respuesta con cita",
@@ -73,9 +76,7 @@ def test_run_agent_turn_allows_two_tools() -> None:
             "lakehouse.services.agent.planner.chat_json",
             side_effect=[VALID_PLAN, FOLLOWUP_TOOL],
         ),
-        patch(
-            "lakehouse.services.agent.executor.buscar_declaraciones", return_value=STRONG
-        ),
+        patch("lakehouse.services.agent.executor.buscar_declaraciones", return_value=STRONG),
         patch(
             "lakehouse.services.agent.executor.consultar_cluster", return_value=STRONG
         ) as mock_cluster,
@@ -97,12 +98,8 @@ def test_run_agent_turn_never_exceeds_two_tools() -> None:
             "lakehouse.services.agent.planner.chat_json",
             side_effect=[VALID_PLAN, FOLLOWUP_TOOL, FOLLOWUP_TOOL],
         ),
-        patch(
-            "lakehouse.services.agent.executor.buscar_declaraciones", return_value=STRONG
-        ),
-        patch(
-            "lakehouse.services.agent.executor.consultar_cluster", return_value=STRONG
-        ),
+        patch("lakehouse.services.agent.executor.buscar_declaraciones", return_value=STRONG),
+        patch("lakehouse.services.agent.executor.consultar_cluster", return_value=STRONG),
         patch(
             "lakehouse.services.agent.synthesizer.chat_text",
             return_value="Respuesta",
@@ -134,9 +131,7 @@ def test_run_agent_turn_persists_fallback_trace() -> None:
             "lakehouse.services.agent.planner.chat_json",
             side_effect=["invalido", "invalido", FOLLOWUP_NONE],
         ),
-        patch(
-            "lakehouse.services.agent.executor.buscar_declaraciones", return_value=STRONG
-        ),
+        patch("lakehouse.services.agent.executor.buscar_declaraciones", return_value=STRONG),
         patch(
             "lakehouse.services.agent.synthesizer.chat_text",
             return_value="Respuesta fallback",

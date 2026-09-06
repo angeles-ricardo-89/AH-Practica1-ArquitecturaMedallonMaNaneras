@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
+
 from lakehouse.config import Settings
 from lakehouse.schemas.agent import BuscarDeclaracionesInput, ToolPlan
 from lakehouse.services.agent.planner import (
@@ -10,6 +12,8 @@ from lakehouse.services.agent.planner import (
     plan_followup,
     validate_plan,
 )
+
+pytestmark = [pytest.mark.security("LLM01")]
 
 VALID_PLAN = (
     '{"tool_name": "buscar_declaraciones", '
@@ -35,16 +39,12 @@ def test_validate_plan_allowlist() -> None:
     assert valid[0] == "explorar_temas"
     unknown = validate_plan(ToolPlan(tool_name="borrar_todo", arguments={}))
     assert unknown is None
-    bad_args = validate_plan(
-        ToolPlan(tool_name="buscar_declaraciones", arguments={"consulta": ""})
-    )
+    bad_args = validate_plan(ToolPlan(tool_name="buscar_declaraciones", arguments={"consulta": ""}))
     assert bad_args is None
 
 
 def test_plan_first_tool_valid() -> None:
-    with patch(
-        "lakehouse.services.agent.planner.chat_json", return_value=VALID_PLAN
-    ) as mock:
+    with patch("lakehouse.services.agent.planner.chat_json", return_value=VALID_PLAN) as mock:
         decision = plan_first_tool(Settings(), "reforma", [])
     assert decision.tool_name == "buscar_declaraciones"
     assert isinstance(decision.parsed_input, BuscarDeclaracionesInput)
@@ -76,18 +76,14 @@ def test_plan_first_tool_fallback_after_double_invalid() -> None:
 
 
 def test_plan_followup_none_when_no_more_tools() -> None:
-    with patch(
-        "lakehouse.services.agent.planner.chat_json", return_value=FOLLOWUP_NONE
-    ) as mock:
+    with patch("lakehouse.services.agent.planner.chat_json", return_value=FOLLOWUP_NONE) as mock:
         decision = plan_followup(Settings(), "reforma", [], "resumen")
     assert decision is None
     mock.assert_called_once()
 
 
 def test_plan_followup_returns_tool() -> None:
-    with patch(
-        "lakehouse.services.agent.planner.chat_json", return_value=VALID_PLAN
-    ):
+    with patch("lakehouse.services.agent.planner.chat_json", return_value=VALID_PLAN):
         decision = plan_followup(Settings(), "reforma", [], "resumen")
     assert decision is not None
     assert decision.tool_name == "buscar_declaraciones"

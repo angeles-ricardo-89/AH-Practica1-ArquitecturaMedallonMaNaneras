@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from lakehouse.main import app
+
+pytestmark = [pytest.mark.security("A01")]
 
 
 def _login(username: str, password: str) -> tuple[TestClient, str]:
@@ -14,12 +17,8 @@ def _login(username: str, password: str) -> tuple[TestClient, str]:
 
 def test_create_and_list_conversations(real_auth, demo_users) -> None:
     client, csrf = _login("testuser1", "test-password-1")
-    r1 = client.post(
-        "/conversations/", json={"title": "energia"}, headers={"X-CSRF-Token": csrf}
-    )
-    r2 = client.post(
-        "/conversations/", json={"title": "salud"}, headers={"X-CSRF-Token": csrf}
-    )
+    r1 = client.post("/conversations/", json={"title": "energia"}, headers={"X-CSRF-Token": csrf})
+    r2 = client.post("/conversations/", json={"title": "salud"}, headers={"X-CSRF-Token": csrf})
     assert r1.status_code == 200
     assert r2.status_code == 200
     assert len({r1.json()["id"], r2.json()["id"]}) == 2

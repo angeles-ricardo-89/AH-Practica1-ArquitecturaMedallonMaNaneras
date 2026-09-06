@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, LiteralString, cast
 
 import psycopg
 
+from lakehouse.db.connection import pg_conn_str_with_timeouts, pg_connect
 from lakehouse.db.pgvector_conn import get_pgvector_connection_string
 from lakehouse.pipeline.enrichment import MIN_CHUNK_LENGTH
 from lakehouse.schemas.agent import (
@@ -41,6 +42,14 @@ def _conn_str(settings: Settings) -> str:
         settings.postgres_db,
         settings.postgres_user,
         settings.postgres_password,
+    )
+
+
+def _conn_str_with_timeouts(settings: Settings) -> str:
+    return pg_conn_str_with_timeouts(
+        _conn_str(settings),
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
     )
 
 
@@ -88,17 +97,17 @@ def buscar_declaraciones(
     )
     full_params = [embedding_str, *params, embedding_str, entrada.top_k]
 
-    with psycopg.connect(_conn_str(settings)) as conn:
+    with pg_connect(
+        _conn_str(settings),
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
+    ) as conn:
         rows = conn.execute(sql, full_params).fetchall()
 
     evidencias = []
     for r in rows:
         embedding_3d_raw = r[7]
-        embedding_3d = (
-            list(embedding_3d_raw)
-            if embedding_3d_raw is not None
-            else None
-        )
+        embedding_3d = list(embedding_3d_raw) if embedding_3d_raw is not None else None
         evidencias.append(
             Evidencia(
                 evidence_id=r[0],
@@ -117,7 +126,7 @@ def buscar_declaraciones(
 
 
 def explorar_temas(settings: Settings, entrada: ExplorarTemasInput) -> ExplorarTemasOutput:
-    run_id = _latest_run_id(_conn_str(settings))
+    run_id = _latest_run_id(_conn_str_with_timeouts(settings))
     if run_id is None:
         return ExplorarTemasOutput(clusters=[])
 
@@ -147,7 +156,11 @@ def explorar_temas(settings: Settings, entrada: ExplorarTemasInput) -> ExplorarT
         """,
     )
 
-    with psycopg.connect(_conn_str(settings)) as conn:
+    with pg_connect(
+        _conn_str(settings),
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
+    ) as conn:
         rows = conn.execute(sql, params).fetchall()
 
     clusters = [
@@ -165,19 +178,19 @@ def explorar_temas(settings: Settings, entrada: ExplorarTemasInput) -> ExplorarT
     return ExplorarTemasOutput(clusters=clusters)
 
 
-def consultar_cluster(
-    settings: Settings, entrada: ConsultarClusterInput
-) -> ConsultarClusterOutput:
-    run_id = _latest_run_id(_conn_str(settings))
+def consultar_cluster(settings: Settings, entrada: ConsultarClusterInput) -> ConsultarClusterOutput:
+    run_id = _latest_run_id(_conn_str_with_timeouts(settings))
     if run_id is None:
         return ConsultarClusterOutput(
-            cluster=ClusterDetalle(
-                cluster_id=entrada.cluster_id, etiqueta=None, tamano=0
-            ),
+            cluster=ClusterDetalle(cluster_id=entrada.cluster_id, etiqueta=None, tamano=0),
             evidencias=[],
         )
 
-    with psycopg.connect(_conn_str(settings)) as conn:
+    with pg_connect(
+        _conn_str(settings),
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
+    ) as conn:
         meta = conn.execute(
             "SELECT gl.cluster_label, COUNT(g.chunk_key) "
             "FROM gold.cluster_labels gl "
@@ -190,9 +203,7 @@ def consultar_cluster(
 
         if meta is None:
             return ConsultarClusterOutput(
-                cluster=ClusterDetalle(
-                    cluster_id=entrada.cluster_id, etiqueta=None, tamano=0
-                ),
+                cluster=ClusterDetalle(cluster_id=entrada.cluster_id, etiqueta=None, tamano=0),
                 evidencias=[],
             )
 
@@ -208,11 +219,7 @@ def consultar_cluster(
     evidencias = []
     for r in rows:
         embedding_3d_raw = r[6]
-        embedding_3d = (
-            list(embedding_3d_raw)
-            if embedding_3d_raw is not None
-            else None
-        )
+        embedding_3d = list(embedding_3d_raw) if embedding_3d_raw is not None else None
         evidencias.append(
             EvidenciaCluster(
                 evidence_id=r[0],
@@ -226,8 +233,6 @@ def consultar_cluster(
             )
         )
     return ConsultarClusterOutput(
-        cluster=ClusterDetalle(
-            cluster_id=entrada.cluster_id, etiqueta=label, tamano=tamano
-        ),
+        cluster=ClusterDetalle(cluster_id=entrada.cluster_id, etiqueta=label, tamano=tamano),
         evidencias=evidencias,
     )

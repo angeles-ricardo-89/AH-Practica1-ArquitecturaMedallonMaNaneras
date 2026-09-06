@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     postgres_user: str = "mananeras"
     postgres_password: str = "mananeras"
 
+    db_connect_timeout: int = 5
+    db_statement_timeout_ms: int = 10000
+
     ducklake_catalog: str = "postgres"
     ducklake_data_path: str = "data/lakehouse/ducklake_files.duckdb"
 
@@ -19,6 +22,8 @@ class Settings(BaseSettings):
 
     llamacpp_base_url: str = "http://localhost:9200/v1"
     llamacpp_model: str = "gemma-4-12b"
+
+    model_request_timeout: float = 10.0
 
     rag_top_k: int = 8
     max_context_tokens: int = 10000
@@ -61,6 +66,8 @@ class Settings(BaseSettings):
     login_rate_limit: int = 5
     chat_rate_limit: int = 10
     daily_rate_limit: int = 100
+    cors_allowed_origins: list[str] = []
+    max_request_body_bytes: int = 65536
 
     @property
     def cookie_secure(self) -> bool:

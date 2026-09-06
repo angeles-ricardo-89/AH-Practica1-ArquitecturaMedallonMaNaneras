@@ -18,6 +18,8 @@ import pytest
 BASE_URL = os.environ.get("E2E_BASE_URL", "http://localhost:8001")
 USERNAME = os.environ.get("E2E_USERNAME", "")
 PASSWORD = os.environ.get("E2E_PASSWORD", "")
+USERNAME2 = os.environ.get("E2E_USERNAME2", "")
+PASSWORD2 = os.environ.get("E2E_PASSWORD2", "")
 
 pytestmark = pytest.mark.e2e
 
@@ -53,9 +55,7 @@ def test_login_and_protected_flow(live_client: httpx.Client) -> None:
     assert r.status_code == 401
 
     # Login real -> cookie + csrf
-    r = live_client.post(
-        "/auth/login", json={"username": USERNAME, "password": PASSWORD}
-    )
+    r = live_client.post("/auth/login", json={"username": USERNAME, "password": PASSWORD})
     assert r.status_code == 200, r.text
     csrf = r.json()["csrf_token"]
     assert csrf
@@ -104,3 +104,32 @@ def test_conversation_and_agent_turn_end_to_end(live_client: httpx.Client) -> No
     r = live_client.delete(f"/conversations/{conv_id}", headers=headers)
     assert r.status_code == 200
     assert live_client.get(f"/conversations/{conv_id}").status_code == 404
+
+
+def test_cross_user_conversation_isolation(live_client: httpx.Client) -> None:
+    if not (USERNAME2 and PASSWORD2):
+        pytest.skip("Definir E2E_USERNAME2/E2E_PASSWORD2 para verificar aislamiento entre usuarios")
+    login = live_client.post("/auth/login", json={"username": USERNAME, "password": PASSWORD})
+    assert login.status_code == 200, login.text
+    headers = {"X-CSRF-Token": login.json()["csrf_token"]}
+
+    created = live_client.post("/conversations/", json={"title": "privada user1"}, headers=headers)
+    assert created.status_code == 200, created.text
+    conv_id = created.json()["id"]
+
+    with httpx.Client(base_url=BASE_URL, timeout=180.0) as other:
+        login2 = other.post("/auth/login", json={"username": USERNAME2, "password": PASSWORD2})
+        assert login2.status_code == 200, login2.text
+        headers2 = {"X-CSRF-Token": login2.json()["csrf_token"]}
+
+        assert other.get(f"/conversations/{conv_id}").status_code == 404
+        msg = other.post(
+            f"/conversations/{conv_id}/messages",
+            json={"question": "reforma energetica"},
+            headers=headers2,
+        )
+        assert msg.status_code == 404
+        assert other.delete(f"/conversations/{conv_id}", headers=headers2).status_code == 404
+
+    cleanup = live_client.delete(f"/conversations/{conv_id}", headers=headers)
+    assert cleanup.status_code == 200

@@ -3,7 +3,18 @@ from __future__ import annotations
 import psycopg
 from psycopg.types.json import Jsonb
 
+from lakehouse.config import Settings
+from lakehouse.db.connection import pg_conn_str_with_timeouts
 from lakehouse.services.security import generate_public_id
+
+
+def _conn_str_with_timeouts(conn_str: str) -> str:
+    settings = Settings()
+    return pg_conn_str_with_timeouts(
+        conn_str,
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
+    )
 
 
 def create_conversation(
@@ -13,7 +24,7 @@ def create_conversation(
     secret: str,
     retention_days: int = 30,
 ) -> str:
-    with psycopg.connect(pg_conn_str) as conn, conn.transaction():
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn, conn.transaction():
         row = conn.execute(
             "INSERT INTO conversation (owner_id, title, expires_at) "
             "VALUES (%s, %s, NOW() + (%s * INTERVAL '1 day')) RETURNING id",
@@ -30,7 +41,7 @@ def create_conversation(
 
 
 def list_conversations(pg_conn_str: str, owner_id: int) -> list[dict]:
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         rows = conn.execute(
             "SELECT public_id, title, created_at, last_activity_at "
             "FROM conversation WHERE owner_id = %s AND expires_at > NOW() "
@@ -49,7 +60,7 @@ def list_conversations(pg_conn_str: str, owner_id: int) -> list[dict]:
 
 
 def resolve_conversation_id(pg_conn_str: str, owner_id: int, public_id: str) -> int | None:
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         row = conn.execute(
             "SELECT id FROM conversation WHERE public_id = %s AND owner_id = %s "
             "AND expires_at > NOW()",
@@ -62,7 +73,7 @@ def get_conversation(pg_conn_str: str, owner_id: int, public_id: str) -> dict | 
     conv_id = resolve_conversation_id(pg_conn_str, owner_id, public_id)
     if conv_id is None:
         return None
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         title_row = conn.execute(
             "SELECT title FROM conversation WHERE id = %s", (conv_id,)
         ).fetchone()
@@ -76,14 +87,12 @@ def get_conversation(pg_conn_str: str, owner_id: int, public_id: str) -> dict | 
     return {
         "id": public_id,
         "title": title,
-        "messages": [
-            {"role": m[0], "content": m[1], "created_at": m[2]} for m in msgs
-        ],
+        "messages": [{"role": m[0], "content": m[1], "created_at": m[2]} for m in msgs],
     }
 
 
 def delete_conversation(pg_conn_str: str, owner_id: int, public_id: str) -> bool:
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         row = conn.execute(
             "DELETE FROM conversation WHERE public_id = %s AND owner_id = %s RETURNING id",
             (public_id, owner_id),
@@ -102,7 +111,7 @@ def add_message(
     completion_tokens: int | None = None,
     total_tokens: int | None = None,
 ) -> int:
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         row = conn.execute(
             "INSERT INTO message (conversation_id, owner_id, role, content, model, "
             "prompt_tokens, completion_tokens, total_tokens) "
@@ -123,7 +132,7 @@ def add_message(
 
 
 def touch_conversation(pg_conn_str: str, conversation_id: int, retention_days: int = 30) -> None:
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         conn.execute(
             "UPDATE conversation SET last_activity_at = NOW(), "
             "expires_at = NOW() + (%s * INTERVAL '1 day') WHERE id = %s",
@@ -132,15 +141,13 @@ def touch_conversation(pg_conn_str: str, conversation_id: int, retention_days: i
 
 
 def list_messages(pg_conn_str: str, conversation_id: int) -> list[dict]:
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         rows = conn.execute(
             "SELECT role, content, created_at FROM message "
             "WHERE conversation_id = %s ORDER BY created_at ASC, id ASC",
             (conversation_id,),
         ).fetchall()
-    return [
-        {"role": r[0], "content": r[1], "created_at": r[2]} for r in rows
-    ]
+    return [{"role": r[0], "content": r[1], "created_at": r[2]} for r in rows]
 
 
 def add_tool_execution(
@@ -154,7 +161,7 @@ def add_tool_execution(
     duration_ms: int,
     status: str,
 ) -> None:
-    with psycopg.connect(pg_conn_str) as conn:
+    with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         conn.execute(
             "INSERT INTO tool_execution (conversation_id, owner_id, turn_id, tool_name, "
             "arguments, result_count, duration_ms, status) "

@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// security: LLM10
 import { describe, it, expect } from 'vitest'
 import { renderMarkdown } from '../../src/utils/markdown'
 
@@ -16,5 +18,10 @@ describe('renderMarkdown', () => {
   it('strips img onerror handlers', () => {
     const out = renderMarkdown('<img src="x" onerror="alert(1)">')
     expect(out).not.toContain('onerror')
+  })
+
+  it('strips javascript: URLs', () => {
+    const out = renderMarkdown('[x](javascript:alert(1))')
+    expect(out).not.toContain('javascript:')
   })
 })

@@ -1,4 +1,4 @@
-.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full test lint typecheck install evaluacion e2e
+.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full test lint typecheck install evaluacion e2e security security-report
 
 # ─── Docker ───────────────────────────────────────────────
 up:
@@ -50,7 +50,7 @@ test: test-backend test-frontend
 # E2E sin mocks contra backend vivo (requiere demo users en .env + llamacpp + Ollama)
 # Default: el stack docker real (frontend :5174 proxya /api -> backend)
 e2e:
-	cd backend && bash -c 'set -a; source ../.env 2>/dev/null || true; set +a; E2E_BASE_URL=$${E2E_BASE_URL:-http://localhost:5174/api} E2E_USERNAME=$${DEMO_USER_1_USERNAME:-} E2E_PASSWORD=$${DEMO_USER_1_PASSWORD:-} uv run pytest tests/e2e -m e2e -o addopts=""'
+	cd backend && bash -c 'set -a; source ../.env 2>/dev/null || true; set +a; E2E_BASE_URL=$${E2E_BASE_URL:-http://localhost:5174/api} E2E_USERNAME=$${DEMO_USER_1_USERNAME:-} E2E_PASSWORD=$${DEMO_USER_1_PASSWORD:-} E2E_USERNAME2=$${DEMO_USER_2_USERNAME:-} E2E_PASSWORD2=$${DEMO_USER_2_PASSWORD:-} uv run pytest tests/e2e -m e2e -o addopts=""'
 
 # ─── Lint & Typecheck ─────────────────────────────────────
 lint:
@@ -66,6 +66,13 @@ typecheck-frontend:
 	cd frontend && pnpm typecheck
 
 typecheck: typecheck-backend typecheck-frontend
+
+# ─── Seguridad (GATE-SEC) ─────────────────────────────────
+security:
+	cd backend && uv run python scripts/security_check.py --check
+
+security-report:
+	cd backend && uv run python scripts/security_check.py --report
 
 # ─── Quality all-in-one ───────────────────────────────────
 check: lint typecheck test

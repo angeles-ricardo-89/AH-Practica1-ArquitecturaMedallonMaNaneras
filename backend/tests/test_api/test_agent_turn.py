@@ -111,3 +111,5 @@ def test_agent_turn_model_error_returns_503(real_auth, demo_users) -> None:
             headers={"X-CSRF-Token": csrf},
         )
     assert resp.status_code == 503
+    assert resp.json() == {"detail": "Internal server error"}
+    assert "modelo no disponible" not in resp.text

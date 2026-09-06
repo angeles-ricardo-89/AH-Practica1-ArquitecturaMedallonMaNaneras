@@ -23,6 +23,8 @@ from lakehouse.services.agent.tools import (
 EMB = [0.0] * 768
 EMB_STR = "[" + ",".join(["0.0"] * 768) + "]"
 
+pytestmark = [pytest.mark.security("A05")]
+
 
 @pytest.fixture
 def cluster_seed(pg_conn_str: str):
@@ -47,9 +49,36 @@ def cluster_seed(pg_conn_str: str):
             (run_id, 1, "salud"),
         )
         chunks = [
-            ("agent_k1", "c1", "2025-01-01", "PARTICIPANTE A", "texto sobre energia electrica y reforma energetica nacional del pais", "u1", 0, 0.9),
-            ("agent_k2", "c2", "2025-06-01", "PARTICIPANTE B", "otro texto sobre energia y la comision federal de electricidad de mexico", "u2", 0, 0.5),
-            ("agent_k3", "c3", "2025-02-01", "PARTICIPANTE A", "texto sobre salud publica y el sistema nacional de vacunacion", "u3", 1, 0.8),
+            (
+                "agent_k1",
+                "c1",
+                "2025-01-01",
+                "PARTICIPANTE A",
+                "texto sobre energia electrica y reforma energetica nacional del pais",
+                "u1",
+                0,
+                0.9,
+            ),
+            (
+                "agent_k2",
+                "c2",
+                "2025-06-01",
+                "PARTICIPANTE B",
+                "otro texto sobre energia y la comision federal de electricidad de mexico",
+                "u2",
+                0,
+                0.5,
+            ),
+            (
+                "agent_k3",
+                "c3",
+                "2025-02-01",
+                "PARTICIPANTE A",
+                "texto sobre salud publica y el sistema nacional de vacunacion",
+                "u3",
+                1,
+                0.8,
+            ),
         ]
         for key, conf, dt, part, txt, url, cid, pert in chunks:
             conn.execute(

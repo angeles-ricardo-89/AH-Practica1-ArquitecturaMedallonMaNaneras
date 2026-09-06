@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import psycopg
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from lakehouse.api.deps import CurrentUser, SettingsDep, get_current_user, require_csrf
+from lakehouse.db.connection import pg_connect
 from lakehouse.schemas.auth import LoginRequest, LoginResponse, MeResponse
 from lakehouse.services.rate_limit import is_allowed, minute_window_start, retry_after_seconds
 from lakehouse.services.security import (
@@ -55,7 +55,11 @@ def login(
             headers={"Retry-After": str(retry_after_seconds())},
         )
 
-    with psycopg.connect(_pg_conn_str(settings)) as conn:
+    with pg_connect(
+        _pg_conn_str(settings),
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
+    ) as conn:
         row = conn.execute(
             "SELECT id, password_hash, role FROM app_user WHERE username = %s",
             (payload.username,),

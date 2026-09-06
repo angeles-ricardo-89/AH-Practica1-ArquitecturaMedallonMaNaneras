@@ -7,6 +7,7 @@ import psycopg
 from fastapi import APIRouter, Query
 
 from lakehouse.config import Settings
+from lakehouse.db.connection import pg_conn_str_with_timeouts
 from lakehouse.schemas.observability import (
     LayerHistoryResponse,
     LayerRun,
@@ -31,9 +32,14 @@ SEMAPHORE_COLORS: dict[str, str] = {
 
 def _get_pg_conn_str() -> str:
     settings = Settings()
-    return (
+    base = (
         f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
         f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+    )
+    return pg_conn_str_with_timeouts(
+        base,
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
     )
 
 

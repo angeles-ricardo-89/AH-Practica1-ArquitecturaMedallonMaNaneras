@@ -41,11 +41,7 @@ opencode.json
 # Worktrees
 .worktrees/
 
-# uv lock (generated)
-backend/uv.lock
-
-# pnpm lock (generated)
-frontend/pnpm-lock.yaml
+# pnpm store (cache local; el lockfile SI se commitea: cadena de suministro A03)
 frontend/.pnpm-store/
 
 

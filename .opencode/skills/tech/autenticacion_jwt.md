@@ -4,7 +4,8 @@
 
 Gobernar la autenticacion del producto: JWT firmado HS256 en cookie `HttpOnly`, proteccion CSRF
 para operaciones con estado, hashing de contrasenas con Argon2 y la provision idempotente de los
-dos usuarios demo. Es la unica duena del control de acceso por propietario.
+dos usuarios demo. El control de acceso por propietario lo gobierna la skill de dominio
+`security-access-control.md`; esta skill es duena de los mecanismos de autenticacion.
 
 ## Cuando usar
 
