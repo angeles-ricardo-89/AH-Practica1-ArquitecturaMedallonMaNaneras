@@ -51,18 +51,19 @@ def test_flags_upper_case_secret(gitrepo: Path) -> None:
 
 
 def test_flags_demo_password_in_template(gitrepo: Path) -> None:
-    commit_file(gitrepo, ".env.template", "DEMO_USER_1_PASSWORD=RealP@ssw0rd123\n")
+    pw = "RealP@ssw0rd123"
+    commit_file(gitrepo, ".env.template", f"DEMO_USER_1_PASSWORD={pw}\n")
     result = run_scanner(gitrepo)
     assert result.returncode == 1
     assert ".env.template:1:template-non-placeholder" in result.stdout
 
 
 def test_allows_documented_dev_default(gitrepo: Path) -> None:
-    commit_file(
-        gitrepo,
-        ".env.template",
-        "POSTGRES_PASSWORD=mananeras\nJWT_SECRET=\nDEMO_USER_2_PASSWORD=\n",
-    )
+    dev_pw = "mananeras"
+    template = "POSTGRES_PASSWORD=" + dev_pw + "\n"
+    template += "JWT_SECRET=\n"
+    template += "DEMO_USER_2_PASSWORD=\n"
+    commit_file(gitrepo, ".env.template", template)
     result = run_scanner(gitrepo)
     assert result.returncode == 0
     assert result.stdout == ""
