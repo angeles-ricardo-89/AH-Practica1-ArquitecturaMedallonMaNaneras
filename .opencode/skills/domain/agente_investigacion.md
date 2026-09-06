@@ -37,7 +37,7 @@ NO usar LangChain, LangGraph, Google ADK ni PydanticAI.
 - El agente local funciona completamente OFFLINE (no llama a Gemini ni a la red).
 - Gemma produce un plan JSON que Pydantic valida; si falla -> UN reintento con instrucciones de reparacion -> fallback seguro a `buscar_declaraciones` (trazable, no simulado).
 - El agente se NIEGA a concluir sin evidencia suficiente (umbral definido en el PRD).
-- La salida del modelo nunca se ejecuta; los resultados se sanean y validan antes de renderizar (ver PRD 13.2 LLM10).
+- La salida del modelo nunca se ejecuta; los resultados se sanean y validan antes de renderizar (ver PRD 13.2 LLM05).
 
 ## Ciclo
 

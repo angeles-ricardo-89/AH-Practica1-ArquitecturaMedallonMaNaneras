@@ -18,6 +18,9 @@ Todo `git commit` y toda ejecucion de feature debe respetar los gates de abajo.
 | `data/` y `backend/data/lakehouse/` | Capas medallon (bronze/silver/gold). Artefactos generados, gitignored. El DuckDB real se crea en `backend/data/lakehouse/` al correr desde `backend/`; `data/lakehouse/` en raiz es solo scaffold con `.gitkeep`. |
 | `docs/superpowers/{specs,plans}` | Specs y planes de feature (Gate S). |
 | `governance/GATE-S-SPEC-QUALITY.md` | Criterios completos del Gate S. |
+| `scripts/` | Utilidades del repo: `export_report_pdf.py` (genera el PDF del reporte), `gcp_cost.py` (costo determinista ~$0), `scan_secrets.py` (GATE-SEC). `scripts/pdf-tools/` = paquete pnpm con mermaid-cli (render de diagramas). |
+| `infra/terraform/` | IaC productivo GCP (Cloud Run, Neon, Secret Manager, Gemini). `*.tfvars`/`*.tfstate` gitignored; estado remoto en GCS. |
+| `docs/reporte.md` → `docs/reporte.pdf` | Reporte final: fuente Markdown editable (diagramas mermaid inline) y PDF generado (ambos commiteados). Portada `docs/Portada-reporte.png`; capturas en `docs/evidence/`. |
 
 Docker Compose levanta: `postgres` pgvector (expuesto `5433:5432`), `backend` (NO expuesto al host), `frontend` (`5174:5173`, corre `pnpm dev`). DB por defecto `mananeras/mananeras/mananeras`.
 
@@ -28,7 +31,7 @@ Docker Compose levanta: `postgres` pgvector (expuesto `5433:5432`), `backend` (N
 - **Los tests de backend NO son hermeticos**: requieren Postgres+pgvector vivo en `localhost:5433`.
   `backend/tests/conftest.py` crea/usa la DB `mananeras_test` y aborta (`SystemExit`) si no hay postgres.
   Levanta antes: `docker compose up -d postgres`.
-- **`.env` se lee relativo al CWD** (pydantic-settings `env_file=".env"`). Por eso los targets del Makefile hacen `cd backend`. El `.env` de raiz esta gitignored (copiar `.env.template`). Ojo: el template dice `nomic-embed-text`, pero el modelo de embed real es `embeddinggemma` (default de `config.py` y del `.env` actual): no copies el template a ciegas.
+- **`.env` se lee relativo al CWD** (pydantic-settings `env_file=".env"`). Por eso los targets del Makefile hacen `cd backend`. El `.env` de raiz esta gitignored (copiar `.env.template`). El modelo de embed local es `embeddinggemma` (default de `config.py` y del template). Para produccion hay `.env.production.example` (Gemini + Neon); los valores reales viven en Secret Manager, nunca se commitean.
 - **Ollama (embeddings) y llamacpp (chat) corren en el host**, nunca en docker. En docker se alcanzan via `host.docker.internal:11434` y `host.docker.internal:9200/v1`; en local `localhost:11434` / `localhost:9200/v1`. Sin ellos: `pipeline enrich` reintenta y deja registros sin embedding; `/chat` devuelve 503.
 - **Frontend dev**: Vite proxya `/api` → `http://backend:8000` (`vite.config.ts`). Ese hostname solo resuelve dentro de la red de compose. Para ver la UI usa docker (`http://localhost:5174`); un `pnpm dev` en el host no llegara a la API salvo que definas un alias `backend`.
 - El host expone **solo** postgres (5433) y frontend (5174); el backend de compose no tiene puerto publicado.
@@ -165,12 +168,26 @@ Cada Domain Skill referencia la Tech Skill que usa: sigue las referencias cruzad
 ## REGLAS DE CONVIVENCIA CON EL CODIGO
 
 - **Prohibido pyenv/pip/poetry.** Solo `uv` para dependencias Python 3.13.
-- **Prohibido npm/yarn.** Solo `pnpm` para frontend.
+- **Prohibido npm/yarn.** Solo `pnpm` (frontend y `scripts/pdf-tools`).
 - **Prohibido IDs aleatorios (UUID4, Snowflake).** Solo hashes concatenados deterministas.
 - **Prohibido modificar archivos de skill sin actualizar AGENTS.md.**
 - **Cero prints de debug en produccion.** Usar `logging` con niveles por `APP_ENV`.
 - **Todo endpoint documentado.** Usar `summary` y `description` en decoradores FastAPI.
 - **Commits atomicos**, mensaje en espanol imperativo: "agrega ingesta bronze", "corrige race condition en merge".
+
+---
+
+## REPORTE (ENTREGABLE PDF)
+
+El reporte final es Markdown editable; el PDF es un artefacto generado (ambos commiteados).
+
+- **Fuente:** `docs/reporte.md` (diagramas mermaid inline). Edita aqui; nunca edites el PDF a mano.
+- **Generar:** `python3 scripts/export_report_pdf.py` — corre con el **Python del host**, NO con `uv`/venv del backend.
+  Requiere en el host `pandoc`, `weasyprint`, `Pillow` y `Chrome/Chromium`, mas mermaid-cli instalado una vez con:
+  `cd scripts/pdf-tools && PUPPETEER_SKIP_DOWNLOAD=true pnpm install` (usa el Chrome del sistema; no descarga Chromium).
+- **Mermaid:** WeasyPrint no renderiza mermaid ni escala imagenes altas. El script renderiza cada bloque `mermaid` (code fence) a PNG con mermaid-cli y lo ajusta con Pillow para que quepa en una pagina. No intentes `max-height` en el CSS: WeasyPrint lo ignora.
+- **Screenshots** (`docs/evidence/*.png`): capturalos con viewport **~1280x850**. A viewport grande (~1863px) el texto de la UI queda ilegible al reducirse al ancho de contenido del PDF (643px).
+- Portada `docs/Portada-reporte.png` (A4) a pagina completa; el contenido arranca en la pagina 2.
 
 ---
 
@@ -194,6 +211,9 @@ make pipeline-enrich                    # gold: embeddings + clustering (requier
 make pipeline-full
 
 # Evaluacion RAG (backend): python -m lakehouse evaluate-rag
+
+# Reporte (entregable): regenera el PDF desde docs/reporte.md (Python del host)
+python3 scripts/export_report_pdf.py
 
 # Seguridad (GATE-SEC)
 make security            # GATE-SEC: bloquea si algun control de seguridad carece de prueba

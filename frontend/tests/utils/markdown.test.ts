@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// security: LLM10
+// security: LLM05
 import { describe, it, expect } from 'vitest'
 import { renderMarkdown } from '../../src/utils/markdown'
 

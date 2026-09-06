@@ -10,7 +10,7 @@ global por modulo.
 ## Referencias
 
 - FastAPI + Pydantic + Typer: `../tech/fastapi_pydantic_typer.md`
-- Testing de Seguridad: `../tech/security_testing.md` (marcador HDRS)
+- Testing de Seguridad: `../tech/security_testing.md` (marcador A02)
 - Testing + QA: `../tech/testing_qa.md`
 
 ## Patron actual (create_app)
@@ -81,12 +81,12 @@ _CSP = (
 ## Reglas de mantenimiento
 
 - Un header o politica nueva se agrega en estos dos archivos y se refleja en los tests de
-  `backend/tests/test_security.py` (marcador HDRS) y en la CSP de este mismo archivo.
+  `backend/tests/test_security.py` (marcador A02) y en la CSP de este mismo archivo.
 - CORS nunca con `*` ni con origen derivado de `Origin` del cliente: siempre lista estatica de config.
 - Docs solo visibles fuera de produccion; si se habilita una ruta de debug nueva, protegerla con el mismo criterio.
 
 ## Verificaciones
 
 - [ ] `uv run pytest tests/test_security.py --cov=src --cov-fail-under=90` verde.
-- [ ] `make security-report` muestra HDRS en OK.
+- [ ] `make security-report` muestra A02 en OK.
 - [ ] Smoke en navegador del build Vue+ECharts en produccion con CSP activa.

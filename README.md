@@ -12,9 +12,12 @@
 
 
 
-[![Backend Tests](https://img.shields.io/badge/backend%20tests-675%20passed-brightgreen)]()
+[![Backend Tests](https://img.shields.io/badge/backend%20tests-679%20passed-brightgreen)]()
 [![Frontend Tests](https://img.shields.io/badge/frontend%20tests-47%20passed-brightgreen)]()
-[![Coverage](https://img.shields.io/badge/coverage-96.34%25-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-96.33%25-brightgreen)]()
+[![Security](https://img.shields.io/badge/security-16%2F16%20checks-brightgreen)]()
+[![OWASP Top 10](https://img.shields.io/badge/OWASP%20Top%2010-8%20controles-brightgreen)]()
+[![OWASP LLM 2025](https://img.shields.io/badge/OWASP%20LLM%202025-4%20controles-brightgreen)]()
 [![Python](https://img.shields.io/badge/python-3.13-blue)]()
 [![Estado](https://img.shields.io/badge/estado-operativo-brightgreen)]()
 
@@ -25,7 +28,7 @@
 La evolución del producto hacia un **agente de investigación** acotado (autenticación,
 memoria conversacional aislada y tres tools de solo lectura) está especificada en
 [`docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md`](docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md).
-**Estado: implementado y desplegado** (T1–T12). URL productiva:
+**Estado: implementado y desplegado** (T1–T13). URL productiva:
 
 **https://rag-del-pueblo-iens6os2ba-uc.a.run.app** (servicio Cloud Run `rag-del-pueblo`; Neon + Gemini).
 
@@ -114,11 +117,11 @@ verificables a las fuentes originales.
 
 | Componente               | Estado          | Notas                                          |
 | ------------------------ | --------------- | ---------------------------------------------- |
-| Ingesta Bronze           | Completo        | 2 lotes, 944 paginas, hash SHA-256             |
-| Parsing Silver           | Completo        | 52,401 intervenciones, validacion Pydantic     |
-| Enriquecimiento Gold     | Completo        | 10,583 chunks con embeddings de 768 dimensiones |
-| Indice vectorial         | Completo        | HNSW en pgvector, similitud coseno             |
-| API REST                 | Completo        | 6 routers, 380 tests                           |
+| Ingesta Bronze           | Completo        | 991 conferencias (2,897 registros raw_html), hash SHA-256 |
+| Parsing Silver           | Completo        | 55,136 intervenciones, validacion Pydantic (DLQ: 0)       |
+| Enriquecimiento Gold     | Completo        | 11,120 chunks con embeddings de 768 dimensiones           |
+| Indice vectorial         | Completo        | HNSW en pgvector, similitud coseno                        |
+| API REST                 | Completo        | 9 routers, 679 tests (96.33% coverage)                    |
 | Chat RAG                 | Completo        | Respuestas con fuentes y citas                 |
 | Dashboard frontend       | Completo        | Semaforo, timeline, chat, embeddings 3D        |
 | Evaluacion RAG           | Completo        | LLM-as-a-Judge: 50 preguntas, fidelidad 93.51%, relevancia 99.53%, cobertura 73.09% (resultado real, sin marcadores) |
@@ -406,7 +409,7 @@ sequenceDiagram
 │   │   ├── pipeline/                # Ingesta, parsing, enrichment, scraper, DLQ, evaluate_rag, interrupt
 │   │   ├── schemas/                 # Modelos Pydantic (bronze, silver, gold, search, chat, observability)
 │   │   └── services/                # Logica de negocio (IngestService, ParseService, EnrichService, RAG, etc.)
-│   ├── tests/                       # Suite de tests (534 tests, 97.27% coverage)
+│   ├── tests/                       # Suite de tests (>= 90% coverage, gate Q)
 │   ├── data/                        # DuckDB y golden dataset
 │   └── logs/                        # Logs de pipeline
 │
@@ -421,14 +424,18 @@ sequenceDiagram
 │   │   ├── api/                     # Clientes HTTP (chat, search, observability, embeddings, config)
 │   │   ├── stores/                  # Pinia stores (chat, dashboard, observability)
 │   │   └── components/              # Componentes (chat, dashboard, pipeline, search, inspector, shared)
-│   └── tests/components/            # Tests Vitest (39 tests)
+│   └── tests/components/            # Tests Vitest
 │
 ├── docs/
 │   ├── prd/                         # Documento de requisitos del producto
 │   ├── superpowers/
-│   │   ├── specs/                   # Especificaciones de diseno (13 archivos)
-│   │   └── plans/                   # Planes de implementacion (12 archivos)
-│   └── screenshots/                 # Capturas de evidencia
+│   │   ├── specs/                   # Especificaciones de diseno
+│   │   └── plans/                   # Planes de implementacion
+│   ├── reporte.md                   # FUENTE editable del reporte final (mermaid inline)
+│   ├── reporte.pdf                  # PDF entregable GENERADO (commiteado)
+│   ├── Portada-reporte.png          # Portada A4 del PDF
+│   ├── evidence/                    # Capturas del producto en produccion
+│   └── screenshots/                 # Capturas historicas (entorno local)
 │
 ├── evaluacion/                      # Framework de evaluacion automatica
 │   └── src/evaluador/
@@ -439,12 +446,43 @@ sequenceDiagram
 ├── governance/
 │   └── GATE-S-SPEC-QUALITY.md       # Criterios de calidad de especificaciones
 │
+├── scripts/                         # Utilidades del repo
+│   ├── export_report_pdf.py         # Genera docs/reporte.pdf (pandoc + weasyprint + mermaid)
+│   ├── gcp_cost.py                  # Estimacion determinista de costo GCP (~$0)
+│   ├── scan_secrets.py              # GATE-SEC: deteccion de secretos en git
+│   └── pdf-tools/                   # pnpm + mermaid-cli (render de diagramas)
+
+├── infra/terraform/                 # IaC productivo GCP (Cloud Run, Neon, Secret Manager, Gemini)
+
 └── data/lakehouse/                  # Directorio de datos en runtime (gitignored)
     ├── bronze/
     ├── silver/
     ├── gold/
     └── logs/
 ```
+
+---
+
+## Reporte y PDF del entregable
+
+El reporte final del proyecto es **Markdown editable**; el PDF es un artefacto generado
+(ambos se commitean).
+
+- **Fuente:** [`docs/reporte.md`](docs/reporte.md) — redacción del reporte con los diagramas
+  de arquitectura en [mermaid](https://mermaid.js.org) (pipeline medallón, capa de
+  indagación, turno RAG y despliegue productivo).
+- **Generar el PDF:**
+  ```bash
+  python3 scripts/export_report_pdf.py
+  ```
+  Corre con el **Python del host** (no con el `uv`/venv del backend). Requiere `pandoc`,
+  `weasyprint`, `Pillow` y Chrome/Chromium, más mermaid-cli instalado una vez con:
+  ```bash
+  cd scripts/pdf-tools && PUPPETEER_SKIP_DOWNLOAD=true pnpm install
+  ```
+  (usa el Chrome del sistema; no descarga Chromium).
+- **Salida:** `docs/reporte.pdf`, con `docs/Portada-reporte.png` como portada a página
+  completa. Las capturas de evidencia en producción viven en `docs/evidence/`.
 
 ---
 
@@ -942,6 +980,11 @@ el 2026-08-02, accediendo a `http://localhost:5174`.
 | 7 | [07-chat-extraterrestre.png](docs/screenshots/07-chat-extraterrestre.png) | Chat: pregunta trampa sobre invasion extraterrestre |
 | 8 | [08-chat-all-four.png](docs/screenshots/08-chat-all-four.png) | Vista completa con las 4 preguntas y fuentes    |
 
+Las capturas del **despliegue productivo** (login, turno del agente con fuentes, dashboard
+con embeddings 3D y aislamiento entre usuarios) están en
+[`docs/evidence/`](docs/evidence/) y se referencian en el
+[reporte final](docs/reporte.md).
+
 ---
 
 ## Prueba de operacion sin Internet
@@ -1023,19 +1066,25 @@ Los 8 chunks recuperados tenian similitud maxima de 0.40 y trataban temas no rel
 cd backend && uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=90
 ```
 
-**Resultado:** 534 passed, 97.27% coverage (satisface el umbral de >= 90%)
+**Resultado:** 679 passed, 96.33% coverage (satisface el umbral de >= 90%)
 
-**Desglose por area:**
+**Desglose por area (679 tests en total, cobertura global 96.33%):**
 
-| Area           | Tests | Cobertura |
-| -------------- | ----: | --------: |
-| Schemas        |   100+ |      100% |
-| API Routers    |   50+ |  96-100% |
-| Pipeline       |   60+ |  91-97%  |
-| Services       |   50+ |  98-100% |
-| Database       |   30+ |  67-100% |
-| CLI            |     - |      99%  |
-| Config/Logging |     - |  92-100% |
+| Area                     | Tests |
+| ------------------------ | ----: |
+| Pipeline                 |   209 |
+| Servicios + agente       |   150 |
+| API Routers              |   130 |
+| Schemas                  |    64 |
+| CLI                      |    36 |
+| Evaluacion RAG           |    29 |
+| Config / Logging         |    20 |
+| Seguridad                |    19 |
+| Base de datos            |    11 |
+| Otros (costo, secretos)  |     8 |
+
+> El conteo por area es aproximado: pytest reporta 679 passed (los casos parametrizados
+> se cuentan por funcion, no por caso).
 
 ### Frontend
 
@@ -1043,7 +1092,7 @@ cd backend && uv run pytest --cov=src --cov-report=term-missing --cov-fail-under
 cd frontend && pnpm test:unit
 ```
 
-**Resultado:** 7 test files, 43 tests, all passed
+**Resultado:** 8 test files, 47 tests, all passed
 
 ### Linting y typecheck
 
@@ -1053,6 +1102,31 @@ make typecheck     # ty check + vue-tsc
 ```
 
 **Resultado:** Sin errores
+
+### Seguridad (GATE-SEC / OWASP)
+
+```bash
+make security          # GATE-SEC: bloquea si un control carece de prueba/chequeo
+make security-report   # GATE-SEC: matriz amenaza -> control -> prueba (informativo)
+```
+
+**Resultado:** 16 prueba(s)/chequeo(s), 0 con falla (14 controles).
+
+Los controles de seguridad se materializan en codigo y se registran en
+[`governance/security-controls.yaml`](governance/security-controls.yaml), siguiendo
+**OWASP Top 10:2025** y **OWASP Top 10 for LLM Applications 2025**. Solo se listan los
+controles que aplican al diseno; cada uno queda vigilado por una prueba/chequeo
+(`pytest.mark.security("<ID>")` en backend, `// security: <ID>` en frontend, o un chequeo
+`lockfiles`/`secrets-scan`).
+
+| Framework                | Controles cubiertos                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| OWASP Top 10:2025        | A01 Broken Access Control · A02 Security Misconfiguration · A03 Software Supply Chain Failures · A04 Cryptographic Failures · A05 Injection · A07 Authentication Failures · A09 Security Logging and Alerting Failures · A10 Mishandling of Exceptional Conditions |
+| OWASP LLM Top 10 (2025)  | LLM01 Prompt Injection · LLM02 Sensitive Information Disclosure · LLM05 Improper Output Handling · LLM06 Excessive Agency |
+| Propios (sin ID OWASP)   | CSRF Protection · Secret Scanning (SEC)                                                                        |
+
+Referencias: [`governance/GATE-SEC-SECURITY.md`](governance/GATE-SEC-SECURITY.md) y
+`scripts/scan_secrets.py` (escaner de secretos).
 
 ---
 
