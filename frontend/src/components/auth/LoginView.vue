@@ -25,7 +25,7 @@ async function onSubmit() {
 <template>
   <div class="min-h-screen bg-stone-50 flex items-center justify-center p-6">
     <div class="w-full max-w-sm bg-white border border-stone-200 rounded-2xl p-8 shadow-sm">
-      <h1 class="text-xl font-bold text-stone-950">Mañaneras · Investigación</h1>
+      <h1 class="text-xl font-bold text-stone-950">RAG del pueblo</h1>
       <p class="text-xs text-stone-500 mt-1 mb-6">
         Acceso restringido. Usa las credenciales demo entregadas en el PDF de la entrega.
       </p>
