@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS message (
     completion_tokens INTEGER,
     total_tokens      INTEGER,
     model             TEXT,
+    sources           JSONB,
+    latency_ms        DOUBLE PRECISION,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -65,10 +67,16 @@ DROP TABLE IF EXISTS conversation;
 DROP TABLE IF EXISTS app_user;
 """
 
+MESSAGE_SOURCES_DDL = """
+ALTER TABLE message ADD COLUMN IF NOT EXISTS sources JSONB;
+ALTER TABLE message ADD COLUMN IF NOT EXISTS latency_ms DOUBLE PRECISION;
+"""
+
 
 def ensure_auth_memory_tables(pg_conn_str: str) -> None:
     with psycopg.connect(pg_conn_str) as conn:
         conn.execute(AUTH_MEMORY_DDL)
+        conn.execute(MESSAGE_SOURCES_DDL)
         conn.commit()
 
 

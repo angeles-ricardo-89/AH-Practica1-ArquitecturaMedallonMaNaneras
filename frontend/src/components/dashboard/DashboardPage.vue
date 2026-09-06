@@ -113,10 +113,35 @@ async function openConversation(id: string) {
   try {
     const detail = await getConversation(id)
     for (const m of detail.messages) {
-      chatStore.addMessage({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content,
-      })
+      if (m.role === 'assistant') {
+        const sources = m.sources ?? []
+        const numSources = sources.length
+        const avgSim =
+          numSources > 0
+            ? sources.reduce((s, src) => s + src.similarity, 0) / numSources
+            : 0
+        chatStore.addMessage({
+          role: 'assistant',
+          content: m.content,
+          sources,
+          metrics: {
+            similarity: avgSim,
+            numSources,
+            coverage: numSources > 0 ? 100 : 0,
+            latency: m.latency_ms ?? 0,
+            tokens: m.total_tokens ?? 0,
+            model: m.model ?? '',
+          },
+        })
+      } else {
+        chatStore.addMessage({ role: 'user', content: m.content })
+      }
+    }
+    const lastAssistant = [...chatStore.messages]
+      .reverse()
+      .find((msg) => msg.role === 'assistant')
+    if (lastAssistant?.metrics?.tokens) {
+      chatStore.setTokenUsage({ total: lastAssistant.metrics.tokens })
     }
   } catch (err) {
     console.error('Error cargando conversación:', err)

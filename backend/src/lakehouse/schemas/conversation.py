@@ -29,6 +29,10 @@ class MessageItem(BaseModel):
     role: str
     content: str
     created_at: datetime
+    model: str | None = None
+    total_tokens: int | None = None
+    latency_ms: float | None = None
+    sources: list[SourceChunk] = Field(default_factory=list)
 
 
 class ConversationDetail(BaseModel):

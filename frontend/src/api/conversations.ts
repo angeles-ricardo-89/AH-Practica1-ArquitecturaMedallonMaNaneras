@@ -13,6 +13,10 @@ export interface ConversationMessage {
   role: string
   content: string
   created_at: string
+  model?: string | null
+  total_tokens?: number | null
+  latency_ms?: number | null
+  sources?: SourceChunk[]
 }
 
 export interface ConversationDetail {
