@@ -55,6 +55,32 @@ services:
     networks:
       - lakehouse-net
 
+  # Verificacion del pipeline medallon con muestra Bronze congelada (no toca el corpus real).
+  # Ollama/llamacpp corren en el host: se alcanzan via host.docker.internal.
+  pipeline:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.pipeline
+    profiles: ["pipeline"]
+    container_name: mananeras-pipeline
+    env_file:
+      - .env
+    environment:
+      APP_ENV: docker
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: mananeras_verify
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      LLAMACPP_BASE_URL: http://host.docker.internal:9200/v1
+      DUCKLAKE_DATA_PATH: /data/verify/ducklake_verify.duckdb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lakehouse-net
+
 networks:
   lakehouse-net:
     driver: bridge

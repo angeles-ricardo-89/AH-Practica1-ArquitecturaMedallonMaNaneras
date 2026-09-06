@@ -625,3 +625,33 @@ class TestEvaluateRagCommand:
         result = runner.invoke(app, ["evaluate-rag"])
         assert result.exit_code == 1
         assert "RAG Evaluation failed: Golden dataset not found" in result.output
+
+
+class TestPipelineVerify:
+    @patch("lakehouse.cli.ensure_verify_database")
+    @patch("lakehouse.cli.verify_pipeline")
+    def test_verify_reports_per_layer_evidence(self, mock_verify, mock_ensure):
+        mock_verify.return_value = {
+            "bronze": 8,
+            "silver_conferences": 8,
+            "silver_interventions": 16,
+            "silver_dlq": 0,
+            "gold_total": 8,
+            "gold_embedded": 8,
+            "clusters": 2,
+            "noise": 0,
+            "labels_completed": 2,
+            "labels_failed": 0,
+        }
+        result = runner.invoke(
+            app, ["pipeline", "verify", "--fixture-dir", "tests/fixtures/bronze", "--clean"]
+        )
+        assert result.exit_code == 0
+        assert mock_verify.call_args.args[1] == "tests/fixtures/bronze"
+        assert mock_verify.call_args.kwargs["clean"] is True
+        assert "Verificacion del pipeline" in result.output
+        assert "Bronze: 8 registros" in result.output
+        assert "Silver: 8 conferencias, 16 intervenciones, 0 DLQ" in result.output
+        assert "Gold: 8/8 embeddings" in result.output
+        assert "Clustering: 2 clusters, 0 ruido" in result.output
+        assert "Etiquetado: 2 completados, 0 fallidos" in result.output

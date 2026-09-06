@@ -6,8 +6,8 @@
 - **PRD:** `docs/prd/arquitectura_medallon_y_embbeding_CSP.md`
 - **Fecha de creacion:** 2026-07-26
 - **Estado actual:** PRD 3.0 aprobado (agente/memoria/auth); plan 2026-09-05 en implementacion
-- **Ultimo checkpoint completado:** S10 (Endurecimiento de seguridad y gate GATE-SEC)
-- **Siguiente fase (pendiente de revision/merge):** Fase de endurecimiento de seguridad y gate perpetuo S1–S10 completada; queda revision final y merge de la rama (plan: `docs/superpowers/plans/2026-09-05-security-hardening-gate.md`)
+- **Ultimo checkpoint completado:** T10 (Docker y verificacion del pipeline)
+- **Siguiente fase (pendiente):** T11 (adaptadores Gemini y reindexacion productiva)
 
 ## Reglas de Reanudacion
 
@@ -657,6 +657,24 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 ---
 
+### FASE: Docker y verificación del pipeline (PRD 3.0)
+
+#### T10: Docker y verificación del pipeline
+
+**Objetivo:** Servicio `pipeline` en contenedor con el mismo código + `make docker-verify` con muestra Bronze congelada.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- Fixture congelado `backend/tests/fixtures/bronze/` (8 conferencias HTML gob.mx) sin descargas.
+- `pipeline/verify.py` (`load_frozen_bronze`, `ensure_verify_database`, `verify_pipeline`) + CLI `pipeline verify`.
+- Test `tests/test_pipeline/test_verify.py` valida Bronze→Silver→Gold→clustering→etiquetado por capa (mocks solo en la frontera HTTP de Ollama/llamacpp).
+- `Dockerfile.pipeline` + servicio `pipeline` (perfil) en `docker-compose.yml`; `make docker-verify` reproducible.
+- `make docker-verify` (Ollama + llamacpp reales via host): Bronze 8, Silver 8/16/0, Gold 8/8, clustering 2/0, etiquetado 2/0 — idéntico en dos ejecuciones.
+- Suite backend 621 passed, coverage 96.70%; `ruff`/`ty` sin errores; `make security` verde.
+
+---
+
 ## Resumen de Checkpoints
 
 | CP | Fase | Nombre | Estado |
@@ -697,3 +715,4 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 | S8 | Seguridad | Inspector determinista + gate | [x] |
 | S9 | Seguridad | Skills de seguridad + AGENTS.md | [x] |
 | S10 | Seguridad | Pruebas de seguridad + GATE-SEC + verificación | [x] |
+| T10 | Agente/Memoria/Auth | Docker y verificación del pipeline | [x] |

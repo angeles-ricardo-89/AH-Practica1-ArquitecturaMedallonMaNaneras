@@ -11,6 +11,7 @@ from lakehouse.db.observability_conn import ensure_observability_tables
 from lakehouse.log_config import get_logger
 from lakehouse.pipeline.evaluate_rag import evaluate_rag as evaluate_rag_fn
 from lakehouse.pipeline.interrupt import install_graceful_interrupt, interrupt_state
+from lakehouse.pipeline.verify import ensure_verify_database, verify_pipeline
 from lakehouse.services.enrich_service import EnrichService
 from lakehouse.services.ingest_service import IngestService
 from lakehouse.services.parse_service import ParseService
@@ -266,6 +267,34 @@ def enrich(
     typer.echo(
         f"Enriquecimiento completado: {result.embedded} incrustados, {result.failed_to_embed} fallidos, {result.mapped_3d} mapeados 3D, {result.failed_to_map} fallidos, {result.clustered} clusterizados, {result.noise} ruido, {result.clusters} clusters, {result.clustered_with_labels} clusterizados con etiquetas, {result.failed_to_label} fallidos, "
         f"{result.failed} fallidos de {result.total} totales"
+    )
+
+
+@pipeline_app.command()
+def verify(
+    fixture_dir: str = typer.Option(
+        "tests/fixtures/bronze",
+        "--fixture-dir",
+        help="Directorio con la muestra Bronze congelada (HTML gob.mx)",
+    ),
+    clean: bool = typer.Option(
+        default=False, help="Reinicia Bronze/Silver/Gold antes de verificar"
+    ),
+) -> None:
+    settings = Settings()
+    ensure_verify_database(settings)
+    result = verify_pipeline(settings, fixture_dir, clean=clean)
+    typer.echo("Verificacion del pipeline (Bronze→Silver→Gold→clustering→etiquetado):")
+    typer.echo(f"  Bronze: {result['bronze']} registros")
+    typer.echo(
+        f"  Silver: {result['silver_conferences']} conferencias, "
+        f"{result['silver_interventions']} intervenciones, {result['silver_dlq']} DLQ"
+    )
+    typer.echo(f"  Gold: {result['gold_embedded']}/{result['gold_total']} embeddings")
+    typer.echo(f"  Clustering: {result['clusters']} clusters, {result['noise']} ruido")
+    typer.echo(
+        f"  Etiquetado: {result['labels_completed']} completados, "
+        f"{result['labels_failed']} fallidos"
     )
 
 
