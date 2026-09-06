@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
+
 import psycopg
+import pytest
 from fastapi.testclient import TestClient
 
 from lakehouse.main import app
@@ -8,12 +11,17 @@ from lakehouse.services.demo_users import ensure_demo_users
 
 TEST_USERS = [("testuser1", "test-password-1"), ("testuser2", "test-password-2")]
 
+pytestmark = [
+    pytest.mark.security("A07"),
+    pytest.mark.security("A04"),
+    pytest.mark.security("CSRF"),
+    pytest.mark.security("A09"),
+]
+
 
 def test_login_success_sets_cookie(real_auth, demo_users) -> None:
     client = TestClient(app)
-    resp = client.post(
-        "/auth/login", json={"username": "testuser1", "password": "test-password-1"}
-    )
+    resp = client.post("/auth/login", json={"username": "testuser1", "password": "test-password-1"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["csrf_token"]
@@ -83,3 +91,15 @@ def test_demo_users_idempotent(pg_conn_str: str) -> None:
 
 def test_ensure_demo_users_empty_is_noop(pg_conn_str: str) -> None:
     ensure_demo_users(pg_conn_str, [])
+
+
+def test_login_failure_does_not_leak_password(
+    caplog: pytest.LogCaptureFixture, real_auth, demo_users
+) -> None:
+    client = TestClient(app)
+    secret = "super-secret-password-xyz"
+    with caplog.at_level(logging.DEBUG):
+        resp = client.post("/auth/login", json={"username": "testuser1", "password": secret})
+    assert resp.status_code == 401
+    assert secret not in resp.text
+    assert secret not in caplog.text

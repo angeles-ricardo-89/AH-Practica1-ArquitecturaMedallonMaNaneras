@@ -21,7 +21,12 @@ from lakehouse.services.security import (
     verify_password,
 )
 
-pytestmark = pytest.mark.security("HDRS")
+pytestmark = [
+    pytest.mark.security("A04"),
+    pytest.mark.security("LLM08"),
+    pytest.mark.security("HDRS"),
+    pytest.mark.security("A10"),
+]
 
 
 def test_security_headers_always_present() -> None:
