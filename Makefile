@@ -1,4 +1,4 @@
-.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full test lint typecheck install evaluacion e2e
+.PHONY: up down ps logs pipeline-ingest pipeline-parse pipeline-enrich pipeline-full test lint typecheck install evaluacion e2e security security-report
 
 # ─── Docker ───────────────────────────────────────────────
 up:
@@ -66,6 +66,13 @@ typecheck-frontend:
 	cd frontend && pnpm typecheck
 
 typecheck: typecheck-backend typecheck-frontend
+
+# ─── Seguridad (GATE-SEC) ─────────────────────────────────
+security:
+	cd backend && uv run python scripts/security_check.py --check
+
+security-report:
+	cd backend && uv run python scripts/security_check.py --report
 
 # ─── Quality all-in-one ───────────────────────────────────
 check: lint typecheck test
