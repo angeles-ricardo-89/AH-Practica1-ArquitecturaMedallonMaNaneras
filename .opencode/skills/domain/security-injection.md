@@ -30,7 +30,7 @@ tools de solo lectura y el agente ejecuta como maximo dos tools por mensaje.
 
 ## Amenaza y control
 
-- **A05 Injection:** la fuente de datos es un corpus propio (no hay SQL, URL ni búsqueda web del
+- **A05 Injection:** la fuente de datos es un corpus propio (no hay SQL, URL ni busqueda web del
   modelo). Toda consulta a Postgres usa parametros de psycopg (`%s`); las tools no aceptan SQL ni
   URL y rechazan entradas fuera de su contrato (tipos, rangos, claves inexistentes).
 - **LLM01 Prompt Injection:** el corpus recuperado y la transcripcion se tratan como DATO, nunca
@@ -53,13 +53,14 @@ tools de solo lectura y el agente ejecuta como maximo dos tools por mensaje.
 - El modelo no emite SQL, URLs, `user_id` ni argumentos libres: todo pasa por allowlist + Pydantic.
 - Tres tools de solo lectura, cerradas: `buscar_declaraciones`, `explorar_temas`, `consultar_cluster`.
 - Maximo DOS ejecuciones de tool por mensaje y maximo 10 segundos por tool.
-- Tool o argumento no permitido se rechaza ANTES de tocar datos.
+- Nombre de tool fuera de la allowlist o argumento con tipo/rango no permitido se rechaza ANTES de
+  tocar datos; argumentos extra desconocidos se ignoran por el esquema Pydantic (no se ejecutan).
 - El corpus es dato: su contenido no cambia instrucciones ni habilita tools.
 - Sin evidencia suficiente el agente se niega a concluir (negativa explicita).
 
 ## Verificaciones de aceptacion
 
-- [ ] Tool/argumento fuera de allowlist rechazado antes de acceder a datos (LLM01, `tests/test_agent/test_planner.py`: `test_validate_plan_allowlist`).
+- [ ] Tool fuera de la allowlist rechazada antes de acceder a datos (LLM01, `tests/test_agent/test_planner.py`: `test_validate_plan_allowlist`).
 - [ ] Plan invalido se repara una vez y, si vuelve a fallar, cae al fallback seguro (`test_plan_first_tool_repairs_after_invalid`, `test_plan_first_tool_fallback_after_double_invalid`).
 - [ ] Nunca mas de 2 tools por turno (LLM03, `tests/test_agent/test_executor.py`: `test_run_agent_turn_never_exceeds_two_tools`).
 - [ ] Entradas invalidas de tools rechazadas (A05, `tests/test_agent/test_tools.py`: `test_consultar_cluster_unknown`).

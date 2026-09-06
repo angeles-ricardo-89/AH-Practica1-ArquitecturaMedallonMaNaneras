@@ -24,7 +24,7 @@ backend responde errores genericos mientras el detalle queda solo en logging.
 - `frontend/src/utils/markdown.ts` (`renderMarkdown`: `marked.parse` + `DOMPurify.sanitize`)
 - `frontend/tests/utils/markdown.test.ts` (marcador `// security: LLM10`)
 - `backend/src/lakehouse/main.py` (`exception_handler` de `RuntimeError` en `create_app`)
-- `backend/src/lakehouse/log_config.py` (niveles por `APP_ENV`, sin secretos)
+- `backend/src/lakehouse/log_config.py` (configuracion de niveles y salida de logs)
 - Prueba: `backend/tests/test_security.py` (marcador LLM08)
 
 ## Amenaza y control

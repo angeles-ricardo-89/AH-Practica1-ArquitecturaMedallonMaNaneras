@@ -1,4 +1,4 @@
-# Domain Skill: Configuracion, Headers y Limites (HDRS + A10/A09/A03)
+# Domain Skill: Configuracion, Headers y Limites (HDRS + A10/A09/A03 + SEC)
 
 ## Proposito
 
@@ -10,7 +10,7 @@ fail-closed (A06): ante configuracion ausente se niega, no se permite.
 ## Cuando usar
 
 - Tocar el middleware de headers, CORS, docs, limite de body o timeouts de BD/modelo.
-- Configurar entornos (`app_env`, orígenes CORS, tamaños y timeouts).
+- Configurar entornos (`app_env`, origenes CORS, tamaños y timeouts).
 - Revisar logging, lockfiles o el escaneo de secretos antes de publicar.
 
 ## Fuente de requisitos
@@ -51,7 +51,8 @@ fail-closed (A06): ante configuracion ausente se niega, no se permite.
 | Security Headers | `../tech/security_headers.md` | Implementacion del middleware, CORS, docs y body |
 | Testing de Seguridad | `../tech/security_testing.md` | Marcadores HDRS/A10 y chequeos del catalogo |
 
-El logging por niveles y sin secretos lo gobierna la skill de dominio `observabilidad_pull.md`.
+La higiene de logging (A09: sin secretos ni contenido en logs, niveles por entorno) se gobierna en
+esta skill; `observabilidad_pull.md` solo gobierna los endpoints de estado y el polling del dashboard.
 
 ## Invariantes
 
