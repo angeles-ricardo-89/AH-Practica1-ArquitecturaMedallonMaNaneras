@@ -119,6 +119,8 @@ autenticacion, memoria, el agente o la UI exige evidencia real:
 | UMAP + HDBSCAN Clustering | `.opencode/skills/tech/umap_hdbscan_clustering.md` | Clustering semantico |
 | LLM Auto-Labeling | `.opencode/skills/tech/llm_auto_labeling.md` | Etiquetado automatico |
 | Autenticacion JWT | `.opencode/skills/tech/autenticacion_jwt.md` | Cookie HttpOnly, CSRF, Argon2, usuarios demo |
+| Security Headers + Middleware | `.opencode/skills/tech/security_headers.md` | Headers CSP/CORS/docs/body |
+| Testing de Seguridad | `.opencode/skills/tech/security_testing.md` | Pruebas con marcadores OWASP y gate |
 | Terraform GCP | `.opencode/skills/tech/terraform_gcp.md` | IaC Cloud Run, Neon, Secret Manager, Gemini |
 | Config Runtime GCP | `.opencode/skills/tech/config_runtime_gcp.md` | Cloud Run runtime, Neon TLS, modelos Gemini |
 | Costo Infraestructura GCP | `.opencode/skills/tech/costo_infraestructura_gcp.md` | Herramienta determinista de costo (~$0) |
@@ -134,6 +136,12 @@ autenticacion, memoria, el agente o la UI exige evidencia real:
 | Agente de Investigacion | `.opencode/skills/domain/agente_investigacion.md` | Plan JSON, 3 tools solo lectura, negativa |
 | Payload Vectorial Limpio | `.opencode/skills/domain/payload_vectorial_limpio.md` | Formato texto para Ollama |
 | Observabilidad Pull | `.opencode/skills/domain/observabilidad_pull.md` | Logs, semaforos, dashboard |
+| Security Auth + JWT | `.opencode/skills/domain/security-auth-jwt.md` | JWT, Argon2, cookies, login rate-limit |
+| Security CSRF | `.opencode/skills/domain/security-csrf.md` | Token HMAC en header, SameSite como refuerzo |
+| Security Control de Acceso | `.opencode/skills/domain/security-access-control.md` | user_id del JWT, ajena -> 404, aislamiento |
+| Security Inyeccion y Agencia | `.opencode/skills/domain/security-injection.md` | SQL parametrizado, 3 tools allowlist, plan JSON |
+| Security Manejo de Salida | `.opencode/skills/domain/security-output-handling.md` | DOMPurify, errores saneados, logs sin detalle |
+| Security Headers y Config | `.opencode/skills/domain/security-headers-config.md` | Headers CSP/CORS, docs prod, body, timeouts |
 
 Cada Domain Skill referencia la Tech Skill que usa: sigue las referencias cruzadas.
 
