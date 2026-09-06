@@ -23,6 +23,7 @@ from lakehouse.api.routers import (
 from lakehouse.api.security_headers import SecurityHeadersMiddleware
 from lakehouse.config import Settings
 from lakehouse.services.demo_users import ensure_demo_users
+from lakehouse.services.index_metadata import validate_index_at_startup
 
 
 @asynccontextmanager
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
     )
     ensure_demo_users(conn_str, settings.demo_users())
+    validate_index_at_startup(settings)
     yield
 
 

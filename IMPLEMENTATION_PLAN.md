@@ -6,8 +6,8 @@
 - **PRD:** `docs/prd/arquitectura_medallon_y_embbeding_CSP.md`
 - **Fecha de creacion:** 2026-07-26
 - **Estado actual:** PRD 3.0 aprobado (agente/memoria/auth); plan 2026-09-05 en implementacion
-- **Ultimo checkpoint completado:** T10 (Docker y verificacion del pipeline)
-- **Siguiente fase (pendiente):** T11 (adaptadores Gemini y reindexacion productiva)
+- **Ultimo checkpoint completado:** T11 (adaptadores Gemini y reindexacion productiva)
+- **Siguiente fase (pendiente):** T12 (Cloud Run + Neon via Terraform)
 
 ## Reglas de Reanudacion
 
@@ -675,6 +675,25 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 ---
 
+#### T11: Adaptadores Gemini y reindexación productiva
+
+**Objetivo:** Adaptadores Gemini (embeddings + chat) aislados, metadatos de índice con validación fail-closed y reindexación total hacia un índice Neon independiente y versionado.
+
+**Estado:** [x] Completado
+
+**Evidencia:**
+- `services/gemini_embedding.py` (`GeminiEmbeddingAdapter`: `embed_documents`/`embed_query`, 768 dims, normalización L2, tareas `RETRIEVAL_DOCUMENT`/`RETRIEVAL_QUERY`) y `services/gemini_chat.py` (`GeminiChatAdapter.generate`) con `google-genai` (SDK oficial) aislado en adaptadores.
+- `schemas/index_metadata.py` + `db/index_metadata.py` (tabla `index_metadata`: proveedor, modelo, dimensión, tarea, versión de formato, fecha, hash de corpus) con upsert y lectura.
+- `services/index_metadata.py`: `validate_query_config` (fail-closed, CA-R05) + `validate_index_at_startup` (no-op en local; en producción valida modelo/dimensión/tarea contra metadatos y aborta el arranque si no coinciden). Cableado en `main.py` lifespan.
+- `services/reindex_production.py::reindex_corpus`: re-embebido TOTAL hacia un índice separado (`target_table`) con `ON CONFLICT` y registro de metadatos (CA-R06: índices local/productivo físicamente separados).
+- `db/pgvector_conn.py::build_neon_connection_string`: exige endpoint agrupado (`-pooler`) y `sslmode=require` (TLS).
+- `config.py`: settings productivos (`gemini_api_key`, `gemini_embedding_model`, `gemini_chat_model`, `gemini_embedding_dimension`, `index_format_version`, `neon_database_url`) + `is_production`.
+- `.env.template` ampliado y `.env.production.example` creado (placeholders, sin secretos).
+- `tests/test_gemini_adapters.py`: 24 tests (adaptadores mockeados en la frontera de `google-genai`, normalización, fail-closed, TLS/pooling, validación de metadatos, reindexación con separación de índices).
+- Suite backend 645 passed, coverage 96.68%; `ruff`/`ty` sin errores.
+
+---
+
 ## Resumen de Checkpoints
 
 | CP | Fase | Nombre | Estado |
@@ -716,3 +735,4 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 | S9 | Seguridad | Skills de seguridad + AGENTS.md | [x] |
 | S10 | Seguridad | Pruebas de seguridad + GATE-SEC + verificación | [x] |
 | T10 | Agente/Memoria/Auth | Docker y verificación del pipeline | [x] |
+| T11 | Agente/Memoria/Auth | Adaptadores Gemini y reindexación productiva | [x] |
