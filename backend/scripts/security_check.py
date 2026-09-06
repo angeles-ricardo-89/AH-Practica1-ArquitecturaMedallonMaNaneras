@@ -22,9 +22,18 @@ def file_coverage(path: Path, marker: str) -> tuple[bool, str]:
 
 
 def lockfiles_ok() -> tuple[bool, str]:
-    missing = [str(p.relative_to(ROOT)) for p in LOCKFILES if not p.exists()]
-    if missing:
-        return False, "lockfiles ausentes: " + ", ".join(missing)
+    untracked: list[str] = []
+    for p in LOCKFILES:
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "--", str(p)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        if not p.exists() or tracked.returncode != 0:
+            untracked.append(f"{p.relative_to(ROOT)} (ausente o no trackeado)")
+    if untracked:
+        return False, "lockfiles no fijados en git: " + ", ".join(untracked)
     return True, ""
 
 
