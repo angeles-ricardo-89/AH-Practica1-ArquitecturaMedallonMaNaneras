@@ -60,7 +60,3 @@ infra/terraform/*.tfstate
 infra/terraform/*.tfstate.*
 infra/terraform/crash.log
 infra/terraform/tfplan
-
-
-# Fuente intermedia del PDF con credenciales demo (el entregable es el PDF)
-docs/rag_del_pueblo.html
