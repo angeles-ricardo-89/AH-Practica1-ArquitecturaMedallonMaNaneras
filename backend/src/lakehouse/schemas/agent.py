@@ -92,6 +92,7 @@ class EvidenciaCluster(BaseModel):
     texto: str
     fecha: date
     participante: str
+    conferencia: str
     url: str
     pertenencia: float | None
     embedding_3d: list[float] | None = None

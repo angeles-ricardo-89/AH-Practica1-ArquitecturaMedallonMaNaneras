@@ -17,6 +17,7 @@ export const useConversationStore = defineStore('conversations', () => {
   async function load(): Promise<void> {
     try {
       conversations.value = await listConversations()
+      error.value = ''
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'No se pudieron cargar las conversaciones'
     }

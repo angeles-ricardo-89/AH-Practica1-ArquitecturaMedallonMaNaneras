@@ -90,7 +90,7 @@ def _to_source_chunks(results: list[object]) -> list[SourceChunk]:
                 chunks.append(
                     SourceChunk(
                         conference_date=str(ev.fecha),
-                        conference_id="",
+                        conference_id=ev.conferencia or ev.evidence_id,
                         participant=ev.participante,
                         chunk_text=ev.texto,
                         similarity=ev.pertenencia or 0.0,
