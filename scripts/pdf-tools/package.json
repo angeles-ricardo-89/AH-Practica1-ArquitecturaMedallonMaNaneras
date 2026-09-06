@@ -1,0 +1,8 @@
+{
+  "name": "pdf-tools",
+  "private": true,
+  "description": "Herramientas para exportar el reporte a PDF (render de diagramas mermaid).",
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "11.17.0"
+  }
+}
