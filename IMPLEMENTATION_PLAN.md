@@ -653,7 +653,7 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 
 **Evidencia:**
 - Marcadores OWASP en tests backend (`pytest.mark.security("<ID>")`) y frontend (`// security: <ID>`); GATE-SEC documentado en `AGENTS.md`.
-- `make security` verde (16/16 controles con prueba); suite backend 617 passed con coverage 96.66%; `pnpm test:unit` 47 verdes; e2e de aislamiento con usuario 2 añadido (`make e2e`).
+- `make security` verde (16/16 pruebas/chequeos sobre 14 controles); suite backend 617 passed con coverage 96.66%; `pnpm test:unit` 47 verdes; e2e de aislamiento con usuario 2 añadido (`make e2e`).
 
 ---
 

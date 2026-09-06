@@ -98,8 +98,9 @@ autenticacion, memoria, el agente o la UI exige evidencia real:
 Activacion: commit/checkpoint que toque auth, memoria, agente, UI, config, o que introduzca/ajuste un control de seguridad.
 
 ```
-[BLOQUEO] → si make security sale != 0 (control materializado sin prueba que lo ejercite)
+[BLOQUEO] → si make security sale != 0 (control del catalogo sin prueba que lo ejercite, lockfile ausente o secreto detectado)
 [BLOQUEO] → si un control de governance/security-controls.yaml no tiene prueba/chequeo registrado
+[BLOQUEO] → si una feature de seguridad se introduce sin registrar su control en governance/security-controls.yaml
 [BLOQUEO] → si scripts/scan_secrets.py detecta un secreto rastreado por git
 [BLOQUEO] → si se modifico un archivo de seguridad sin actualizar la skill correspondiente en .opencode/skills/
 ```
