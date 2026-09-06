@@ -6,7 +6,8 @@ Uso:
 
 Recorre la salida de `git ls-files` desde REPO_ROOT (por defecto, la raíz
 del repo derivada de la ubicación del script) y aplica patrones regex por
-línea. Exit 0 sin hallazgos; exit 1 si encuentra algún secreto.
+línea. Exit 0 sin hallazgos; exit 1 si encuentra algún secreto; exit 2 si
+no se puede inspeccionar el repo (git ausente o raíz inexistente).
 """
 
 import re
@@ -17,25 +18,44 @@ from pathlib import Path
 SECRET_PATTERNS = [
     ("gemini-api-key", re.compile(r"GEMINI_API_KEY\s*=\s*[A-Za-z0-9_-]{20,}")),
     ("db-url-with-creds", re.compile(r"DATABASE_URL\s*=\s*postgres(ql)?://[^@\s]+@")),
-    ("jwt-secret", re.compile(r"(?:jwt_secret|csrf_secret)\s*=\s*[A-Za-z0-9+/=]{32,}")),
-    ("password-assignment", re.compile(r"password\s*=\s*[^\s\"']{8,}")),
+    (
+        "jwt-secret",
+        re.compile(r"(?:jwt_secret|csrf_secret)\s*=\s*[A-Za-z0-9+/=]{32,}", re.IGNORECASE),
+    ),
+    (
+        "password-assignment",
+        re.compile(r"password\s*=\s*[^\s\"'${}().\[\]]{8,}", re.IGNORECASE),
+    ),
     ("private-key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
 ]
 
 TEMPLATE_SECRET_KEY = re.compile(
-    r"(?:^|_)(?:secret|token|key|jwt|csrf|dsn)(?:_|$)|database[_-]?url",
+    r"(?:^|_)(?:secret|token|key|jwt|csrf|dsn|password)(?:_|$)|database[_-]?url",
     re.IGNORECASE,
 )
+
+TEMPLATE_ALLOWED_VALUES = {
+    "POSTGRES_PASSWORD": {"mananeras"},
+}
+
+QUOTED_ASSIGNMENT = re.compile(r'(?<![=<>!])(=\s*)(["\'])([^"\']*)\2')
 
 DEFAULT_REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def tracked_files(root: Path) -> list[str] | None:
-    result = subprocess.run(
-        ["git", "ls-files", "-z"],
-        cwd=root,
-        capture_output=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=root,
+            capture_output=True,
+        )
+    except FileNotFoundError:
+        print(
+            "scan_secrets: no se pudo ejecutar 'git ls-files' (git ausente o raiz inexistente)",
+            file=sys.stderr,
+        )
+        return None
     if result.returncode != 0:
         print("scan_secrets: no se pudo ejecutar 'git ls-files'", file=sys.stderr)
         return None
@@ -43,12 +63,13 @@ def tracked_files(root: Path) -> list[str] | None:
 
 
 def is_excluded(rel: str) -> bool:
-    name = Path(rel).name
     if rel.startswith("docs/"):
         return True
-    if rel.endswith(".lock") or name in ("uv.lock", "pnpm-lock.yaml"):
-        return True
-    return False
+    return rel.endswith(".lock")
+
+
+def strip_quoted_values(line: str) -> str:
+    return QUOTED_ASSIGNMENT.sub(r"\1\3", line)
 
 
 def is_placeholder_value(line: str) -> bool:
@@ -70,6 +91,7 @@ def scan_file(path: Path, rel: str) -> list[str]:
         return []
     findings = []
     for lineno, line in enumerate(text.splitlines(), start=1):
+        line = strip_quoted_values(line)
         if is_placeholder_value(line):
             continue
         for label, pattern in SECRET_PATTERNS:
@@ -85,16 +107,20 @@ def scan_env_template(path: Path, rel: str) -> list[str]:
         return []
     findings = []
     for lineno, line in enumerate(text.splitlines(), start=1):
-        stripped = line.strip()
+        stripped = strip_quoted_values(line).strip()
         if not stripped or stripped.startswith("#"):
             continue
-        key, sep, _ = stripped.partition("=")
+        key, sep, value = stripped.partition("=")
         key = key.strip()
         if not sep or not key:
             continue
-        if not TEMPLATE_SECRET_KEY.search(key.lower()):
+        if not TEMPLATE_SECRET_KEY.search(key):
             continue
-        if is_placeholder_value(stripped):
+        value = value.strip()
+        allowed = TEMPLATE_ALLOWED_VALUES.get(key.upper())
+        if allowed is not None and value.lower() in allowed:
+            continue
+        if is_placeholder_value(f"{key}={value}"):
             continue
         findings.append(f"{rel}:{lineno}:template-non-placeholder")
     return findings
