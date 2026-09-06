@@ -1,0 +1,10 @@
+{
+  "monthly_requests": 5000,
+  "avg_cpu_seconds_per_request": 1.5,
+  "avg_gib_seconds_per_request": 1.5,
+  "memory_gib": 1,
+  "storage_gib": 0,
+  "secret_active_versions": 6,
+  "secret_access_ops": 2000,
+  "neon_plan": "free"
+}
