@@ -60,4 +60,3 @@ infra/terraform/*.tfstate
 infra/terraform/*.tfstate.*
 infra/terraform/crash.log
 infra/terraform/tfplan
-

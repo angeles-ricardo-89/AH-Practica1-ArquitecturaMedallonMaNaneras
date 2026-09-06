@@ -82,6 +82,7 @@ def test_format_results_covers_three_tools() -> None:
                     texto="declaracion",
                     fecha=date(2025, 1, 1),
                     participante="PRESIDENTA",
+                    conferencia="conf_1",
                     url="https://gob.mx",
                     pertenencia=0.8,
                 )

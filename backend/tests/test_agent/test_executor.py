@@ -9,10 +9,13 @@ from lakehouse.config import Settings
 from lakehouse.schemas.agent import (
     AgentTurnResult,
     BuscarDeclaracionesOutput,
+    ClusterDetalle,
+    ConsultarClusterOutput,
     Evidencia,
+    EvidenciaCluster,
     ToolExecutionTrace,
 )
-from lakehouse.services.agent.executor import run_agent_turn
+from lakehouse.services.agent.executor import _to_source_chunks, run_agent_turn
 
 VALID_PLAN = (
     '{"tool_name": "buscar_declaraciones", '
@@ -144,3 +147,24 @@ def test_run_agent_turn_persists_fallback_trace() -> None:
     assert isinstance(trace, ToolExecutionTrace)
     assert trace.status == "fallback"
     assert trace.tool_name == "buscar_declaraciones"
+
+
+def test_to_source_chunks_cluster_evidence_validates() -> None:
+    result = ConsultarClusterOutput(
+        cluster=ClusterDetalle(cluster_id=1, etiqueta="energia", tamano=10),
+        evidencias=[
+            EvidenciaCluster(
+                evidence_id="kc",
+                texto="declaracion del cluster",
+                fecha=date(2025, 1, 1),
+                participante="PRESIDENTA",
+                conferencia="c1",
+                url="https://gob.mx",
+                pertenencia=0.8,
+            )
+        ],
+    )
+    chunks = _to_source_chunks([result])
+    assert len(chunks) == 1
+    assert chunks[0].conference_id == "c1"
+    assert chunks[0].cluster_id == 1

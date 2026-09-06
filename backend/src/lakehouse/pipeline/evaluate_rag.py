@@ -170,7 +170,7 @@ def _parse_score(text: str) -> float:
     return 50.0
 
 
-def evaluate_rag() -> dict:
+def evaluate_rag(output_path: Path | None = None) -> dict:
     settings = Settings()
 
     if not GOLDEN_DATASET_PATH.exists():
@@ -265,7 +265,7 @@ def evaluate_rag() -> dict:
     avg_relevance = sum(r["relevance"] for r in scored) / len(scored) if scored else 0.0
     avg_coverage = sum(r["coverage"] for r in scored) / len(scored) if scored else 0.0
 
-    output_path = (
+    output_path = output_path or (
         Path(GOLDEN_DATASET_PATH).resolve().parent
         / "lakehouse"
         / "logs"

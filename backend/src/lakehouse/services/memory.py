@@ -80,14 +80,15 @@ def get_conversation(pg_conn_str: str, owner_id: int, public_id: str) -> dict | 
         assert title_row is not None
         title = title_row[0]
         msgs = conn.execute(
-            "SELECT role, content, created_at FROM message "
+            "SELECT role, content, created_at, model, total_tokens, latency_ms, sources "
+            "FROM message "
             "WHERE conversation_id = %s ORDER BY created_at ASC, id ASC",
             (conv_id,),
         ).fetchall()
     return {
         "id": public_id,
         "title": title,
-        "messages": [{"role": m[0], "content": m[1], "created_at": m[2]} for m in msgs],
+        "messages": [_message_dict(m) for m in msgs],
     }
 
 
@@ -110,12 +111,14 @@ def add_message(
     prompt_tokens: int | None = None,
     completion_tokens: int | None = None,
     total_tokens: int | None = None,
+    sources: list[dict] | None = None,
+    latency_ms: float | None = None,
 ) -> int:
     with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         row = conn.execute(
             "INSERT INTO message (conversation_id, owner_id, role, content, model, "
-            "prompt_tokens, completion_tokens, total_tokens) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+            "prompt_tokens, completion_tokens, total_tokens, sources, latency_ms) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
             (
                 conversation_id,
                 owner_id,
@@ -125,6 +128,8 @@ def add_message(
                 prompt_tokens,
                 completion_tokens,
                 total_tokens,
+                Jsonb(sources) if sources is not None else None,
+                latency_ms,
             ),
         ).fetchone()
     assert row is not None
@@ -140,14 +145,27 @@ def touch_conversation(pg_conn_str: str, conversation_id: int, retention_days: i
         )
 
 
+def _message_dict(row: tuple) -> dict:
+    return {
+        "role": row[0],
+        "content": row[1],
+        "created_at": row[2],
+        "model": row[3],
+        "total_tokens": row[4],
+        "latency_ms": row[5],
+        "sources": row[6] if row[6] is not None else [],
+    }
+
+
 def list_messages(pg_conn_str: str, conversation_id: int) -> list[dict]:
     with psycopg.connect(_conn_str_with_timeouts(pg_conn_str)) as conn:
         rows = conn.execute(
-            "SELECT role, content, created_at FROM message "
+            "SELECT role, content, created_at, model, total_tokens, latency_ms, sources "
+            "FROM message "
             "WHERE conversation_id = %s ORDER BY created_at ASC, id ASC",
             (conversation_id,),
         ).fetchall()
-    return [{"role": r[0], "content": r[1], "created_at": r[2]} for r in rows]
+    return [_message_dict(r) for r in rows]
 
 
 def add_tool_execution(

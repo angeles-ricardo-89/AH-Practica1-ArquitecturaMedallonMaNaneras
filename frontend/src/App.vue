@@ -19,7 +19,7 @@ async function doLogout() {
 <template>
   <div v-if="authed && !inLogin" class="h-screen flex flex-col">
     <nav class="h-12 shrink-0 bg-white border-b border-stone-200 flex items-center gap-4 px-6">
-      <span class="text-sm font-bold text-stone-950">Mañaneras</span>
+      <span class="text-sm font-bold text-stone-950">RAG del pueblo</span>
       <router-link
         to="/"
         class="text-xs text-stone-500 hover:text-stone-800"

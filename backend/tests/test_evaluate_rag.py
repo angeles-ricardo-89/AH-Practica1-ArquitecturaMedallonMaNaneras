@@ -99,11 +99,12 @@ class TestEvaluateRag:
         self,
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
+        tmp_path: Path,
     ) -> None:
         mock_chat.return_value = ("La reforma energética fortalece a Pemex.", "contexto", "fuentes")
         mock_llamacpp.return_value = "95"
 
-        result = evaluate_rag()
+        result = evaluate_rag(output_path=tmp_path / "out.json")
 
         assert result["status"] == "completed"
         assert result["total"] == 50
@@ -118,11 +119,12 @@ class TestEvaluateRag:
         self,
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
+        tmp_path: Path,
     ) -> None:
         mock_chat.return_value = ("Respuesta de prueba.", "contexto", "fuentes")
         mock_llamacpp.return_value = "90"
 
-        result = evaluate_rag()
+        result = evaluate_rag(output_path=tmp_path / "out.json")
 
         output_path = Path(result["output_path"])
         assert output_path.exists()
@@ -136,11 +138,12 @@ class TestEvaluateRag:
         self,
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
+        tmp_path: Path,
     ) -> None:
         mock_chat.return_value = ("Respuesta.", "contexto", "fuentes")
         mock_llamacpp.return_value = "85"
 
-        result = evaluate_rag()
+        result = evaluate_rag(output_path=tmp_path / "out.json")
 
         assert result["total"] == 50
 
@@ -150,10 +153,11 @@ class TestEvaluateRag:
         self,
         mock_logger: MagicMock,
         mock_chat: MagicMock,
+        tmp_path: Path,
     ) -> None:
         mock_chat.side_effect = RuntimeError("Chat unavailable")
 
-        result = evaluate_rag()
+        result = evaluate_rag(output_path=tmp_path / "out.json")
 
         assert result["status"] == "completed"
         assert result["total"] == 50
@@ -165,11 +169,12 @@ class TestEvaluateRag:
         self,
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
+        tmp_path: Path,
     ) -> None:
         mock_chat.return_value = ("Respuesta.", "contexto", "fuentes")
         mock_llamacpp.return_value = "90"
 
-        result = evaluate_rag()
+        result = evaluate_rag(output_path=tmp_path / "out.json")
 
         ids = {r["id"] for r in result["results"]}
         assert ids == set(range(1, 51))
@@ -180,11 +185,12 @@ class TestEvaluateRag:
         self,
         mock_llamacpp: MagicMock,
         mock_chat: MagicMock,
+        tmp_path: Path,
     ) -> None:
         mock_chat.return_value = ("Respuesta.", "contexto", "fuentes")
         mock_llamacpp.return_value = "95"
 
-        result = evaluate_rag()
+        result = evaluate_rag(output_path=tmp_path / "out.json")
 
         for r in result["results"]:
             if "error" not in r:
@@ -281,11 +287,11 @@ class TestCallFunctions:
         assert sources == "fuente1"
         mock_search.assert_called_once_with("¿Hola?", 8)
 
-    def test_evaluate_rag_returns_error_when_golden_missing(self) -> None:
+    def test_evaluate_rag_returns_error_when_golden_missing(self, tmp_path: Path) -> None:
         mock_path = MagicMock()
         mock_path.exists.return_value = False
         with patch("lakehouse.pipeline.evaluate_rag.GOLDEN_DATASET_PATH", mock_path):
-            result = evaluate_rag()
+            result = evaluate_rag(output_path=tmp_path / "out.json")
 
         assert result["status"] == "error"
         assert "not found" in result["message"]
@@ -298,10 +304,11 @@ class TestEvaluateRagFailures:
         self,
         mock_chat: MagicMock,
         mock_logger: MagicMock,
+        tmp_path: Path,
     ) -> None:
         mock_chat.side_effect = RuntimeError("Chat unavailable")
 
-        result = evaluate_rag()
+        result = evaluate_rag(output_path=tmp_path / "out.json")
 
         assert result["status"] == "completed"
         assert result["failed"] == 50
@@ -315,11 +322,12 @@ class TestEvaluateRagFailures:
         mock_chat: MagicMock,
         mock_llamacpp: MagicMock,
         mock_logger: MagicMock,
+        tmp_path: Path,
     ) -> None:
         mock_chat.return_value = ("Respuesta.", "contexto", "fuentes")
         mock_llamacpp.side_effect = RuntimeError("Judge unavailable")
 
-        result = evaluate_rag()
+        result = evaluate_rag(output_path=tmp_path / "out.json")
 
         assert result["status"] == "completed"
         assert result["failed"] == 0

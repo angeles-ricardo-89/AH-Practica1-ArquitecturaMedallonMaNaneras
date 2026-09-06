@@ -161,6 +161,9 @@ def send_message(
         "assistant",
         result.answer,
         model=result.model_used,
+        total_tokens=result.token_usage.get("total") if result.token_usage else None,
+        sources=[s.model_dump(mode="json") for s in result.sources],
+        latency_ms=result.latency_ms,
     )
     for trace in result.tool_executions:
         add_tool_execution(

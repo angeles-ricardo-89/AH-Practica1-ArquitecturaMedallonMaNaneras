@@ -22,6 +22,7 @@ from lakehouse.services.index_metadata import GOOGLE_PROVIDER
 from lakehouse.services.ingest_service import IngestService
 from lakehouse.services.neon_bootstrap import bootstrap_neon_schema
 from lakehouse.services.parse_service import ParseService
+from lakehouse.services.prod_observability import sync_production_observability
 from lakehouse.services.prod_visuals import sync_production_visuals as run_sync_visuals
 from lakehouse.services.reindex_production import reindex_corpus
 
@@ -383,6 +384,18 @@ def sync_visuals_cmd() -> None:
         f"filas, run {result['run_id']}, {result['clusters']} clusters, "
         f"etiquetado={result['labeling']}"
     )
+
+
+@pipeline_app.command(name="sync-production-observability")
+def sync_observability_cmd() -> None:
+    """Replica las corridas del pipeline local hacia la base de produccion.
+
+    Copia observability.pipeline_runs (local -> Neon) para que el dashboard
+    productivo muestre el estado real del medallon. Idempotente por run_id.
+    """
+    settings = Settings()
+    result = sync_production_observability(settings)
+    typer.echo(f"Observabilidad productiva sincronizada: {result['copied']} corridas")
 
 
 @app.command()

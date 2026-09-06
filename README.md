@@ -1,8 +1,10 @@
-# Datalake Mañaneras
+# RAG del pueblo
 
-Pipeline de datos con arquitectura medallon (Bronze → Silver → Gold) y sistema RAG
-para procesar, estructurar y consultar conferencias de prensa matutinas del Gobierno
-de Mexico.
+> **RAG del pueblo** es el nombre público del proyecto. La base es un datalake
+> (arquitectura medallón Bronze → Silver → Gold) que procesa, estructura y hace
+> consultables las conferencias de prensa matutinas del Gobierno de México, con un
+> agente de investigación acotado (autenticación, memoria aislada y tres tools de
+> solo lectura).
 
 **Fuente oficial:** [https://www.gob.mx/presidencia/es/archivo/articulos](https://www.gob.mx/presidencia/es/archivo/articulos)
 
@@ -10,20 +12,22 @@ de Mexico.
 
 
 
-[![Backend Tests](https://img.shields.io/badge/backend%20tests-534%20passed-brightgreen)]()
-[![Frontend Tests](https://img.shields.io/badge/frontend%20tests-43%20passed-brightgreen)]()
-[![Coverage](https://img.shields.io/badge/coverage-97.27%25-brightgreen)]()
+[![Backend Tests](https://img.shields.io/badge/backend%20tests-675%20passed-brightgreen)]()
+[![Frontend Tests](https://img.shields.io/badge/frontend%20tests-47%20passed-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-96.34%25-brightgreen)]()
 [![Python](https://img.shields.io/badge/python-3.13-blue)]()
 [![Estado](https://img.shields.io/badge/estado-operativo-brightgreen)]()
 
 ---
 
-## PRD 3.0 (planificado)
+## PRD 3.0 (implementado)
 
 La evolución del producto hacia un **agente de investigación** acotado (autenticación,
 memoria conversacional aislada y tres tools de solo lectura) está especificada en
-[`docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md`](docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md),
-que se agrega al PRD 2.0 como antecedente. **Estado: planificado** — todavía no implementado.
+[`docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md`](docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md).
+**Estado: implementado y desplegado** (T1–T12). URL productiva:
+
+**https://rag-del-pueblo-iens6os2ba-uc.a.run.app** (servicio Cloud Run `rag-del-pueblo`; Neon + Gemini).
 
 ---
 
@@ -117,7 +121,7 @@ verificables a las fuentes originales.
 | API REST                 | Completo        | 6 routers, 380 tests                           |
 | Chat RAG                 | Completo        | Respuestas con fuentes y citas                 |
 | Dashboard frontend       | Completo        | Semaforo, timeline, chat, embeddings 3D        |
-| Evaluacion RAG           | Pendiente       | LLM-as-a-Judge implementado; resultados con marcadores, regenerar |
+| Evaluacion RAG           | Completo        | LLM-as-a-Judge: 50 preguntas, fidelidad 93.51%, relevancia 99.53%, cobertura 73.09% (resultado real, sin marcadores) |
 | Idempotencia             | Completo        | Verificado en las 3 capas                      |
 | Interrupcion graceful    | Completo        | CP-16 completado                               |
 | Prueba offline RAG       | No verificado   | Requiere configuracion de red adicional        |

@@ -201,7 +201,7 @@ def consultar_cluster(settings: Settings, entrada: ConsultarClusterInput) -> Con
         label, tamano = meta[0], meta[1]
         rows = conn.execute(
             "SELECT chunk_key, chunk_text, conference_date, participant, url, "
-            "cluster_pertenencia, embedding_3d, pregunta_activa "
+            "cluster_pertenencia, embedding_3d, pregunta_activa, conference_id "
             "FROM gold.rag_corpus WHERE clustering_run_id = %s AND cluster_id = %s "
             "ORDER BY cluster_pertenencia DESC NULLS LAST, chunk_key LIMIT %s",
             (run_id, entrada.cluster_id, entrada.limite),
@@ -221,6 +221,7 @@ def consultar_cluster(settings: Settings, entrada: ConsultarClusterInput) -> Con
                 pertenencia=round(float(r[5]), 4) if r[5] is not None else None,
                 embedding_3d=embedding_3d,
                 pregunta_activa=r[7] or "",
+                conferencia=r[8] or "",
             )
         )
     return ConsultarClusterOutput(

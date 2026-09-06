@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from lakehouse.main import app
 from lakehouse.schemas.agent import AgentTurnResult, ToolExecutionTrace
+from lakehouse.schemas.chat import SourceChunk
 
 
 def _login(username: str, password: str) -> tuple[TestClient, str]:
@@ -109,3 +110,41 @@ def test_agent_turn_model_error_returns_503(real_auth, demo_users) -> None:
     assert resp.status_code == 503
     assert resp.json() == {"detail": "Internal server error"}
     assert "modelo no disponible" not in resp.text
+
+
+def test_agent_turn_persists_sources_with_3d_and_cluster(real_auth, demo_users) -> None:
+    sources = [
+        SourceChunk(
+            conference_date="2025-01-01",
+            conference_id="conf_1",
+            participant="PRESIDENTA",
+            chunk_text="Declaracion sobre energia",
+            similarity=0.9,
+            conference_url="https://gob.mx/1",
+            embedding_3d=[0.1, 0.2, 0.3],
+            cluster_id=3,
+        )
+    ]
+
+    result = _turn_result()
+    result.sources = sources
+
+    client, csrf = _login("testuser1", "test-password-1")
+    conv_id = _create_conversation(client, csrf)
+
+    with patch("lakehouse.api.routers.conversations.run_agent_turn", return_value=result):
+        resp = client.post(
+            f"/conversations/{conv_id}/messages",
+            json={"question": "que dijo sobre energia?"},
+            headers={"X-CSRF-Token": csrf},
+        )
+    assert resp.status_code == 200
+
+    detail = client.get(f"/conversations/{conv_id}").json()
+    assistant = detail["messages"][1]
+    assert assistant["role"] == "assistant"
+    assert len(assistant["sources"]) == 1
+    src = assistant["sources"][0]
+    assert src["cluster_id"] == 3
+    assert src["embedding_3d"] == [0.1, 0.2, 0.3]
+    assert src["conference_id"] == "conf_1"
