@@ -8,14 +8,13 @@ from lakehouse.config import Settings
 from lakehouse.db.connection import pg_conn_str_with_timeouts
 from lakehouse.db.rate_limit import ensure_rate_limit_tables
 
-_SETTINGS = Settings()
-
 
 def _conn_str_with_timeouts(conn_str: str) -> str:
+    settings = Settings()
     return pg_conn_str_with_timeouts(
         conn_str,
-        connect_timeout=_SETTINGS.db_connect_timeout,
-        statement_timeout_ms=_SETTINGS.db_statement_timeout_ms,
+        connect_timeout=settings.db_connect_timeout,
+        statement_timeout_ms=settings.db_statement_timeout_ms,
     )
 
 
