@@ -1,15 +1,15 @@
 import time
 
-import httpx
 from fastapi import APIRouter
 
 from lakehouse.config import Settings
 from lakehouse.log_config import get_logger
 from lakehouse.schemas.chat import ChatRequest, ChatResponse, SourceChunk
+from lakehouse.services.agent.llm import active_chat_model, chat_text
 from lakehouse.services.context_builder import ContextBuilder
 from lakehouse.services.qualitative_label import assign_qualitative_labels
 from lakehouse.services.rag_search import (
-    _embed_query,
+    embed_search_query,
     search_gold_corpus_from_vector,
     search_with_date_filter,
 )
@@ -56,9 +56,7 @@ def chat(request: ChatRequest) -> ChatResponse:
     )
 
     try:
-        query_embedding = _embed_query(
-            texto_semantico, settings.ollama_base_url, settings.ollama_embed_model
-        )
+        query_embedding = embed_search_query(settings, texto_semantico)
     except Exception as e:
         logger.exception("No se pudo generar embedding para la consulta")
         raise RuntimeError("Embedding backend unavailable") from e
@@ -109,31 +107,20 @@ def chat(request: ChatRequest) -> ChatResponse:
     logger.info("Contexto construido para LLM", tokens_estimados=token_usage)
 
     try:
-        with httpx.Client(timeout=60.0) as client:
-            payload = {
-                "model": settings.llamacpp_model,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": context},
-                ],
-                "max_tokens": 4096,
-            }
-            resp = client.post(
-                f"{settings.llamacpp_base_url}/chat/completions",
-                json=payload,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            answer = data["choices"][0]["message"]["content"]
-            prompt_tokens = data.get("usage", {}).get("prompt_tokens", estimate_tokens(context))
-            completion_tokens = data.get("usage", {}).get(
-                "completion_tokens", estimate_tokens(answer)
-            )
-            logger.info(
-                "Chat response generado",
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-            )
+        answer = chat_text(
+            settings,
+            [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": context},
+            ],
+        )
+        prompt_tokens = estimate_tokens(context)
+        completion_tokens = estimate_tokens(answer)
+        logger.info(
+            "Chat response generado",
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+        )
     except Exception as e:
         logger.exception("Backend LLM no disponible")
         raise RuntimeError("LLM backend unavailable") from e
@@ -149,6 +136,6 @@ def chat(request: ChatRequest) -> ChatResponse:
             "completion": completion_tokens,
             "total": prompt_tokens + completion_tokens,
         },
-        model_used=settings.llamacpp_model,
+        model_used=active_chat_model(settings),
         latency_ms=round(latency_ms, 1),
     )

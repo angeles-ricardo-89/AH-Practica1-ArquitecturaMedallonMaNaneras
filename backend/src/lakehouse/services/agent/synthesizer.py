@@ -13,9 +13,7 @@ from lakehouse.services.agent.planner import format_history
 if TYPE_CHECKING:
     from lakehouse.config import Settings
 
-REFUSAL_TEXT = (
-    "No encontré evidencia suficiente en el corpus para sostener esa conclusión."
-)
+REFUSAL_TEXT = "No encontré evidencia suficiente en el corpus para sostener esa conclusión."
 
 SYNTH_SYSTEM_PROMPT = (
     "Eres un asistente de investigacion sobre las conferencias matutinas. "

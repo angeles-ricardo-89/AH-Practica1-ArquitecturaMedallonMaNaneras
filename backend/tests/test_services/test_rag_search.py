@@ -7,11 +7,11 @@ import psycopg
 import pytest
 
 from lakehouse.config import Settings
+from lakehouse.db.connection import get_database_url
 from lakehouse.schemas.chat import SourceChunk
 from lakehouse.services.rag_search import (
     _call_ollama_embed,
     _embed_query,
-    _get_pgvector_connection_string,
     search_gold_corpus,
     search_gold_corpus_from_vector,
     search_sources,
@@ -19,10 +19,10 @@ from lakehouse.services.rag_search import (
 )
 
 
-class TestGetPgvectorConnectionString:
+class TestGetDatabaseUrl:
     def test_formats_url_from_settings(self):
         settings = Settings()
-        url = _get_pgvector_connection_string(settings)
+        url = get_database_url(settings)
         assert url == (
             f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
             f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"

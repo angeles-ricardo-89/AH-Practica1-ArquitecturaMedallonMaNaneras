@@ -149,6 +149,21 @@ class TestGeminiChatAdapter:
         with pytest.raises(RuntimeError, match="GEMINI_API_KEY"):
             adapter.generate([{"role": "user", "content": "hola"}])
 
+    def test_system_role_becomes_system_instruction(self, fake_genai):
+        fake_genai.gen_text = "ok"
+        adapter = GeminiChatAdapter(api_key="k", model="gemini-3.5-flash-lite")
+        adapter.generate(
+            [
+                {"role": "system", "content": "Eres un agente"},
+                {"role": "user", "content": "pregunta"},
+                {"role": "assistant", "content": "respuesta previa"},
+            ]
+        )
+        _model, contents, config = fake_genai.generate_calls[0]
+        roles = [c.role for c in contents]
+        assert roles == ["user", "model"]
+        assert config.system_instruction == "Eres un agente"
+
 
 class TestNeonConnectionString:
     def test_adds_sslmode_require_when_missing(self):
@@ -286,9 +301,7 @@ class TestValidateIndexAtStartup:
                 "postgresql://u:p@ep-test-pooler.us-east-2.aws.neon.tech/db?sslmode=require"
             ),
         )
-        monkeypatch.setattr(
-            "lakehouse.services.index_metadata.read_index_metadata", lambda _: None
-        )
+        monkeypatch.setattr("lakehouse.services.index_metadata.read_index_metadata", lambda _: None)
         with pytest.raises(IndexMetadataMismatchError, match="No index metadata"):
             validate_index_at_startup(settings)
 

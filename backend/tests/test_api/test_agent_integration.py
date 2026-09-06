@@ -39,7 +39,7 @@ def _fake_llamacpp(plan_first: str) -> Callable[..., str]:
     - Llamada de texto (sintesis) -> respuesta con cita.
     """
 
-    def _post(settings, messages, *, json_mode, max_tokens) -> str:
+    def _post(settings, messages, *, json_mode, max_tokens, temperature) -> str:
         last_user = ""
         for m in messages:
             if m["role"] == "user":
@@ -55,9 +55,7 @@ def _fake_llamacpp(plan_first: str) -> Callable[..., str]:
 
 def _login() -> tuple[TestClient, str]:
     client = TestClient(app)
-    resp = client.post(
-        "/auth/login", json={"username": "testuser1", "password": "test-password-1"}
-    )
+    resp = client.post("/auth/login", json={"username": "testuser1", "password": "test-password-1"})
     assert resp.status_code == 200, resp.text
     return client, resp.json()["csrf_token"]
 

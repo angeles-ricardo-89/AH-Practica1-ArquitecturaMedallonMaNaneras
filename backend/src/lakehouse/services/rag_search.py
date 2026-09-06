@@ -8,21 +8,15 @@ import httpx
 import psycopg
 
 from lakehouse.config import Settings
-from lakehouse.db.connection import pg_conn_str_with_timeouts
+from lakehouse.db.connection import get_database_url, pg_conn_str_with_timeouts
 from lakehouse.log_config import get_logger
 from lakehouse.pipeline.enrichment import MIN_CHUNK_LENGTH
 from lakehouse.schemas.chat import SourceChunk
+from lakehouse.services.gemini_embedding import GeminiEmbeddingAdapter
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = get_logger(__name__, layer="service")
-
-
-def _get_pgvector_connection_string(settings: Settings) -> str:
-    return (
-        f"postgresql://{settings.postgres_user}:{settings.postgres_password}"
-        f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-    )
 
 
 def _call_ollama_embed(url: str, model: str, text: str) -> list[float]:
@@ -111,7 +105,7 @@ def search_gold_corpus_from_vector(
         settings = Settings()
 
     conn_str = pg_conn_str_with_timeouts(
-        _get_pgvector_connection_string(settings),
+        get_database_url(settings),
         connect_timeout=settings.db_connect_timeout,
         statement_timeout_ms=settings.db_statement_timeout_ms,
     )
@@ -144,6 +138,18 @@ def search_gold_corpus_from_vector(
     return results
 
 
+def embed_search_query(settings: Settings, text: str) -> list[float]:
+    """Embebe la consulta con el proveedor activo: Gemini en produccion, Ollama local."""
+    if settings.is_production:
+        adapter = GeminiEmbeddingAdapter(
+            settings.gemini_api_key,
+            settings.gemini_embedding_model,
+            settings.gemini_embedding_dimension,
+        )
+        return adapter.embed_query(text)
+    return _embed_query(text, settings.ollama_base_url, settings.ollama_embed_model)
+
+
 def search_gold_corpus(
     query: str,
     top_k: int,
@@ -153,7 +159,7 @@ def search_gold_corpus(
         settings = Settings()
 
     try:
-        query_embedding = _embed_query(query, settings.ollama_base_url, settings.ollama_embed_model)
+        query_embedding = embed_search_query(settings, query)
     except (ConnectionError, ValueError) as e:
         logger.exception("No se pudo generar embedding para la consulta")
         raise RuntimeError("Search unavailable: embedding generation failed") from e
@@ -174,7 +180,7 @@ def search_with_date_filter(
         settings = Settings()
 
     conn_str = pg_conn_str_with_timeouts(
-        _get_pgvector_connection_string(settings),
+        get_database_url(settings),
         connect_timeout=settings.db_connect_timeout,
         statement_timeout_ms=settings.db_statement_timeout_ms,
     )

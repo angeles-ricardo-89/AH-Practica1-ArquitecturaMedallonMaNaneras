@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Depends, HTTPException
 
 from lakehouse.api.deps import CurrentUser, SettingsDep, get_current_user, require_csrf
-from lakehouse.db.pgvector_conn import get_pgvector_connection_string
+from lakehouse.db.connection import get_database_url
 from lakehouse.schemas.conversation import (
     AgentMessageRequest,
     AgentMessageResponse,
@@ -43,13 +43,7 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 
 def _pg_conn_str(settings: Settings) -> str:
-    return get_pgvector_connection_string(
-        settings.postgres_host,
-        settings.postgres_port,
-        settings.postgres_db,
-        settings.postgres_user,
-        settings.postgres_password,
-    )
+    return get_database_url(settings)
 
 
 @router.get(
@@ -63,9 +57,7 @@ def list_own_conversations(
     user: CurrentUser = Depends(get_current_user),
 ) -> ConversationList:
     items = list_conversations(_pg_conn_str(settings), user.id)
-    return ConversationList(
-        conversations=[ConversationSummary(**item) for item in items]
-    )
+    return ConversationList(conversations=[ConversationSummary(**item) for item in items])
 
 
 @router.post(
@@ -141,17 +133,13 @@ def send_message(
     if conv_id is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    if not is_allowed(
-        conn_str, f"chat:{user.id}", minute_window_start(), settings.chat_rate_limit
-    ):
+    if not is_allowed(conn_str, f"chat:{user.id}", minute_window_start(), settings.chat_rate_limit):
         raise HTTPException(
             status_code=429,
             detail="Rate limit exceeded",
             headers={"Retry-After": str(retry_after_seconds())},
         )
-    if not is_allowed(
-        conn_str, f"daily:{user.id}", day_window_start(), settings.daily_rate_limit
-    ):
+    if not is_allowed(conn_str, f"daily:{user.id}", day_window_start(), settings.daily_rate_limit):
         raise HTTPException(
             status_code=429,
             detail="Daily quota exceeded",
@@ -159,8 +147,7 @@ def send_message(
         )
 
     history = [
-        {"role": m["role"], "content": m["content"]}
-        for m in list_messages(conn_str, conv_id)
+        {"role": m["role"], "content": m["content"]} for m in list_messages(conn_str, conv_id)
     ]
 
     add_message(conn_str, conv_id, user.id, "user", payload.question)

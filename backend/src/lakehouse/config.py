@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     gemini_embedding_dimension: int = 768
     index_format_version: str = "v1"
     neon_database_url: str = ""
+    frontend_dist_dir: str = ""
 
     @property
     def cookie_secure(self) -> bool:

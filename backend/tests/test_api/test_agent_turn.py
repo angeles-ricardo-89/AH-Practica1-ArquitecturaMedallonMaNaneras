@@ -46,9 +46,7 @@ def test_agent_turn_persists_messages_and_traces(real_auth, demo_users, pg_conn_
     client, csrf = _login("testuser1", "test-password-1")
     conv_id = _create_conversation(client, csrf)
 
-    with patch(
-        "lakehouse.api.routers.conversations.run_agent_turn", return_value=_turn_result()
-    ):
+    with patch("lakehouse.api.routers.conversations.run_agent_turn", return_value=_turn_result()):
         resp = client.post(
             f"/conversations/{conv_id}/messages",
             json={"question": "que dijo sobre energia?"},
@@ -80,9 +78,7 @@ def test_agent_turn_persists_messages_and_traces(real_auth, demo_users, pg_conn_
 def test_agent_turn_requires_csrf(real_auth, demo_users) -> None:
     client, csrf = _login("testuser1", "test-password-1")
     conv_id = _create_conversation(client, csrf)
-    resp = client.post(
-        f"/conversations/{conv_id}/messages", json={"question": "hola"}
-    )
+    resp = client.post(f"/conversations/{conv_id}/messages", json={"question": "hola"})
     assert resp.status_code == 403
 
 

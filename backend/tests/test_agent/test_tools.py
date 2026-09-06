@@ -123,7 +123,7 @@ def test_consultar_cluster_unknown(cluster_seed) -> None:
 
 
 def test_buscar_declaraciones_prefilters_date(cluster_seed) -> None:
-    with patch("lakehouse.services.agent.tools._embed_query", return_value=EMB):
+    with patch("lakehouse.services.agent.tools.embed_search_query", return_value=EMB):
         out = buscar_declaraciones(
             Settings(),
             BuscarDeclaracionesInput(
@@ -138,7 +138,7 @@ def test_buscar_declaraciones_prefilters_date(cluster_seed) -> None:
 
 
 def test_buscar_declaraciones_prefilters_participante(cluster_seed) -> None:
-    with patch("lakehouse.services.agent.tools._embed_query", return_value=EMB):
+    with patch("lakehouse.services.agent.tools.embed_search_query", return_value=EMB):
         out = buscar_declaraciones(
             Settings(),
             BuscarDeclaracionesInput(consulta="x", participante="PARTICIPANTE A", top_k=8),

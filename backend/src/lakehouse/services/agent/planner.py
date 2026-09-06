@@ -19,15 +19,15 @@ if TYPE_CHECKING:
 PLAN_SYSTEM_PROMPT = (
     "Eres un agente de investigacion sobre las conferencias matutinas. Tienes "
     "exactamente tres herramientas de SOLO LECTURA y no puedes usar otras:\n"
-    "1. buscar_declaraciones: argumentos {\"consulta\": str, \"fecha_inicio\": "
-    "\"YYYY-MM-DD\"|null, \"fecha_fin\": \"YYYY-MM-DD\"|null, \"participante\": str|null, "
-    "\"top_k\": int 1..8}. Localiza que se dijo sobre una persona o tema.\n"
-    "2. explorar_temas: argumentos {\"texto\": str|null, \"limite\": int 1..5}. "
+    '1. buscar_declaraciones: argumentos {"consulta": str, "fecha_inicio": '
+    '"YYYY-MM-DD"|null, "fecha_fin": "YYYY-MM-DD"|null, "participante": str|null, '
+    '"top_k": int 1..8}. Localiza que se dijo sobre una persona o tema.\n'
+    '2. explorar_temas: argumentos {"texto": str|null, "limite": int 1..5}. '
     "Descubre temas del corpus.\n"
-    "3. consultar_cluster: argumentos {\"cluster_id\": int >= 0, \"limite\": int 1..8}. "
+    '3. consultar_cluster: argumentos {"cluster_id": int >= 0, "limite": int 1..8}. '
     "Explica un tema con declaraciones representativas.\n"
     "Responde SOLO con JSON estricto y valido: "
-    "{\"tool_name\": \"<una de las tres>\", \"arguments\": {...}, \"motivo\": \"breve\"}. "
+    '{"tool_name": "<una de las tres>", "arguments": {...}, "motivo": "breve"}. '
     "No inventes fechas, participantes ni identificadores."
 )
 
@@ -99,9 +99,7 @@ def _messages(question: str, history: list[dict], extra: str = "") -> list[dict]
     ]
 
 
-def plan_first_tool(
-    settings: Settings, question: str, history: list[dict]
-) -> ToolDecision:
+def plan_first_tool(settings: Settings, question: str, history: list[dict]) -> ToolDecision:
     messages = _messages(question, history)
     raw = chat_json(settings, messages)
     plan = parse_plan(raw)
