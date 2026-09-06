@@ -69,8 +69,19 @@ class Settings(BaseSettings):
     cors_allowed_origins: list[str] = []
     max_request_body_bytes: int = 65536
 
+    gemini_api_key: str = ""
+    gemini_embedding_model: str = "gemini-embedding-001"
+    gemini_chat_model: str = "gemini-3.5-flash-lite"
+    gemini_embedding_dimension: int = 768
+    index_format_version: str = "v1"
+    neon_database_url: str = ""
+
     @property
     def cookie_secure(self) -> bool:
+        return self.app_env == "production"
+
+    @property
+    def is_production(self) -> bool:
         return self.app_env == "production"
 
     def demo_users(self) -> list[tuple[str, str]]:
