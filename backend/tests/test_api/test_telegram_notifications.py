@@ -92,9 +92,24 @@ def test_agent_turn_telegram_failure_does_not_break(real_auth, demo_users, monke
         app.dependency_overrides.pop(get_settings, None)
 
 
-def test_agent_turn_without_telegram_config_is_noop(real_auth, demo_users) -> None:
-    client, csrf = _login("testuser1", "test-password-1")
-    conv_id = _create_conversation(client, csrf)
-    resp = _post_message(client, csrf, conv_id)
-    assert resp.status_code == 200
-    assert resp.json()["answer"] == "La presidenta dijo que la reforma avanza."
+def test_agent_turn_without_telegram_config_is_noop(real_auth, demo_users, monkeypatch) -> None:
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        telegram_bot_token="", telegram_chat_id=""
+    )
+    called = False
+
+    def _fake_client(*args: object, **kwargs: object) -> None:
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(telegram_notifier.httpx, "Client", _fake_client)
+    try:
+        client, csrf = _login("testuser1", "test-password-1")
+        conv_id = _create_conversation(client, csrf)
+        resp = _post_message(client, csrf, conv_id)
+        assert resp.status_code == 200
+        assert resp.json()["answer"] == "La presidenta dijo que la reforma avanza."
+    finally:
+        app.dependency_overrides.pop(get_settings, None)
+
+    assert called is False
