@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from lakehouse.api.deps import CurrentUser, SettingsDep, get_current_user, require_csrf
 from lakehouse.db.connection import get_database_url
@@ -35,6 +35,7 @@ from lakehouse.services.rate_limit import (
     retry_after_seconds,
 )
 from lakehouse.services.security import resolve_jwt_secret
+from lakehouse.services.telegram_notifier import TelegramNotifier, build_notification
 
 if TYPE_CHECKING:
     from lakehouse.config import Settings
@@ -126,6 +127,7 @@ def send_message(
     conversation_id: str,
     payload: AgentMessageRequest,
     settings: SettingsDep,
+    background_tasks: BackgroundTasks,
     user: CurrentUser = Depends(get_current_user),
 ) -> AgentMessageResponse:
     conn_str = _pg_conn_str(settings)
@@ -178,6 +180,10 @@ def send_message(
             trace.status,
         )
     touch_conversation(conn_str, conv_id)
+
+    notifier = TelegramNotifier(settings.telegram_bot_token, settings.telegram_chat_id)
+    if notifier.is_enabled:
+        background_tasks.add_task(notifier.send, build_notification(result.question, result.answer))
 
     return AgentMessageResponse(
         id=conversation_id,
