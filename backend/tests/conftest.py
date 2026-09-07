@@ -45,6 +45,8 @@ def pytest_configure(config) -> None:
     os.environ["LOGIN_RATE_LIMIT"] = "10000"
     os.environ["CHAT_RATE_LIMIT"] = "10000"
     os.environ["DAILY_RATE_LIMIT"] = "10000"
+    os.environ.pop("TELEGRAM_BOT_TOKEN", None)
+    os.environ.pop("TELEGRAM_CHAT_ID", None)
 
     admin_conn = "postgresql://mananeras:mananeras@localhost:5433/postgres"
     try:

@@ -26,6 +26,7 @@ def _build_system_prompt() -> str:
     if dias_desde_lunes == 0:
         dias_desde_lunes = 7
     lunes_pasado = (now - timedelta(days=dias_desde_lunes)).strftime("%Y-%m-%d")
+    hace_una_semana = (now - timedelta(days=7)).strftime("%Y-%m-%d")
 
     return (
         "Eres un parser de consultas temporales. Tu UNICA tarea es extraer informacion "
@@ -49,7 +50,22 @@ def _build_system_prompt() -> str:
         '"texto_busqueda_semantica":"Que dijo Sheinbaum sobre el T-MEC en la conferencia"}\n\n'
         'Query: "Cual es la postura sobre energia nuclear?"\n'
         '-> {"requiere_filtro_tiempo":false, "fecha_inicio":null, "fecha_fin":null, '
-        '"texto_busqueda_semantica":"Cual es la postura sobre energia nuclear"}'
+        '"texto_busqueda_semantica":"Cual es la postura sobre energia nuclear"}\n'
+        'Query: "Cual fue la última [conferencia/matutina]?"\n'
+        f"-> Si hoy es {weekday} {now.strftime('%Y-%m-%d')}:\n"
+        f'{{"requiere_filtro_tiempo":true, "fecha_inicio":"{hace_una_semana} 00:00:00", '
+        f'"fecha_fin":"{now.strftime("%Y-%m-%d")} 23:59:59", '
+        f'"texto_busqueda_semantica":"Cual fue la última [conferencia/matutina]"}}\n'
+        'Query: "Que paso ayer?"\n'
+        f"-> Si hoy es {weekday} {now.strftime('%Y-%m-%d')}:\n"
+        f'{{"requiere_filtro_tiempo":true, "fecha_inicio":"{(now - timedelta(days=1)).strftime("%Y-%m-%d")} 00:00:00", '
+        f'"fecha_fin":"{(now - timedelta(days=1)).strftime("%Y-%m-%d")} 23:59:59", '
+        f'"texto_busqueda_semantica":"Que paso"}}\n'
+        'Query: "Que paso la última semana?"\n'
+        f"-> Si hoy es {weekday} {now.strftime('%Y-%m-%d')}:\n"
+        f'{{"requiere_filtro_tiempo":true, "fecha_inicio":"{lunes_pasado} 00:00:00", '
+        f'"fecha_fin":"{now.strftime("%Y-%m-%d")} 23:59:59", '
+        f'"texto_busqueda_semantica":"Que paso la última semana"}}\n'
     )
 
 
