@@ -8,6 +8,9 @@ image            = "us-central1-docker.pkg.dev/rag-conferencias-matutinas/lakeho
 demo_user_1_username = "demo_1"
 demo_user_2_username = "demo_2"
 
+# existing_secrets: los 4 son NOMBRES de secretos en Secret Manager.
+# TELEGRAM_CHAT_ID debe crearse a mano (valor = id numerico del chat destino, p.ej. via @userinfobot);
+# TELEGRAM_BOT_TOKEN ya existe. Anade ambas claves telegram_* a tu terraform.tfvars real (gitignored).
 existing_secrets = {
   gemini_api_key     = "GEMINI_API_KEY"
   neon_db_url        = "NEON_DATABASE_URL"
