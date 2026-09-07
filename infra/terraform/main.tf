@@ -57,6 +57,14 @@ data "google_secret_manager_secret" "neon_db_url" {
   secret_id = var.existing_secrets.neon_db_url
 }
 
+data "google_secret_manager_secret" "telegram_bot_token" {
+  secret_id = var.existing_secrets.telegram_bot_token
+}
+
+data "google_secret_manager_secret" "telegram_chat_id" {
+  secret_id = var.existing_secrets.telegram_chat_id
+}
+
 # ─── Secretos nuevos con valores aleatorios (1 version cada uno) ─────────────
 resource "random_password" "jwt_secret" {
   length  = 64
@@ -233,6 +241,24 @@ resource "google_cloud_run_v2_service" "app" {
         value_source {
           secret_key_ref {
             secret  = data.google_secret_manager_secret.neon_db_url.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name  = "TELEGRAM_BOT_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = data.google_secret_manager_secret.telegram_bot_token.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name  = "TELEGRAM_CHAT_ID"
+        value_source {
+          secret_key_ref {
+            secret  = data.google_secret_manager_secret.telegram_chat_id.secret_id
             version = "latest"
           }
         }

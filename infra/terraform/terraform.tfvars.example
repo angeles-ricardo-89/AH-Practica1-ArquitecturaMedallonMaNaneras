@@ -9,6 +9,8 @@ demo_user_1_username = "demo_1"
 demo_user_2_username = "demo_2"
 
 existing_secrets = {
-  gemini_api_key = "GEMINI_API_KEY"
-  neon_db_url    = "NEON_DATABASE_URL"
+  gemini_api_key     = "GEMINI_API_KEY"
+  neon_db_url        = "NEON_DATABASE_URL"
+  telegram_bot_token = "TELEGRAM_BOT_TOKEN"
+  telegram_chat_id   = "TELEGRAM_CHAT_ID"
 }

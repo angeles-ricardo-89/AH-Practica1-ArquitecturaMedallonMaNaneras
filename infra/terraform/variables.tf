@@ -65,8 +65,10 @@ variable "demo_user_2_username" {
 
 variable "existing_secrets" {
   type = object({
-    gemini_api_key = string
-    neon_db_url    = string
+    gemini_api_key     = string
+    neon_db_url        = string
+    telegram_bot_token = string
+    telegram_chat_id   = string
   })
   description = "Nombres de secretos existentes en Secret Manager"
 }
