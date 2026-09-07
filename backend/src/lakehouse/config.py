@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     neon_database_url: str = ""
     frontend_dist_dir: str = ""
 
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+
     @property
     def cookie_secure(self) -> bool:
         return self.app_env == "production"
