@@ -100,6 +100,10 @@ class TestTelegramNotifier:
         )
         assert TelegramNotifier("tok", "123").send("hola") is False
 
+    def test_send_returns_false_on_non_object_json(self, monkeypatch) -> None:
+        self._install_transport(monkeypatch, lambda _request: httpx.Response(200, json=[]))
+        assert TelegramNotifier("tok", "123").send("hola") is False
+
     def test_send_returns_false_on_network_error(self, monkeypatch) -> None:
         def fake_client(*args: object, **kwargs: object) -> None:
             raise httpx.ConnectError("sin red")

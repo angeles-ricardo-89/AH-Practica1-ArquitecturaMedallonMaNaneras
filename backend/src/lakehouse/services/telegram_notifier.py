@@ -34,8 +34,8 @@ class TelegramNotifier:
         try:
             with httpx.Client(timeout=5.0) as client:
                 resp = client.post(url, json=payload)
-        except Exception:
-            logger.exception("Telegram: error de red enviando notificacion")
+        except Exception:  # noqa: BLE001
+            logger.warning("Telegram: error de red enviando notificacion")
             return False
 
         if resp.status_code != 200:
@@ -43,11 +43,16 @@ class TelegramNotifier:
             return False
 
         try:
-            ok = bool(resp.json().get("ok"))
+            data = resp.json()
         except ValueError:
             logger.warning("Telegram: respuesta no JSON")
             return False
 
+        if not isinstance(data, dict):
+            logger.warning("Telegram: respuesta JSON inesperada")
+            return False
+
+        ok = bool(data.get("ok"))
         if not ok:
             logger.warning("Telegram: devolvio ok=false")
         return ok
