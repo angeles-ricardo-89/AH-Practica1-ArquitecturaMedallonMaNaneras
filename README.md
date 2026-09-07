@@ -31,7 +31,7 @@ memoria conversacional aislada y tres tools de solo lectura) está especificada 
 [`docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md`](docs/prd/PRD_3_0_AGENTE_INVESTIGACION_MANANERAS.md).
 **Estado: implementado y desplegado** (T1–T13). URL productiva:
 
-**https://rag-del-pueblo-iens6os2ba-uc.a.run.app** (servicio Cloud Run `rag-del-pueblo`; Neon + Gemini).
+**https://rag-del-pueblo.tsib.dev** (servicio Cloud Run `rag-del-pueblo` con dominio propio; Neon + Gemini).
 
 ---
 

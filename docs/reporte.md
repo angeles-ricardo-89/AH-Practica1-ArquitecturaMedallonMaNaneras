@@ -34,7 +34,7 @@ La versión descrita en este reporte se encuentra desplegada en un entorno produ
 demostración en Cloud Run y utiliza PostgreSQL/pgvector como almacenamiento e índice
 vectorial.
 
-**URL productiva:** `https://rag-del-pueblo-iens6os2ba-uc.a.run.app`
+**URL productiva:** `https://rag-del-pueblo.tsib.dev`
 
 ---
 

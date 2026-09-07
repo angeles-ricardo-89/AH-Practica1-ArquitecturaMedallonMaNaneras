@@ -273,3 +273,22 @@ resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
+
+# Dominio propio del producto (URL fija de marca). El dominio base tsib.dev esta
+# verificado en Search Console; los registros DNS se publican en Squarespace.
+resource "google_cloud_run_domain_mapping" "app" {
+  name     = "rag-del-pueblo.tsib.dev"
+  location = var.region
+  metadata {
+    namespace = var.project
+  }
+  spec {
+    route_name = google_cloud_run_v2_service.app.name
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].labels,
+      metadata[0].annotations,
+    ]
+  }
+}
