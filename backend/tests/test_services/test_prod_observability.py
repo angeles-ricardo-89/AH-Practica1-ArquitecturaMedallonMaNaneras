@@ -7,9 +7,7 @@ import pytest
 from lakehouse.config import Settings
 from lakehouse.services.prod_observability import sync_production_observability
 
-NEON_URL = (
-    "postgresql://u:p@ep-demo-pooler.us-east-1.aws.neon.tech/db?sslmode=require"
-)
+NEON_URL = "postgresql://u:p@ep-demo-pooler.us-east-1.aws.neon.tech/db?sslmode=require"
 
 
 class TestSyncProductionObservability:
@@ -44,7 +42,8 @@ class TestSyncProductionObservability:
             "lakehouse.services.prod_observability.psycopg",
             MagicMock(
                 connect=lambda conn_str: (
-                    _ConnMgr(source_conn) if conn_str.startswith("postgresql://") and "-pooler" not in conn_str
+                    _ConnMgr(source_conn)
+                    if conn_str.startswith("postgresql://") and "-pooler" not in conn_str
                     else _ConnMgr(target_conn)
                 )
             ),
