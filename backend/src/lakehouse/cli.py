@@ -25,6 +25,9 @@ from lakehouse.services.parse_service import ParseService
 from lakehouse.services.prod_observability import sync_production_observability
 from lakehouse.services.prod_visuals import sync_production_visuals as run_sync_visuals
 from lakehouse.services.reindex_production import reindex_corpus
+from lakehouse.services.temporal_verification import (
+    verify_temporal_gemini as verify_temporal_gemini_fn,
+)
 
 logger = get_logger(__name__, layer="cli")
 app = typer.Typer()
@@ -419,6 +422,63 @@ def evaluate_rag() -> None:
         f"relevancia={result['avg_relevance']}%, "
         f"cobertura={result.get('avg_coverage', 0)}%"
     )
+
+
+@app.command("verify-temporal-gemini")
+def verify_temporal_gemini_command(
+    top_k: int = typer.Option(8, help="Top-K para busqueda vectorial"),
+) -> None:
+    """
+    Ejecuta 5 queries de prueba del parser temporal y muestra si cada una
+    obtuvo las fechas correctas. Valida que este en PRODUCCION con Gemini.
+
+    [Gate QA] Verificacion de parser temporal con Gemini real.
+    """
+    settings = Settings()
+
+    if not settings.is_production:
+        raise typer.BadParameter(
+            f"Este comando requiere Gemini real (APP_ENV=production). "
+            f"APP_ENV='{settings.app_env}'. Configure su .env para produccion."
+        )
+
+    if not settings.gemini_api_key:
+        raise typer.BadParameter(
+            "GEMINI_API_KEY no configurado. "
+            "Defina GEMINI_API_KEY en su archivo .env o Secret Manager."
+        )
+
+    if not settings.neon_database_url:
+        raise typer.BadParameter(
+            "NEON_DATABASE_URL no configurado. "
+            "Defina NEON_DATABASE_URL en su archivo .env o Secret Manager."
+        )
+
+    result = verify_temporal_gemini_fn(settings, top_k=top_k)
+
+    color_red = "\033[91m"
+    color_green = "\033[92m"
+    color_reset = "\033[0m"
+
+    typer.echo(f"\n{'=' * 60}")
+    typer.echo("  Verificacion Temporal - 5 Queries de Prueba")
+    typer.echo(f"{'=' * 60}\n")
+
+    for caso in result.casos:
+        status = f"{color_green}PASS{color_reset}" if caso.ok else f"{color_red}FAIL{color_reset}"
+        intento = "FILTRO" if caso.requiere_filtro else "Sin filtro"
+        typer.echo(f"  [{status}] {caso.tipo:12s} | fuentes: {caso.source_count:2d} | {intento}")
+        typer.echo(f'           Query: "{caso.query}"')
+        if caso.ok:
+            typer.echo(f"           Rango: {caso.esperado_inicio} → {caso.esperado_fin}")
+        else:
+            typer.echo(f"           Esperado: {caso.esperado_inicio} → {caso.esperado_fin}")
+            typer.echo(f"           Obtenido: {caso.obtenido_inicio} → {caso.obtenido_fin}")
+        typer.echo()
+
+    typer.echo(f"{'=' * 60}")
+    typer.echo(f"  Resultado: {result.pasaron}/{result.total} pasaron")
+    typer.echo(f"{'=' * 60}\n")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,16 @@
+from datetime import datetime
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
 
 from lakehouse.config import Settings
-from lakehouse.services.temporal_parser import TemporalParser
+from lakehouse.services.temporal_parser import TemporalParser, _build_system_prompt
 
 PATCH_CHAT = "lakehouse.services.temporal_parser.chat_json"
+
+_MX = ZoneInfo("America/Mexico_City")
 
 
 @pytest.fixture
@@ -165,3 +169,31 @@ class TestTemporalParserExtraer:
         assert result.fallback_ocurrido is False
         assert result.filter_out.texto_busqueda_semantica == "recuperado"
         mock_sleep.assert_called_once()
+
+
+class TestBuildSystemPrompt:
+    def test_calcula_fechas_relativas_en_zona_horaria_mexico(self):
+        now = datetime(2026, 9, 8, 2, 10, 0, tzinfo=_MX)
+
+        prompt = _build_system_prompt("America/Mexico_City", now=now)
+
+        assert "martes" in prompt
+        assert "2026-09-07 00:00:00" in prompt
+        assert "2026-09-01 00:00:00" in prompt
+
+    def test_lunes_usa_semana_anterior(self):
+        now = datetime(2026, 9, 7, 10, 0, 0, tzinfo=_MX)
+
+        prompt = _build_system_prompt("America/Mexico_City", now=now)
+
+        assert "lunes" in prompt
+        assert "2026-08-31 00:00:00" in prompt
+        assert "2026-09-06 00:00:00" in prompt
+
+    def test_referencia_temporal_usa_la_zona_indicada(self):
+        now = datetime(2026, 9, 7, 10, 0, 0, tzinfo=_MX)
+
+        prompt = _build_system_prompt("America/Mexico_City", now=now)
+
+        assert "fecha/hora actual" in prompt
+        assert "2026-09-07T10:00:00-06:00" in prompt
