@@ -203,6 +203,7 @@ make lint-fix        # ruff check --fix + ruff format
 make typecheck-backend   # ty check
 make test-backend    # pytest --cov=src ... --cov-fail-under=90 (necesita postgres arriba)
 uv run pytest tests/test_pipeline/test_ingestion.py   # test suelto; addopts ya aplican coverage
+uv run python -m lakehouse verify-temporal-gemini  # [Gate QA] parser temporal contra Gemini
 
 # Pipeline por etapas (Makefile en raiz). ARGS se pasan tal cual:
 make pipeline-ingest ARGS="--dry-run"   # bronze (scrapea gob.mx)
