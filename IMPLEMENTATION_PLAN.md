@@ -759,3 +759,4 @@ escribiendo su corrida como `interrupted` con conteos parciales.
 | T10 | Agente/Memoria/Auth | Docker y verificación del pipeline | [x] |
 | T11 | Agente/Memoria/Auth | Adaptadores Gemini y reindexación productiva | [x] |
 | T12 | Agente/Memoria/Auth | Cloud Run + Neon via Terraform | [x] |
+| T13 | Agente/Memoria/Auth | Verificacion parser temporal contra Gemini (CLI + integracion) | [ ] |
