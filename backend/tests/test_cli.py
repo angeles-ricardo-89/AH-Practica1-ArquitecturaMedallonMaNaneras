@@ -11,6 +11,7 @@ from lakehouse.config import Settings
 from lakehouse.db.observability_conn import ensure_observability_tables
 from lakehouse.pipeline.interrupt import interrupt_state
 from lakehouse.schemas.gold import EnrichmentResult
+from lakehouse.services.temporal_verification import VerifyResult
 
 runner = CliRunner()
 
@@ -655,3 +656,53 @@ class TestPipelineVerify:
         assert "Gold: 8/8 embeddings" in result.output
         assert "Clustering: 2 clusters, 0 ruido" in result.output
         assert "Etiquetado: 2 completados, 0 fallidos" in result.output
+
+
+class TestVerifyTemporalGemini:
+    def test_sin_produccion_falla_cerrado(self, monkeypatch):
+        from lakehouse.cli import app
+
+        monkeypatch.setattr("lakehouse.cli.Settings", lambda: Settings(app_env="local"))
+        runner = CliRunner()
+        result = runner.invoke(app, ["verify-temporal-gemini"])
+        assert result.exit_code != 0
+        assert "production" in result.output.lower()
+
+    def test_exito(self, monkeypatch, tmp_path):
+        from lakehouse.cli import app
+
+        def _fake_settings():
+            return Settings(
+                app_env="production",
+                gemini_api_key="k",
+                neon_database_url="x",
+            )
+
+        def _fake_verify(settings, top_k=8):
+            return VerifyResult(
+                total=5,
+                pasaron=5,
+                casos=[
+                    {
+                        "query": f"q{i}",
+                        "tipo": "t",
+                        "ok": True,
+                        "requiere_filtro": True,
+                        "obtenido_inicio": "i",
+                        "obtenido_fin": "f",
+                        "esperado_inicio": "i",
+                        "esperado_fin": "f",
+                        "fallback_ocurrido": False,
+                        "source_count": 0,
+                        "fuentes": [],
+                    }
+                    for i in range(5)
+                ],
+            )
+
+        monkeypatch.setattr("lakehouse.cli.Settings", _fake_settings)
+        monkeypatch.setattr("lakehouse.cli.verify_temporal_gemini_fn", _fake_verify)
+        runner = CliRunner()
+        result = runner.invoke(app, ["verify-temporal-gemini"])
+        assert result.exit_code == 0
+        assert "5/5" in result.output
