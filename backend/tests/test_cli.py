@@ -660,8 +660,6 @@ class TestPipelineVerify:
 
 class TestVerifyTemporalGemini:
     def test_sin_produccion_falla_cerrado(self, monkeypatch):
-        from lakehouse.cli import app
-
         monkeypatch.setattr("lakehouse.cli.Settings", lambda: Settings(app_env="local"))
         runner = CliRunner()
         result = runner.invoke(app, ["verify-temporal-gemini"])
@@ -669,16 +667,14 @@ class TestVerifyTemporalGemini:
         assert "production" in result.output.lower()
 
     def test_exito(self, monkeypatch, tmp_path):
-        from lakehouse.cli import app
-
-        def _fake_settings():
+        def _fake_settings() -> Settings:
             return Settings(
                 app_env="production",
                 gemini_api_key="k",
                 neon_database_url="x",
             )
 
-        def _fake_verify(settings, top_k=8):
+        def _fake_verify(settings: Settings, top_k: int = 8) -> VerifyResult:
             return VerifyResult(
                 total=5,
                 pasaron=5,

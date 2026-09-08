@@ -460,25 +460,25 @@ def verify_temporal_gemini_command(
     color_green = "\033[92m"
     color_reset = "\033[0m"
 
-    print(f"\n{'='*60}")
-    print(f"  Verificacion Temporal - 5 Queries de Prueba")
-    print(f"{'='*60}\n")
+    typer.echo(f"\n{'=' * 60}")
+    typer.echo("  Verificacion Temporal - 5 Queries de Prueba")
+    typer.echo(f"{'=' * 60}\n")
 
     for caso in result.casos:
         status = f"{color_green}PASS{color_reset}" if caso.ok else f"{color_red}FAIL{color_reset}"
         intento = "FILTRO" if caso.requiere_filtro else "Sin filtro"
-        print(f"  [{status}] {caso.tipo:12s} | fuentes: {caso.source_count:2d} | {intento}")
-        print(f"           Query: \"{caso.query}\"")
+        typer.echo(f"  [{status}] {caso.tipo:12s} | fuentes: {caso.source_count:2d} | {intento}")
+        typer.echo(f'           Query: "{caso.query}"')
         if caso.ok:
-            print(f"           Rango: {caso.esperado_inicio} → {caso.esperado_fin}")
+            typer.echo(f"           Rango: {caso.esperado_inicio} → {caso.esperado_fin}")
         else:
-            print(f"           Esperado: {caso.esperado_inicio} → {caso.esperado_fin}")
-            print(f"           Obtenido: {caso.obtenido_inicio} → {caso.obtenido_fin}")
-        print()
+            typer.echo(f"           Esperado: {caso.esperado_inicio} → {caso.esperado_fin}")
+            typer.echo(f"           Obtenido: {caso.obtenido_inicio} → {caso.obtenido_fin}")
+        typer.echo()
 
-    print(f"{'='*60}")
-    print(f"  Resultado: {result.pasaron}/{result.total} pasaron")
-    print(f"{'='*60}\n")
+    typer.echo(f"{'=' * 60}")
+    typer.echo(f"  Resultado: {result.pasaron}/{result.total} pasaron")
+    typer.echo(f"{'=' * 60}\n")
 
 
 if __name__ == "__main__":
