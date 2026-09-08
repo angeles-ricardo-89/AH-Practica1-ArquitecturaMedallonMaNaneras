@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel
 
-from lakehouse.config import Settings
 from lakehouse.log_config import get_logger
+
+if TYPE_CHECKING:
+    from lakehouse.config import Settings
 from lakehouse.services.rag_search import (
     embed_search_query,
     search_gold_corpus_from_vector,
@@ -137,9 +139,7 @@ def _verificar_caso(
     except Exception:
         logger.exception("Verificacion temporal: busqueda fallo", query=caso.query)
 
-    ok = _evaluar_ok(
-        caso, filtro.requiere_filtro_tiempo, filtro.fecha_inicio, filtro.fecha_fin
-    )
+    ok = _evaluar_ok(caso, filtro.requiere_filtro_tiempo, filtro.fecha_inicio, filtro.fecha_fin)
 
     return TemporalCaseResult(
         query=caso.query,

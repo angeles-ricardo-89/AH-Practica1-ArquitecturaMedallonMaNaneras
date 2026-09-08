@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import re
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pydantic
 
@@ -17,8 +18,9 @@ logger = get_logger(__name__, layer="service")
 _DIAS_SEMANA = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
 
 
-def _build_system_prompt() -> str:
-    now = datetime.now(UTC).astimezone()
+def _build_system_prompt(tz_name: str, now: datetime | None = None) -> str:
+    if now is None:
+        now = datetime.now(ZoneInfo(tz_name))
     now_iso = now.isoformat()
     weekday = _DIAS_SEMANA[now.weekday()]
 
@@ -99,7 +101,7 @@ class TemporalParser:
         self._settings = settings or Settings()
 
     def extraer(self, query: str) -> TimeParserResult:
-        system_prompt = _build_system_prompt()
+        system_prompt = _build_system_prompt(self._settings.app_timezone)
         max_tokens = self._settings.temporal_parser_max_tokens
         temperature = self._settings.temporal_parser_temperature
         max_retries = self._settings.temporal_parser_max_retries

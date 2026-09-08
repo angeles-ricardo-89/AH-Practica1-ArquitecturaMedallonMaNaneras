@@ -12,3 +12,5 @@ class TestSettings:
         assert s.max_context_tokens == 10000
         assert s.llamacpp_model == "gemma-4-12b"
         assert s.ollama_embed_model == "embeddinggemma"
+        assert s.app_timezone == "America/Mexico_City"
+        assert s.temporal_parser_max_tokens >= 4096

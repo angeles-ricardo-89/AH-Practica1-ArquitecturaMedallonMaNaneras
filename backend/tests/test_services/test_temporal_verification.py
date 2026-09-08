@@ -62,8 +62,14 @@ class TestBuildCasos:
 class TestEvaluarOk:
     def test_sin_intento(self):
         caso = TemporalTestCase(query="x", tipo="sin_intento")
-        assert _evaluar_ok(caso, False, None, None) is True
-        assert _evaluar_ok(caso, True, None, None) is False
+        assert (
+            _evaluar_ok(caso, requiere_filtro=False, obtenido_inicio=None, obtenido_fin=None)
+            is True
+        )
+        assert (
+            _evaluar_ok(caso, requiere_filtro=True, obtenido_inicio=None, obtenido_fin=None)
+            is False
+        )
 
     def test_absoluta_coincidencia(self):
         caso = TemporalTestCase(
@@ -72,18 +78,37 @@ class TestEvaluarOk:
             esperado_inicio="2025-07-15 00:00:00",
             esperado_fin="2025-07-15 23:59:59",
         )
-        assert _evaluar_ok(caso, True, "2025-07-15 00:00:00", "2025-07-15 23:59:59") is True
-        assert _evaluar_ok(caso, True, "2025-07-16 00:00:00", "2025-07-16 23:59:59") is False
+        assert (
+            _evaluar_ok(
+                caso,
+                requiere_filtro=True,
+                obtenido_inicio="2025-07-15 00:00:00",
+                obtenido_fin="2025-07-15 23:59:59",
+            )
+            is True
+        )
+        assert (
+            _evaluar_ok(
+                caso,
+                requiere_filtro=True,
+                obtenido_inicio="2025-07-16 00:00:00",
+                obtenido_fin="2025-07-16 23:59:59",
+            )
+            is False
+        )
 
     def test_relativa_sin_filtro_falla(self):
         caso = TemporalTestCase(query="x", tipo="relativa", esperado_inicio="2026-09-07 00:00:00")
-        assert _evaluar_ok(caso, False, None, None) is False
+        assert (
+            _evaluar_ok(caso, requiere_filtro=False, obtenido_inicio=None, obtenido_fin=None)
+            is False
+        )
 
 
 class TestVerifyTemporalGemini:
     def test_orquestacion_solo_absoluta_coincide(self, monkeypatch):
         class _FakeParser:
-            def __init__(self, settings):
+            def __init__(self, settings: Settings) -> None:
                 self.settings = settings
 
             def extraer(self, query: str) -> TimeParserResult:
@@ -99,14 +124,14 @@ class TestVerifyTemporalGemini:
                 )
 
         monkeypatch.setattr(temporal_verification, "TemporalParser", _FakeParser)
-        monkeypatch.setattr(temporal_verification, "embed_search_query", lambda s, t: [0.1])
+        monkeypatch.setattr(temporal_verification, "embed_search_query", lambda _s, _t: [0.1])
         monkeypatch.setattr(
             temporal_verification,
             "search_with_date_filter",
-            lambda v, k, i, f, s: [{"conference_date": "2025-07-15"}],
+            lambda _v, _k, _i, _f, _s: [{"conference_date": "2025-07-15"}],
         )
         monkeypatch.setattr(
-            temporal_verification, "search_gold_corpus_from_vector", lambda v, k, s: []
+            temporal_verification, "search_gold_corpus_from_vector", lambda _v, _k, _s: []
         )
 
         result = temporal_verification.verify_temporal_gemini(

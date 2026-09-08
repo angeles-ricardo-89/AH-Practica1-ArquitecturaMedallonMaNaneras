@@ -30,7 +30,8 @@ class Settings(BaseSettings):
     max_ingest_pool: int = 1
     temporal_parser_temperature: float = 0.1
     temporal_parser_max_retries: int = 3
-    temporal_parser_max_tokens: int = 2040
+    temporal_parser_max_tokens: int = 8192
+    app_timezone: str = "America/Mexico_City"
 
     umap_clustering_n_components: int = 30
     umap_clustering_n_neighbors: int = 50
